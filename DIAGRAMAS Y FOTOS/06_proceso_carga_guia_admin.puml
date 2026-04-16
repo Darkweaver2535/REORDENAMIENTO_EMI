@@ -1,0 +1,122 @@
+@startuml Proceso_Carga_Guia_Admin
+!theme plain
+skinparam backgroundColor #F9F8F5
+skinparam ParticipantBackgroundColor #FFFFFF
+skinparam ParticipantBorderColor #01696F
+skinparam ArrowColor #01696F
+skinparam NoteBackgroundColor #CEDCD8
+skinparam NoteBorderColor #01696F
+skinparam GroupBackgroundColor #EDF7F6
+skinparam GroupBorderColor #0C4E54
+
+title Sistema de Gestión de Laboratorios\n<b>Proceso Admin: Carga, Aprobación y Publicación de Guías</b>
+
+actor "Admin / Jefe" as ADM
+participant "React Admin\nPanel" as FE
+participant "Django API\n/api/guias/" as API
+participant "FileStorageService" as FSS
+participant "pdf2image +\nPillow" as PDF_PROC
+participant "S3 / MinIO\n(Archivos)" as S3
+participant "PostgreSQL\n(Guias)" as DB
+actor "Decano / Autoridad" as DEC
+
+== PASO 1: CARGA DEL ARCHIVO ==
+
+ADM -> FE : Selecciona asignatura, semestre,\nnúmero de práctica
+ADM -> FE : Adjunta archivo PDF de la guía\n+ Imagen de portada JPG/PNG
+
+FE -> API : POST /api/guias/\nContent-Type: multipart/form-data\n{asignatura_id, num_practica, titulo,\npdf_file, portada_file}
+
+API -> API : Validar:
+note right of API
+  Validaciones de seguridad:
+  - Solo PDF (mime-type check)
+  - Solo JPG/PNG para portada
+  - Tamaño max PDF: 50MB
+  - Nombre único por asignatura+num_practica
+  - Rol: ADMIN / JEFE únicamente
+end note
+
+API -> FSS : upload_file(pdf_file,\nbucket='guias/pdfs/')
+
+FSS -> S3 : PUT objeto con key:\n/guias/{unidad_id}/{asig_codigo}/{num_practica}.pdf
+
+S3 --> FSS : URL del objeto guardado
+FSS --> API : pdf_s3_url
+
+API -> FSS : upload_file(portada_file,\nbucket='guias/portadas/')
+
+FSS -> S3 : PUT objeto portada
+S3 --> FSS : URL portada
+
+alt Si se sube PDF sin portada separada
+  API -> PDF_PROC : generate_thumbnail(pdf_s3_url,\npage=0)
+  PDF_PROC -> S3 : Descargar página 1 del PDF
+  PDF_PROC -> PDF_PROC : Convertir a JPG\n800x600px con Pillow
+  PDF_PROC -> S3 : PUT thumbnail auto-generado
+  PDF_PROC --> API : thumbnail_url
+end
+
+API -> DB : INSERT Guia\n{asignatura_id, titulo, num_practica,\nportada_url, pdf_url,\nestado='BORRADOR',\nresolucion_numero=NULL}
+
+DB --> API : guia_id = 78
+API --> FE : 201 Created {guia_id: 78, estado: 'BORRADOR'}
+FE --> ADM : Guía guardada como BORRADOR
+
+== PASO 2: SOLICITAR APROBACIÓN ==
+
+ADM -> FE : Completar formulario:\n- Número de resolución formal\n- Observaciones adicionales
+
+FE -> API : PATCH /api/guias/78/solicitar-aprobacion/\n{resolucion_numero: 'RES-2025-042'}
+
+API -> DB : UPDATE Guia\nSET estado='PENDIENTE',\nresolucion_numero='RES-2025-042'
+
+API -> DB : INSERT AuditLog\n{accion:'REQUEST_APPROVAL', guia_id:78}
+
+API --> FE : 200 OK - Estado: PENDIENTE
+FE --> ADM : Guía enviada a aprobación
+
+== PASO 3: REVISIÓN Y APROBACIÓN (AUTORIDAD) ==
+
+DEC -> FE : Accede a panel "Guías Pendientes"
+FE -> API : GET /api/guias/?estado=PENDIENTE
+API -> DB : SELECT WHERE estado='PENDIENTE'
+DB --> API : Lista guías pendientes
+API --> FE : Lista con vista previa de portadas
+
+DEC -> FE : Revisa guía 78\n(visualiza portada + PDF)
+
+alt Aprobación
+  DEC -> FE : Click "Aprobar y Publicar"
+  FE -> API : PATCH /api/guias/78/publicar/\n{aprobado_por: DECANO_ID}
+
+  API -> DB : UPDATE Guia\nSET estado='PUBLICADO',\naprobado_por_id=DECANO_ID,\nupdated_at=NOW()
+
+  API -> DB : INSERT AuditLog\n{accion:'PUBLISH', usuario_id:DECANO_ID}
+
+  API --> FE : 200 OK - Guía PUBLICADA
+  FE --> DEC : Guía visible para Estudiantes y Docentes
+
+else Rechazo con observaciones
+  DEC -> FE : Click "Rechazar"\n+ Comentario de rechazo
+
+  FE -> API : PATCH /api/guias/78/rechazar/\n{motivo_rechazo: "Falta actualizar..."}
+
+  API -> DB : UPDATE Guia\nSET estado='BORRADOR',\nresolucion_numero=NULL
+
+  API --> FE : 200 OK - Devuelta a BORRADOR
+  FE --> ADM : Notificación: guía rechazada + motivo
+end
+
+note over DB
+  FLUJO DE ESTADOS:
+  BORRADOR → PENDIENTE → PUBLICADO
+                    ↓
+                 BORRADOR (si rechazada)
+  
+  Solo PUBLICADO es visible para Estudiantes/Docentes.
+  La transición PENDIENTE→PUBLICADO requiere
+  que aprobado_por_id sea rol DECANO o ADMIN_SENIOR.
+end note
+
+@enduml

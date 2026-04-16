@@ -1,0 +1,131 @@
+@startuml Proceso_Autenticacion_y_Guias
+!theme plain
+skinparam backgroundColor #F9F8F5
+skinparam {
+  ParticipantBackgroundColor #FFFFFF
+  ParticipantBorderColor #01696F
+  ParticipantFontColor #28251D
+  SequenceArrowColor #01696F
+  SequenceLifeLineBorderColor #0C4E54
+  NoteBackgroundColor #CEDCD8
+  NoteBorderColor #01696F
+  ActorBackgroundColor #EDF7F6
+  ActorBorderColor #01696F
+  SequenceGroupBackgroundColor #F5FFFE
+  SequenceGroupBorderColor #0C4E54
+}
+
+title Sistema de Gestión de Laboratorios\n<b>Proceso 1: Autenticación SSO y Navegación de Guías</b>
+
+actor "Usuario\n(Estudiante/Docente)" as USR
+participant "React SPA\n(Frontend)" as FE
+participant "Nginx" as NGX
+participant "Django API\n/api/auth/" as API
+participant "apps/usuarios\nAuthBackend" as AUTH
+participant "SAGA / LDAP\n(Externo)" as SAGA
+database "PostgreSQL\nUsuarios+Roles" as DB
+participant "Redis\n(Sesiones)" as REDIS
+participant "apps/guias\nFilterService" as GS
+collections "S3/MinIO\n(Archivos)" as S3
+== Autenticación (SSO con SAGA) ==
+
+USR -> FE : Ingresa CI o usuario SAGA\n+ contraseña
+
+FE -> NGX : POST /api/auth/login/\n{carnet_identidad, password}
+NGX -> API : Forward request
+
+API -> AUTH : validate_credentials(ci, pwd)
+AUTH -> SAGA : Consultar credenciales\n(LDAP bind / API call)
+
+alt Credenciales válidas en SAGA
+  SAGA --> AUTH : Usuario autenticado\n{nombre, email, carrera}
+
+  AUTH -> DB : SELECT usuario WHERE ci = X
+  
+  alt Usuario existe en BD local
+    DB --> AUTH : Usuario + Rol asignado
+  else Usuario nuevo (primera vez)
+    AUTH -> DB : INSERT Usuario\n(ci, nombre, email,\nrol=ESTUDIANTE por defecto)
+    DB --> AUTH : Usuario creado
+  end
+
+  AUTH -> REDIS : SET session_token → {user_id, rol, ua_id}\nTTL = 8 horas
+  AUTH --> API : JWT Access Token + Refresh Token
+  API --> FE : 200 OK {access_token, refresh_token,\nrol, nombre_completo, unidad_academica}
+
+  FE -> FE : Guardar tokens en memoria\n(NO localStorage)\nRedirigir según ROL
+
+else Credenciales inválidas
+  SAGA --> AUTH : Auth failed
+  AUTH --> API : Unauthorized
+  API --> FE : 401 {error: "Credenciales incorrectas"}
+  FE --> USR : Mostrar error
+end
+
+== Filtros en Cascada (Buscar Guía) ==
+
+note over USR, S3
+  El usuario (Estudiante/Docente) navega con filtros jerárquicos para encontrar su guía.
+  El backend SOLO devuelve opciones válidas según la selección anterior.
+end note
+
+USR -> FE : Carga módulo de Guías
+
+FE -> API : GET /api/estructura/unidades/\nAuthorization: Bearer <token>
+API -> DB : SELECT UnidadAcademica WHERE is_active=True
+DB --> API : [La Paz, Cochabamba, SCZ, Riberalta, Trópico]
+API --> FE : Lista de Unidades Académicas
+FE --> USR : Dropdown 1: Unidad Académica
+
+USR -> FE : Selecciona "La Paz"
+FE -> API : GET /api/estructura/departamentos/?unidad_id=1
+API -> DB : SELECT Departamento WHERE unidad_id=1
+DB --> API : [Cs. de la Tierra, Comerciales, ...]
+API --> FE : Departamentos filtrados
+FE --> USR : Dropdown 2: Departamento
+
+USR -> FE : Selecciona "Ingeniería Industrial"
+FE -> API : GET /api/estructura/carreras/?dept_id=5
+API -> DB : SELECT Carrera WHERE dept_id=5
+DB --> API : [Ing. Industrial, ...]
+API --> FE : Carreras
+FE --> USR : Dropdown 3: Carrera
+
+USR -> FE : Selecciona Semestre
+FE -> API : GET /api/estructura/asignaturas/\n?carrera_id=3&semestre_id=4&unidad_id=1
+API -> DB : SELECT Asignatura con código_curricular
+DB --> API : Lista asignaturas con código oficial
+API --> FE : Asignaturas del semestre
+FE --> USR : Dropdown 5: Asignatura
+
+USR -> FE : Selecciona "Química General"
+FE -> API : GET /api/guias/?asignatura_id=12\n(solo guias con estado=PUBLICADO)
+API -> DB : SELECT Guia WHERE asignatura_id=12\nAND estado='PUBLICADO'
+DB --> API : Lista de prácticas publicadas
+API --> FE : [{id, titulo, num_practica,\nportada_url_firmada, estado}]
+FE --> USR : Galería de prácticas con portadas JPG/PNG
+
+== Visualización y Descarga de PDF ==
+
+USR -> FE : Click en práctica "Práctica 3"
+FE -> API : GET /api/guias/45/
+API -> DB : SELECT Guia WHERE id=45 AND estado='PUBLICADO'
+DB --> API : Datos de la guía
+API -> S3 : Generar URL firmada\n(presigned_url, TTL=15min)
+S3 --> API : URL temporal segura
+API --> FE : {titulo, portada_url, pdf_presigned_url,\ndescripcion, num_practica}
+FE --> USR : Vista previa de portada\n+ Botón "Descargar PDF"
+
+USR -> FE : Click "Descargar PDF"
+FE -> NGX : GET [pdf_presigned_url]\n(URL firmada, no pasa por Django)
+NGX -> S3 : Proxy o redirect
+S3 --> USR : Descarga directa del PDF
+
+note over API
+  CANDADO: Si estado != 'PUBLICADO'
+  el endpoint devuelve 404.
+  Docentes y Estudiantes NUNCA
+  ven guías en BORRADOR o PENDIENTE.
+end note
+
+@enduml

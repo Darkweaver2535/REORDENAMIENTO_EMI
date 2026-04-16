@@ -1,0 +1,268 @@
+@startuml ERD_Modelo_Relacional
+!theme plain
+skinparam linetype ortho
+skinparam backgroundColor #F9F8F5
+skinparam entity {
+  BackgroundColor #FFFFFF
+  BorderColor #01696F
+  FontColor #28251D
+  HeaderBackgroundColor #01696F
+  HeaderFontColor #FFFFFF
+}
+skinparam note {
+  BackgroundColor #CEDCD8
+  BorderColor #01696F
+}
+
+title Sistema de Gestión de Laboratorios\n<b>Modelo Entidad-Relación (Base de Datos)</b>
+
+' ===== ESTRUCTURA ACADÉMICA =====
+package "Estructura Académica" #EDF7F6 {
+
+  entity "UnidadAcademica" as UA {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(100)
+    * ciudad : VARCHAR(50)
+    * codigo : VARCHAR(10) <<UNIQUE>>
+    created_at : TIMESTAMP
+  }
+
+  entity "Departamento" as DEPT {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(100)
+    * codigo : VARCHAR(15)
+    * unidad_academica_id : INT <<FK>>
+  }
+
+  entity "Carrera" as CARR {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(150)
+    * codigo_institucional : VARCHAR(20) <<UNIQUE>>
+    * departamento_id : INT <<FK>>
+  }
+
+  entity "CarreraUnidadAcademica" as CARR_UA {
+    * id : SERIAL <<PK>>
+    --
+    * carrera_id : INT <<FK>>
+    * unidad_academica_id : INT <<FK>>
+    <<UNIQUE(carrera_id, unidad_academica_id)>>
+  }
+
+  entity "Semestre" as SEM {
+    * id : SERIAL <<PK>>
+    --
+    * numero : SMALLINT [1..10]
+    * nombre : VARCHAR(20)
+  }
+
+  entity "Asignatura" as ASIG {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(150)
+    * codigo_curricular : VARCHAR(20) <<UNIQUE>>
+    * carrera_id : INT <<FK>>
+    * semestre_id : INT <<FK>>
+    * unidad_academica_id : INT <<FK>>
+  }
+}
+
+' ===== MÓDULO DE GUÍAS =====
+package "Módulo de Guías" #FFF8F0 {
+
+  entity "Guia" as GUIA {
+    * id : SERIAL <<PK>>
+    --
+    * titulo : VARCHAR(200)
+    * codigo_interno : VARCHAR(30) <<UNIQUE>>
+    * numero_practica : SMALLINT
+    * asignatura_id : INT <<FK>>
+    * portada_url : TEXT  [JPG/PNG → S3]
+    * pdf_url : TEXT  [PDF → S3]
+    * estado : ENUM [BORRADOR, PENDIENTE,\n  APROBADO, PUBLICADO]
+    * resolucion_numero : VARCHAR(50) [nullable]
+    * aprobado_por_id : INT <<FK>> [nullable]
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+  }
+}
+
+' ===== MÓDULO DE LABORATORIOS Y EQUIPOS =====
+package "Módulo de Laboratorios y Equipos" #F0F4FF {
+
+  entity "Laboratorio" as LAB {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(150)
+    * unidad_academica_id : INT <<FK>>
+    * campus : VARCHAR(100)
+    * edificio : VARCHAR(50)
+    * piso : SMALLINT
+    * sala : VARCHAR(50)
+    * capacidad_estudiantes : INT
+  }
+
+  entity "LaboratorioAsignatura" as LAB_ASIG {
+    * id : SERIAL <<PK>>
+    --
+    * laboratorio_id : INT <<FK>>
+    * asignatura_id : INT <<FK>>
+    <<UNIQUE(laboratorio_id, asignatura_id)>>
+  }
+
+  entity "Equipo" as EQ {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(150)
+    * codigo_activo : VARCHAR(50) <<UNIQUE>>
+    * laboratorio_id : INT <<FK>>
+    * cantidad_total : INT
+    * cantidad_buena : INT
+    * cantidad_regular : INT
+    * cantidad_mala : INT
+    * estatus_general : ENUM [BUENO, REGULAR, MALO]
+    * ubicacion_sala : VARCHAR(100)
+    observaciones : TEXT
+    evaluado_en : TIMESTAMP
+    evaluado_por_id : INT <<FK>>
+  }
+
+  entity "EquipoRequeridoPorGuia" as EQ_GUIA {
+    * id : SERIAL <<PK>>
+    --
+    * guia_id : INT <<FK>>
+    * nombre_equipo_teorico : VARCHAR(150)
+    * equipo_id : INT <<FK>> [nullable]
+    * cantidad_requerida : INT
+  }
+}
+
+' ===== MÓDULO DE REORDENAMIENTO =====
+package "Módulo de Reordenamiento" #FFF0F5 {
+
+  entity "Reordenamiento" as REORD {
+    * id : SERIAL <<PK>>
+    --
+    * equipo_id : INT <<FK>>
+    * laboratorio_origen_id : INT <<FK>>
+    * laboratorio_destino_id : INT <<FK>>
+    * cantidad_trasladada : INT
+    motivo : TEXT
+    * resolucion_numero : VARCHAR(50) <<NOT NULL>>
+    * estado : ENUM [PENDIENTE, AUTORIZADO, EJECUTADO]
+    * autorizado_por_id : INT <<FK>>
+    ejecutado_por_id : INT <<FK>> [nullable]
+    pdf_reporte_url : TEXT [nullable]
+    * fecha_creacion : TIMESTAMP
+    fecha_ejecucion : TIMESTAMP [nullable]
+  }
+}
+
+' ===== USUARIOS Y AUDITORÍA =====
+package "Usuarios y Auditoría" #F5F5FF {
+
+  entity "Usuario" as USER {
+    * id : SERIAL <<PK>>
+    --
+    * carnet_identidad : VARCHAR(20) <<UNIQUE>>
+    saga_username : VARCHAR(100)
+    * nombre_completo : VARCHAR(200)
+    email : VARCHAR(150)
+    * rol : ENUM [ESTUDIANTE, DOCENTE, ADMIN,\n  JEFE, DECANO, ENCARGADO_ACTIVOS]
+    * unidad_academica_id : INT <<FK>>
+    * is_active : BOOLEAN
+    last_login : TIMESTAMP
+  }
+
+  entity "AuditLog" as AUDIT {
+    * id : SERIAL <<PK>>
+    --
+    * tabla_afectada : VARCHAR(100)
+    * registro_id : INT
+    * accion : ENUM [CREATE, UPDATE,\n  DELETE, APPROVE, MOVE]
+    * usuario_id : INT <<FK>>
+    datos_anteriores : JSONB
+    datos_nuevos : JSONB
+    * timestamp : TIMESTAMP
+  }
+}
+
+' ===== MÓDULO FUTURO =====
+package "Módulo Futuro: Reactivos e Insumos" #F5FFF5 {
+
+  entity "Insumo <<FUTURO>>" as INS {
+    * id : SERIAL <<PK>>
+    --
+    * nombre : VARCHAR(150)
+    * laboratorio_id : INT <<FK>>
+    * unidad_medida : VARCHAR(30)
+    * stock_actual : DECIMAL(10,3)
+    * stock_minimo : DECIMAL(10,3)
+    consumo_por_practica : DECIMAL(10,3)
+    merma_estimada_pct : DECIMAL(5,2)
+    es_reactivo : BOOLEAN
+    fecha_vencimiento : DATE [nullable]
+    proveedor : VARCHAR(150)
+  }
+}
+
+' ===== RELACIONES =====
+UA        ||--o{ DEPT        : "tiene >"
+DEPT      ||--o{ CARR        : "tiene >"
+CARR      ||--o{ ASIG        : "tiene >"
+SEM       ||--o{ ASIG        : "define nivel >"
+CARR      ||--o{ CARR_UA     : "existe en >"
+UA        ||--o{ CARR_UA     : "alberga carrera >"
+
+UA        ||--o{ LAB         : "posee >"
+UA        ||--o{ USER        : "pertenece >"
+UA        ||--o{ ASIG        : "oferta >"
+
+ASIG      ||--o{ GUIA        : "tiene >"
+ASIG      ||--o{ LAB_ASIG    : "es impartida en >"
+LAB       ||--o{ LAB_ASIG    : "imparte >"
+
+LAB       ||--o{ EQ          : "alberga >"
+EQ        ||--o{ EQ_GUIA     : "requerido en >"
+GUIA      ||--o{ EQ_GUIA     : "requiere >"
+
+EQ        ||--o{ REORD       : "es trasladado >"
+LAB       ||--o{ REORD       : "origen >"
+LAB       ||--o{ REORD       : "destino >"
+USER      ||--o{ REORD       : "autoriza >"
+
+USER      ||--o{ AUDIT       : "genera >"
+USER      ||--o{ GUIA        : "aprueba >"
+USER      ||--o{ EQ          : "evalua >"
+
+LAB       ||--o{ INS         : "almacena >"
+
+note bottom of EQ_GUIA
+  TABLA PIVOTE CRÍTICA:
+  Cruza requerimiento teórico
+  (guía) vs. activo real (equipo).
+  equipo_id puede ser NULL si
+  aún no se vinculó al activo físico.
+end note
+
+note right of GUIA
+  CANDADO LÓGICO:
+  Solo pasa a PUBLICADO
+  si resolucion_numero
+  no es NULL y estado = APROBADO.
+  Docentes y Estudiantes solo
+  ven estado = PUBLICADO.
+end note
+
+note right of EQ
+  CÁLCULO DE DISPONIBLES:
+  cantidad_disponible =
+  cantidad_buena + cantidad_regular
+  (la cantidad_mala NO se cuenta
+  para atender prácticas)
+end note
+
+@enduml

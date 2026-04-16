@@ -1,0 +1,112 @@
+@startuml Escalabilidad_Modular
+!theme plain
+skinparam backgroundColor #F9F8F5
+skinparam {
+  PackageBackgroundColor #FFFFFF
+  PackageBorderColor #01696F
+  ComponentBackgroundColor #EDF7F6
+  ComponentBorderColor #01696F
+  ArrowColor #01696F
+  NoteBackgroundColor #CEDCD8
+  NoteBorderColor #01696F
+}
+
+title Sistema de Gestión de Laboratorios\n<b>Proceso 4: Arquitectura Modular Escalable — Django Apps</b>
+
+package "Proyecto Django: lab_management/" #F9F8F5 {
+
+  package "config/ — Configuración Global" #E8F0FE {
+    [settings/\n  base.py\n  development.py\n  production.py] as SETTINGS
+    [urls.py\n  (Router principal: /api/v1/)] as URLS
+    [wsgi.py / asgi.py] as WSGI
+    [celery.py\n  (Configuración Celery+Redis)] as CELERY_CONF
+  }
+
+  package "apps/ — Módulos Independientes" #EDF7F6 {
+
+    package "apps/usuarios/ [FASE 1]" #FFFFFF {
+      [models.py: Usuario, AuditLog] as M_USR
+      [serializers.py: UserSerializer] as S_USR
+      [views.py: LoginView, ProfileView] as V_USR
+      [backends.py: SAGAAuthBackend] as B_USR
+      [permissions.py: IsAdmin, IsJefe...] as P_USR
+      [urls.py: /api/v1/auth/] as U_USR
+    }
+
+    package "apps/estructura_academica/ [FASE 1]" #FFFFFF {
+      [models.py: UnidadAcad, Dept,\n  Carrera, Semestre, Asignatura] as M_EST
+      [filters.py: CascadeFilterBackend] as F_EST
+      [views.py: Viewsets con filtros\n  en cascada jerárquicos] as V_EST
+      [urls.py: /api/v1/estructura/] as U_EST
+    }
+
+    package "apps/guias/ [FASE 1]" #FFFFFF {
+      [models.py: Guia, Practica] as M_GUI
+      [serializers.py: GuiaSerializer\n  (estado=PUBLICADO filter)] as S_GUI
+      [views.py: GuiaViewSet,\n  FileUploadView] as V_GUI
+      [services.py: FileStorageService,\n  ThumbnailGenerator] as SVC_GUI
+      [signals.py: post_save → AuditLog] as SIG_GUI
+      [urls.py: /api/v1/guias/] as U_GUI
+    }
+
+    package "apps/laboratorios/ [FASE 1]" #FFFFFF {
+      [models.py: Laboratorio, Equipo,\n  EquipoRequeridoPorGuia] as M_LAB
+      [views.py: EvaluacionInsituView,\n  InventarioView] as V_LAB
+      [services.py: InventoryAnalyticsService\n  (calcular %uso, deficit, ratio)] as SVC_LAB
+      [urls.py: /api/v1/laboratorios/] as U_LAB
+    }
+
+    package "apps/reordenamiento/ [FASE 1]" #FFFFFF {
+      [models.py: Reordenamiento] as M_REO
+      [views.py: ReordenamientoViewSet\n  (crear, autorizar, ejecutar)] as V_REO
+      [services.py: ReorderService\n  (validar, actualizar, notificar)] as SVC_REO
+      [tasks.py: generate_pdf_report\n  (tarea Celery asíncrona)] as T_REO
+      [urls.py: /api/v1/reordenamientos/] as U_REO
+    }
+
+    package "apps/reactivos/ [FASE 2 — FUTURO]" #F5FFF5 {
+      [models.py: Insumo, Reactivo,\n  MovimientoStock, SaldoActual] as M_REA
+      [views.py: StockView,\n  ConsumoRegistroView] as V_REA
+      [services.py: SaldoCalculatorService\n  (consumo + merma + saldo)] as SVC_REA
+      [tasks.py: alertas_stock_minimo\n  (Celery Beat diario)] as T_REA
+      [urls.py: /api/v1/reactivos/] as U_REA
+    }
+  }
+
+  package "shared/ — Utilidades Compartidas" #FFFDF0 {
+    [mixins.py: AuditMixin,\n  PermissionMixin] as MIXINS
+    [pagination.py: StandardPagination] as PAGI
+    [exceptions.py: CustomAPIException] as EXCEP
+    [validators.py: ResolucionValidator,\n  CantidadValidator] as VALID
+    [storage.py: S3StorageBackend] as STOR
+    [reports.py: BasePDFReport] as REP
+  }
+}
+
+note right of M_REA
+  ESCALABILIDAD:
+  Para agregar el módulo de reactivos
+  SOLO se requiere:
+  1. Crear apps/reactivos/
+  2. Registrar en INSTALLED_APPS
+  3. Agregar URL en config/urls.py
+  4. Ejecutar: python manage.py makemigrations
+  NO se modifica ninguna app existente.
+  El principio OPEN/CLOSED en acción.
+end note
+
+note bottom of MIXINS
+  Código reutilizable entre apps.
+  AuditMixin: registra automáticamente
+  cualquier cambio en AuditLog vía
+  Django signals (post_save, pre_delete).
+end note
+
+M_LAB ..> M_GUI : "FK: guia_id"
+M_REO ..> M_LAB : "FK: equipo_id, lab_id"
+M_REA ..> M_LAB : "FK: laboratorio_id [FUTURO]"
+SVC_LAB ..> MIXINS : "usa"
+SVC_REO ..> REP : "hereda"
+SVC_REA ..> REP : "hereda [FUTURO]"
+
+@enduml

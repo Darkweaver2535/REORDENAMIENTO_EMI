@@ -1,0 +1,132 @@
+@startuml Arquitectura_Backend
+!theme plain
+skinparam backgroundColor #F9F8F5
+skinparam componentStyle rectangle
+skinparam {
+  ComponentBackgroundColor #FFFFFF
+  ComponentBorderColor #01696F
+  ComponentFontColor #28251D
+  PackageBackgroundColor #EDF7F6
+  PackageBorderColor #0C4E54
+  PackageFontColor #0C4E54
+  DatabaseBackgroundColor #FFF8F0
+  DatabaseBorderColor #DA7101
+  ArrowColor #01696F
+}
+
+title Sistema de Gestión de Laboratorios\n<b>Arquitectura de Componentes Backend</b>
+
+' === CLIENTE ===
+package "Navegador / Cliente" #F0F0F0 {
+  [React + Vite SPA\n(Frontend)] as REACT
+}
+
+' === CAPA DE RED ===
+package "Capa de Red" #E8F4E8 {
+  [Nginx\nReverse Proxy + SSL\n+ Servir Archivos Estáticos] as NGINX
+}
+
+' === CAPA DE APLICACIÓN ===
+package "Capa de Aplicación — Django 5.x + Python" #EDF7F6 {
+
+  [Gunicorn\n(WSGI Server\n4–8 workers)] as GUNICORN
+
+  package "Django REST Framework (API)" #FFFFFF {
+    [Middleware Stack\n(CORS, JWT Auth, RateLimit,\nAuditLog, Permissions)] as MW
+
+    package "Apps Django (Módulos)" #F5FFFE {
+      [apps/usuarios\nAuth + Roles + SAGA SSO\nJWT Tokens] as APP_USR
+      [apps/estructura_academica\nUA, Dept, Carrera,\nSemestre, Asignatura] as APP_EST
+      [apps/guias\nGuías, Prácticas,\nFiltros Cascada, PDFs] as APP_GUI
+      [apps/laboratorios\nLabs, Equipos, Activos,\nEvaluación In-Situ] as APP_LAB
+      [apps/reordenamiento\nLógica Cruce Datos,\n% Uso, Movimientos] as APP_REO
+      [apps/reactivos ★FUTURO★\nInsumos, Reactivos,\nSaldos, Consumos] as APP_REA
+    }
+
+    package "Servicios Transversales" #FFFDF0 {
+      [CascadeFilterService\n(Filtros jerárquicos\nUA→Dept→Carrera→...)] as SVC_FILTER
+      [InventoryAnalyticsService\n(Cálculo % uso, déficit,\ndetección excedentes)] as SVC_ANALYTICS
+      [ReportGeneratorService\nWeasyPrint/ReportLab\n→ PDF firmado] as SVC_REPORT
+      [FileStorageService\nSubida PDFs, gen. thumbnail\nPDFs con pdf2image)] as SVC_FILE
+      [AuditService\nRegistro de cambios\npost_save signals] as SVC_AUDIT
+    }
+  }
+
+  [Django Admin Panel\n(Gestión administrativa\ncon permisos por rol)] as ADMIN
+  [Celery Worker\n(Tareas asíncronas:\ngenerar PDF reporte,\nsend notificaciones)] as CELERY
+  [Celery Beat\n(Tareas programadas:\nrecalcular métricas\nnocturnamente)] as BEAT
+}
+
+' === CAPA DE DATOS ===
+package "Capa de Datos" #FFF8F0 {
+  database "PostgreSQL 16\n(Base de Datos Principal\nEsquema Relacional)" as PG
+  database "Redis 7\n(Caché de consultas\n+ Cola de Celery\n+ Sesiones)" as REDIS
+}
+
+' === ALMACENAMIENTO ===
+package "Almacenamiento de Archivos" #F0F4FF {
+  storage "MinIO (Self-hosted)\no AWS S3\n(PDFs Guías, Imágenes Portadas,\nPDFs Reportes Reordenamiento)" as S3
+}
+
+' === SISTEMA EXTERNO ===
+package "Sistema Institucional Externo" #FFF0F0 {
+  [SAGA / LDAP\n(Validación de credenciales\nCarnet de Identidad)] as SAGA
+}
+
+' === CONEXIONES ===
+REACT        -down-> NGINX         : "HTTPS :443"
+NGINX        -down-> GUNICORN      : "Proxy Pass :8000"
+NGINX        -right-> S3           : "URLs firmadas para\ndescargas PDF"
+
+GUNICORN     -down-> MW            : "Request"
+MW           -down-> APP_USR
+MW           -down-> APP_EST
+MW           -down-> APP_GUI
+MW           -down-> APP_LAB
+MW           -down-> APP_REO
+
+APP_USR      -right-> SAGA         : "Validar CI\no token SAGA"
+APP_GUI      -right-> SVC_FILTER   : "Usa"
+APP_GUI      -down-> SVC_FILE      : "Subir PDF/IMG"
+APP_LAB      -right-> SVC_ANALYTICS : "Usa"
+APP_REO      -right-> SVC_ANALYTICS : "Usa"
+APP_REO      -down-> SVC_REPORT    : "Genera PDF\nreordenamiento"
+APP_REO      -right-> CELERY       : "Encola tarea\ngenerar reporte"
+
+SVC_FILE     -right-> S3           : "upload_to S3"
+SVC_REPORT   -down-> S3            : "Guardar PDF"
+SVC_AUDIT    -down-> PG            : "INSERT AuditLog"
+
+CELERY       -down-> REDIS         : "Queue"
+BEAT         -right-> CELERY       : "Trigger"
+CELERY       -down-> SVC_REPORT    : "Ejecuta"
+
+MW           -down-> PG            : "ORM Queries"
+MW           -left-> REDIS         : "Cache GET/SET"
+ADMIN        -down-> PG            : "Django ORM"
+
+note right of SVC_ANALYTICS
+  LÓGICA CLAVE:
+  1. cantidad_disponible = buena + regular
+  2. % uso = practicas_que_usa / total_practicas_lab
+  3. ratio = cantidad_disponible / estudiantes_lab
+  4. deficit = cantidad_requerida - cantidad_disponible < 0
+  5. excedente = disponibles - max(requeridos_cross_labs)
+end note
+
+note right of APP_REA
+  MÓDULO FUTURO:
+  Misma estructura modular.
+  Agrega nueva app sin
+  modificar apps existentes.
+  Nuevas tablas, nuevas rutas API.
+end note
+
+note bottom of PG
+  Multi-sede: Todos los laboratorios
+  de La Paz, Cbba, SCZ, Riberalta, Trópico
+  en la misma DB con unidad_academica_id
+  como discriminador de sede.
+end note
+
+@enduml

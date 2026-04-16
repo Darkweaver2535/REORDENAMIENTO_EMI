@@ -1,0 +1,160 @@
+@startuml Proceso_Evaluacion_Reordenamiento
+!theme plain
+skinparam backgroundColor #F9F8F5
+skinparam ActivityBackgroundColor #FFFFFF
+skinparam ActivityBorderColor #01696F
+skinparam ActivityFontColor #28251D
+skinparam ActivityDiamondBackgroundColor #EDF7F6
+skinparam ActivityDiamondBorderColor #0C4E54
+skinparam ArrowColor #01696F
+skinparam NoteBackgroundColor #CEDCD8
+skinparam NoteBorderColor #01696F
+skinparam PartitionBackgroundColor #F5FFFE
+skinparam PartitionBorderColor #0C4E54
+skinparam PartitionFontColor #0C4E54
+skinparam StartColor #01696F
+skinparam EndColor #0F3638
+
+title Sistema de Gestión de Laboratorios - Proceso 2: Evaluación In-Situ + Proceso 3: Reordenamiento de Equipos
+
+start
+
+partition "Administrador / Jefe Lab" {
+  :Lee PDF oficial de la guía;
+  :Accede a módulo Equipos Requeridos de la práctica X;
+}
+
+partition "Backend Django (API)" {
+  :POST /api/guias/{id}/equipos-requeridos/;
+}
+
+partition "PostgreSQL" {
+  :INSERT EquipoRequeridoPorGuia;
+}
+
+partition "Backend Django (API)" {
+  :Retorna lista de equipos teóricos registrados;
+}
+
+partition "Administrador / Jefe Lab" {
+  :Vincula cada nombre teórico con un Activo real;
+}
+
+partition "Backend Django (API)" {
+  :PATCH /api/guias/{id}/equipos-requeridos/{req_id}/;
+}
+
+partition "PostgreSQL" {
+  :UPDATE EquipoRequeridoPorGuia SET equipo_id = <activo>;
+}
+
+partition "Administrador / Jefe Lab" {
+  :Accede a Evaluación In-Situ del Laboratorio X;
+}
+
+partition "Backend Django (API)" {
+  :GET /api/laboratorios/{lab_id}/equipos/;
+}
+
+partition "Administrador / Jefe Lab" {
+  :Registra ubicacion_sala, cantidades y observaciones;
+}
+
+partition "Backend Django (API)" {
+  :PATCH /api/equipos/{equipo_id}/evaluacion/;
+  :Calcula cantidad_disponible = buena + regular;
+}
+
+partition "Backend Django (API)" {
+  :GET /api/laboratorios/{lab_id}/analytics/;
+  :InventoryAnalyticsService.calcular(lab_id);
+}
+
+partition "PostgreSQL" {
+  :Query para contar guias requeridas por cada equipo;
+}
+
+fork
+  :Calcular porcentaje de uso;
+fork again
+  :Detectar deficit;
+fork again
+  :Calcular ratio por estudiantes;
+end fork
+
+partition "Administrador / Jefe Lab" {
+  :Visualiza dashboard y comparativa multi-sede;
+}
+
+if (¿Hay equipos excedentes o déficit?) then (SÍ)
+  :Sistema resalta disparidades entre sedes;
+else (NO)
+  :Sistema muestra inventario balanceado;
+  stop
+endif
+
+partition "Administrador / Jefe Lab" {
+  :Inicia acción de reordenamiento;
+  :Selecciona equipo, origen, destino, cantidad y resolución;
+}
+
+partition "Backend Django (API)" {
+  :POST /api/reordenamientos/;
+  :Valida resolución, cantidades, sedes y rol;
+}
+
+if (¿Validaciones pasadas?) then (SÍ)
+  partition "PostgreSQL" {
+    :INSERT Reordenamiento (estado=PENDIENTE);
+  }
+else (NO)
+  partition "Backend Django (API)" {
+    :400 Bad Request con errores detallados;
+  }
+  stop
+endif
+
+partition "Administrador / Jefe Lab" {
+  :Decano o Jefe autoriza el reordenamiento;
+}
+
+partition "Backend Django (API)" {
+  :PATCH /api/reordenamientos/{id}/autorizar/;
+  :Encolar tarea Celery para generar PDF;
+}
+
+partition "Celery Worker" {
+  :Obtener datos del reordenamiento;
+  :Renderizar template HTML a PDF;
+  :Incluir equipo, origen, destino, cantidad y firmas;
+}
+
+partition "Almacenamiento S3" {
+  :UPLOAD reporte_reord_XXX.pdf;
+}
+
+partition "Celery Worker" {
+  :UPDATE Reordenamiento SET pdf_reporte_url y estado = PDF_GENERADO;
+}
+
+partition "Administrador / Jefe Lab" {
+  :Descarga reporte PDF formal;
+  :Ejecuta traslado físico del equipo;
+}
+
+partition "Backend Django (API)" {
+  :PATCH /api/reordenamientos/{id}/ejecutar/;
+}
+
+partition "PostgreSQL" {
+  :UPDATE Reordenamiento SET estado = EJECUTADO;
+  :UPDATE Equipo y INSERT AuditLog;
+}
+
+partition "Administrador / Jefe Lab" {
+  :Sistema confirma actualización e historial de movimientos;
+}
+
+stop
+
+@enduml
