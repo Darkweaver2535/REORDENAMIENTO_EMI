@@ -1,3 +1,16 @@
+# App: estructura_academica | Archivo: urls.py
+# TAREA: Registrar todos los ViewSets con DefaultRouter de DRF
+#
+# from rest_framework.routers import DefaultRouter
+# router = DefaultRouter()
+# router.register('unidades', UnidadAcademicaViewSet, basename='unidadacademica')
+# router.register('departamentos', DepartamentoViewSet, basename='departamento')
+# router.register('carreras', CarreraViewSet, basename='carrera')
+# router.register('semestres', SemestreViewSet, basename='semestre')
+# router.register('asignaturas', AsignaturaViewSet, basename='asignatura')
+# urlpatterns = router.urls
+# Prefix en config/urls.py: path('api/v1/estructura/', include('estructura_academica.urls'))
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 

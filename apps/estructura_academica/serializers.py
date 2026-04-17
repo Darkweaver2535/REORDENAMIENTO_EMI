@@ -1,24 +1,3 @@
-# App: estructura_academica | Archivo: serializers.py
-# Sistema de gestión de laboratorios universitarios - DRF
-#
-# TAREA: Crear serializers para la navegación jerárquica en cascada:
-#
-# 1. UnidadAcademicaSerializer: campos id, nombre, ciudad, codigo
-#
-# 2. DepartamentoSerializer: campos id, nombre, codigo, unidad_academica_id,
-#    unidad_academica_nombre (SerializerMethodField)
-#
-# 3. CarreraSerializer: campos id, nombre, codigo_institucional, departamento_id
-#
-# 4. SemestreSerializer: campos id, numero, nombre
-#
-# 5. AsignaturaSerializer: campos id, nombre, codigo_curricular, carrera_id,
-#    carrera_nombre, semestre_id, semestre_numero, unidad_academica_id
-#
-# 6. AsignaturaDetalleSerializer (extiende AsignaturaSerializer):
-#    Agrega campos anidados completos de carrera y semestre
-#    Se usa cuando se necesita el detalle completo (no en listas)
-
 from rest_framework import serializers
 
 from apps.estructura_academica.models import (
@@ -67,9 +46,9 @@ class SemestreSerializer(serializers.ModelSerializer):
 		fields = ("id", "numero", "nombre")
 
 
-class AsignaturaSerializer(serializers.ModelSerializer):
-	carrera_nombre = serializers.CharField(source="carrera.nombre", read_only=True)
-	semestre_numero = serializers.IntegerField(source="semestre.numero", read_only=True)
+class AsignaturaListSerializer(serializers.ModelSerializer):
+	carrera_nombre = serializers.SerializerMethodField()
+	semestre_numero = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Asignatura
@@ -78,19 +57,31 @@ class AsignaturaSerializer(serializers.ModelSerializer):
 			"nombre",
 			"codigo_curricular",
 			"carrera_id",
-			"carrera_nombre",
 			"semestre_id",
-			"semestre_numero",
 			"unidad_academica_id",
+			"carrera_nombre",
+			"semestre_numero",
 		)
 
+	def get_carrera_nombre(self, instance):
+		if instance.carrera_id is None:
+			return None
+		return instance.carrera.nombre
 
-class AsignaturaDetalleSerializer(AsignaturaSerializer):
+	def get_semestre_numero(self, instance):
+		if instance.semestre_id is None:
+			return None
+		return instance.semestre.numero
+
+
+class AsignaturaDetalleSerializer(AsignaturaListSerializer):
 	carrera = CarreraSerializer(read_only=True)
 	semestre = SemestreSerializer(read_only=True)
+	unidad_academica = UnidadAcademicaSerializer(read_only=True)
 
-	class Meta(AsignaturaSerializer.Meta):
-		fields = AsignaturaSerializer.Meta.fields + (
+	class Meta(AsignaturaListSerializer.Meta):
+		fields = AsignaturaListSerializer.Meta.fields + (
 			"carrera",
 			"semestre",
+			"unidad_academica",
 		)

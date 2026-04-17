@@ -1,33 +1,3 @@
-# App: guias | Archivo: serializers.py
-# Sistema de gestión de laboratorios universitarios - DRF
-#
-# TAREA: Crear serializers para el módulo de guías con control de estado:
-#
-# 1. GuiaListSerializer (lectura, para listas):
-#    - Campos: id, titulo, numero_practica, asignatura_id, asignatura_nombre,
-#      portada_url, estado, created_at
-#    - FILTRO: solo mostrar estado='publicado' para usuarios con rol estudiante/docente
-#      Implementar esto en get_queryset del ViewSet, NO aquí
-#
-# 2. GuiaDetalleSerializer (lectura, para detalle):
-#    - Todos los campos de GuiaListSerializer +
-#    - pdf_url, resolucion_numero, aprobado_por_nombre
-#    - equipos_requeridos: lista anidada con EquipoRequeridoSerializer
-#
-# 3. GuiaCrearSerializer (escritura, solo para admin/jefe):
-#    - Campos editables: titulo, numero_practica, asignatura, portada_url, pdf_url
-#    - estado siempre se crea como 'borrador' (no editable por el usuario)
-#    - Validación: verificar que no exista ya una guía con el mismo
-#      (asignatura, numero_practica)
-#
-# 4. GuiaEstadoSerializer (para cambios de estado - transiciones):
-#    - Campos: estado, resolucion_numero, motivo_rechazo
-#    - Validar que si estado='publicado', resolucion_numero no sea vacío
-#
-# 5. EquipoRequeridoSerializer:
-#    - Campos: id, nombre_equipo_teorico, equipo_id, equipo_nombre,
-#      cantidad_requerida, tiene_deficit, cantidad_deficit
-
 from django.db import transaction
 from rest_framework import serializers
 
@@ -35,8 +5,8 @@ from apps.guias.models import Guia
 from apps.laboratorios.models import EquipoRequeridoPorGuia
 
 
-class EquipoRequeridoSerializer(serializers.ModelSerializer):
-	equipo_nombre = serializers.CharField(source="equipo.nombre", read_only=True)
+class EquipoRequeridoListSerializer(serializers.ModelSerializer):
+	equipo_nombre = serializers.SerializerMethodField()
 	tiene_deficit = serializers.SerializerMethodField()
 	cantidad_deficit = serializers.SerializerMethodField()
 
@@ -50,7 +20,13 @@ class EquipoRequeridoSerializer(serializers.ModelSerializer):
 			"cantidad_requerida",
 			"tiene_deficit",
 			"cantidad_deficit",
+			"notas",
 		)
+
+	def get_equipo_nombre(self, obj):
+		if obj.equipo_id is None:
+			return None
+		return obj.equipo.nombre
 
 	def get_tiene_deficit(self, obj):
 		return obj.tiene_deficit()
@@ -77,18 +53,26 @@ class GuiaListSerializer(serializers.ModelSerializer):
 
 
 class GuiaDetalleSerializer(GuiaListSerializer):
-	aprobado_por_nombre = serializers.CharField(source="aprobado_por.nombre_completo", read_only=True)
+	aprobado_por_nombre = serializers.SerializerMethodField()
 	pdf_url = serializers.URLField(read_only=True)
 	resolucion_numero = serializers.CharField(read_only=True)
-	equipos_requeridos = EquipoRequeridoSerializer(many=True, read_only=True)
+	motivo_rechazo = serializers.CharField(read_only=True)
+	equipos_requeridos = EquipoRequeridoListSerializer(many=True, read_only=True)
 
 	class Meta(GuiaListSerializer.Meta):
 		fields = GuiaListSerializer.Meta.fields + (
 			"pdf_url",
 			"resolucion_numero",
+			"motivo_rechazo",
 			"aprobado_por_nombre",
+			"updated_at",
 			"equipos_requeridos",
 		)
+
+	def get_aprobado_por_nombre(self, obj):
+		if obj.aprobado_por_id is None:
+			return None
+		return obj.aprobado_por.nombre_completo
 
 
 class GuiaCrearSerializer(serializers.ModelSerializer):
@@ -108,7 +92,7 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
 
 		if Guia.objects.filter(asignatura=asignatura, numero_practica=numero_practica).exists():
 			raise serializers.ValidationError(
-				"Ya existe una guia para esa asignatura con el mismo numero de practica."
+				f"Ya existe la Práctica {numero_practica} para esta asignatura."
 			)
 
 		return attrs
@@ -133,18 +117,30 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
 		return codigo
 
 
-class GuiaEstadoSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = Guia
-		fields = ("estado", "resolucion_numero", "motivo_rechazo")
+class GuiaCambioEstadoSerializer(serializers.Serializer):
+	"""Serializer para cambios de estado en guías (publicar, rechazar, etc.)."""
+
+	resolucion_numero = serializers.CharField(
+		max_length=50,
+		required=False,
+		allow_blank=True,
+	)
+	motivo_rechazo = serializers.CharField(
+		required=False,
+		allow_blank=True,
+	)
 
 	def validate(self, attrs):
-		estado = attrs.get("estado", getattr(self.instance, "estado", None))
-		resolucion_numero = attrs.get("resolucion_numero", getattr(self.instance, "resolucion_numero", None))
+		"""Valida que resolucion_numero esté presente si se va a publicar."""
+		resolucion_numero = attrs.get("resolucion_numero", "").strip()
 
-		if estado == Guia.Estado.PUBLICADO and not resolucion_numero:
+		if self.context.get("action") == "publicar" and not resolucion_numero:
 			raise serializers.ValidationError(
-				{"resolucion_numero": "La resolucion_numero es obligatoria para publicar una guia."}
+				{"resolucion_numero": "Se requiere número de resolución para publicar."}
 			)
 
 		return attrs
+
+
+# Alias para compatibilidad con vistas existentes (opcional)
+GuiaEstadoSerializer = GuiaCambioEstadoSerializer

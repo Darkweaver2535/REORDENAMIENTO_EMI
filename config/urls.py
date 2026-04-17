@@ -1,11 +1,17 @@
-# Sistema de gestión de laboratorios universitarios
-# TAREA: Crear el archivo urls.py principal del proyecto que incluya:
-# 1. Prefijo global /api/v1/ para todas las rutas de la API
-# 2. Incluir las URLs de cada app: usuarios, estructura_academica, guias,
-#    laboratorios, reordenamiento
-# 3. Rutas de JWT: /api/v1/auth/token/ y /api/v1/auth/token/refresh/
-# 4. Ruta del Django Admin en /admin/
-# 5. Comentar claramente la responsabilidad de cada include
+# config/urls.py | ACTUALIZAR el archivo existente
+# TAREA: Incluir TODAS las URLs de las apps con el prefijo correcto
+#
+# urlpatterns = [
+#   path('admin/', admin.site.urls),
+#   path('api/v1/auth/', include('usuarios.urls')),
+#   path('api/v1/estructura/', include('estructura_academica.urls')),
+#   path('api/v1/', include('guias.urls')),
+#   path('api/v1/', include('laboratorios.urls')),
+#   path('api/v1/', include('reordenamiento.urls')),
+#   # JWT tokens
+#   path('api/v1/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+#   path('api/v1/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+# ]
 
 from django.contrib import admin
 from django.urls import include, path
