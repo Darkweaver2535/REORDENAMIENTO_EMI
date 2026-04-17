@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Seguridad
-SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-dev-only-change-me")
+SECRET_KEY = config("DJANGO_SECRET_KEY")
 DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.guias",
     "apps.laboratorios",
     "apps.reordenamiento",
+    "apps.reactivos",
 ]
 
 AUTH_USER_MODEL = "usuarios.Usuario"
