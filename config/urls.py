@@ -11,11 +11,15 @@ from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from apps.usuarios.views import LoginView, PerfilView
+
 urlpatterns = [
     # Panel administrativo de Django.
     path("admin/", admin.site.urls),
 
     # Autenticacion JWT para clientes API.
+    path("api/v1/auth/login/", LoginView.as_view(), name="login"),
+    path("api/v1/auth/perfil/", PerfilView.as_view(), name="perfil"),
     path("api/v1/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 

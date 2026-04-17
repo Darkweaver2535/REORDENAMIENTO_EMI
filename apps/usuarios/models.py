@@ -111,6 +111,7 @@ class Usuario(AbstractUser):
 
 class AuditLog(models.Model):
 	class Accion(models.TextChoices):
+		LOGIN = "LOGIN", "Inicio de sesion"
 		CREATE = "CREATE", "Creacion"
 		UPDATE = "UPDATE", "Actualizacion"
 		DELETE = "DELETE", "Eliminacion"

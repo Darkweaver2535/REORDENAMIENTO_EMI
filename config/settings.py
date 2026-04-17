@@ -35,6 +35,13 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = "usuarios.Usuario"
 
+SAGA_AUTH_URL = config("SAGA_AUTH_URL", default="")
+
+AUTHENTICATION_BACKENDS = (
+    "apps.usuarios.backends.SAGAAuthBackend",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -139,6 +146,16 @@ SIMPLE_JWT = {
 
 # CORS
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
+
+
+# Cache (Redis)
+CACHE_URL = config("CACHE_URL", default="redis://localhost:6379/2")
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": CACHE_URL,
+    }
+}
 
 
 # Celery
