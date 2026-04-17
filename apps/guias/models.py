@@ -31,4 +31,52 @@
 
 from django.db import models
 
-# Create your models here.
+from apps.estructura_academica.models import BaseModel
+
+
+class Guia(BaseModel):
+	class Estado(models.TextChoices):
+		BORRADOR = "borrador", "Borrador"
+		PENDIENTE = "pendiente", "Pendiente"
+		APROBADO = "aprobado", "Aprobado"
+		PUBLICADO = "publicado", "Publicado"
+
+	titulo = models.CharField(max_length=200)
+	codigo_interno = models.CharField(max_length=30, unique=True)
+	numero_practica = models.SmallIntegerField()
+	asignatura = models.ForeignKey(
+		"estructura_academica.Asignatura",
+		on_delete=models.PROTECT,
+		related_name="guias",
+	)
+	portada_url = models.URLField(max_length=500, blank=True)
+	pdf_url = models.URLField(max_length=500)
+	estado = models.CharField(
+		max_length=20,
+		choices=Estado.choices,
+		default=Estado.BORRADOR,
+	)
+	resolucion_numero = models.CharField(max_length=50, null=True, blank=True)
+	aprobado_por = models.ForeignKey(
+		"usuarios.Usuario",
+		null=True,
+		blank=True,
+		on_delete=models.SET_NULL,
+		related_name="guias_aprobadas",
+	)
+	motivo_rechazo = models.TextField(blank=True)
+
+	class Meta:
+		ordering = ["asignatura", "numero_practica"]
+		verbose_name = "Guia"
+		verbose_name_plural = "Guias"
+		unique_together = (("asignatura", "numero_practica"),)
+
+	def __str__(self):
+		return f"Práctica {self.numero_practica} - {self.asignatura.nombre}"
+
+	def puede_publicarse(self):
+		return self.resolucion_numero is not None and self.estado == self.Estado.APROBADO
+
+	def es_visible_para_estudiantes(self):
+		return self.estado == self.Estado.PUBLICADO

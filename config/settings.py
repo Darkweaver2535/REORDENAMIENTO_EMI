@@ -1,4 +1,5 @@
 from datetime import timedelta
+import getpass
 from pathlib import Path
 
 from decouple import Csv, config
@@ -8,8 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Seguridad
-SECRET_KEY = config("DJANGO_SECRET_KEY")
-DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="django-insecure-dev-only-change-me")
+DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
 
@@ -31,6 +32,8 @@ INSTALLED_APPS = [
     "apps.laboratorios",
     "apps.reordenamiento",
 ]
+
+AUTH_USER_MODEL = "usuarios.Usuario"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -67,10 +70,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST", default="localhost"),
+        "NAME": config("DB_NAME", default="reordenamiento_emi"),
+        "USER": config("DB_USER", default=getpass.getuser()),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default=""),
         "PORT": config("DB_PORT", default="5432"),
     }
 }
