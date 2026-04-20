@@ -16,7 +16,7 @@ from apps.reordenamiento.views import ReordenamientoViewSet
 app_name = "reordenamiento"
 
 router = DefaultRouter()
-router.register("reordenamientos", ReordenamientoViewSet, basename="reordenamiento")
+router.register(r"", ReordenamientoViewSet, basename="reordenamiento")
 
 urlpatterns = [
 	path("", include(router.urls)),

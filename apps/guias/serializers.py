@@ -47,6 +47,7 @@ class GuiaListSerializer(serializers.ModelSerializer):
 			"asignatura_id",
 			"asignatura_nombre",
 			"portada_url",
+			"pdf_url",
 			"estado",
 			"created_at",
 		)
@@ -54,14 +55,12 @@ class GuiaListSerializer(serializers.ModelSerializer):
 
 class GuiaDetalleSerializer(GuiaListSerializer):
 	aprobado_por_nombre = serializers.SerializerMethodField()
-	pdf_url = serializers.URLField(read_only=True)
 	resolucion_numero = serializers.CharField(read_only=True)
 	motivo_rechazo = serializers.CharField(read_only=True)
 	equipos_requeridos = EquipoRequeridoListSerializer(many=True, read_only=True)
 
 	class Meta(GuiaListSerializer.Meta):
 		fields = GuiaListSerializer.Meta.fields + (
-			"pdf_url",
 			"resolucion_numero",
 			"motivo_rechazo",
 			"aprobado_por_nombre",
@@ -84,13 +83,23 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
 			"asignatura",
 			"portada_url",
 			"pdf_url",
+			"estado",
 		)
+		extra_kwargs = {
+			"portada_url": {"required": False, "allow_blank": True, "allow_null": True},
+			"estado": {"required": False},
+		}
 
 	def validate(self, attrs):
-		asignatura = attrs.get("asignatura")
-		numero_practica = attrs.get("numero_practica")
+		asignatura = attrs.get("asignatura", getattr(self.instance, "asignatura", None))
+		numero_practica = attrs.get("numero_practica", getattr(self.instance, "numero_practica", None))
 
-		if Guia.objects.filter(asignatura=asignatura, numero_practica=numero_practica).exists():
+		qs = Guia.objects.filter(asignatura=asignatura, numero_practica=numero_practica)
+
+		if self.instance:
+			qs = qs.exclude(pk=self.instance.pk)
+
+		if qs.exists():
 			raise serializers.ValidationError(
 				f"Ya existe la Práctica {numero_practica} para esta asignatura."
 			)

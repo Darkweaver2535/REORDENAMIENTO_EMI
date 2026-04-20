@@ -89,8 +89,15 @@ class ReordenamientoViewSet(ModelViewSet):
 
 	def perform_create(self, serializer):
 		"""Delega la creación a ReordenamientoService."""
+		data = serializer.validated_data
 		ReordenamientoService.crear_solicitud(
-			**serializer.validated_data, usuario_solicitante=self.request.user
+			equipo_id=data["equipo_id"],
+			lab_origen_id=data["laboratorio_origen_id"],
+			lab_destino_id=data["laboratorio_destino_id"],
+			cantidad=data["cantidad_trasladada"],
+			resolucion_numero=data["resolucion_numero"],
+			motivo=data.get("motivo", ""),
+			usuario_solicitante=self.request.user
 		)
 
 	@action(detail=True, methods=["post"], url_path="autorizar")

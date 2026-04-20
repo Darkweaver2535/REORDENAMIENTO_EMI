@@ -129,6 +129,7 @@ class EquipoViewSet(ModelViewSet):
 		equipo.cantidad_buena = serializer.validated_data["cantidad_buena"]
 		equipo.cantidad_regular = serializer.validated_data["cantidad_regular"]
 		equipo.cantidad_mala = serializer.validated_data["cantidad_mala"]
+		equipo.cantidad_total = serializer.validated_data["cantidad_total"]
 		equipo.ubicacion_sala = serializer.validated_data.get(
 			"ubicacion_sala", equipo.ubicacion_sala
 		)

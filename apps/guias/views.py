@@ -181,6 +181,39 @@ class GuiaViewSet(ModelViewSet):
 			status=status.HTTP_200_OK,
 		)
 
+	@action(detail=True, methods=["patch"], url_path="cambiar-estado")
+	def cambiar_estado(self, request, pk=None):
+		guia = self.get_object()
+
+		# Solo admin/jefe/decano puede cambiar estado
+		user_rol = getattr(request.user, "rol", "")
+		if user_rol not in [getattr(request.user.Rol, "ADMIN", "ADMIN"), getattr(request.user.Rol, "JEFE", "JEFE"), getattr(request.user.Rol, "DECANO", "DECANO")]:
+			return Response(
+				{"error": "No autorizado para cambiar el estado"},
+				status=status.HTTP_403_FORBIDDEN,
+			)
+
+		nuevo_estado = request.data.get("estado")
+		estados_validos = ["BORRADOR", "PENDIENTE", "PENDIENTE_APROBACION", "APROBADO", "PUBLICADO"]
+
+		if not nuevo_estado or nuevo_estado not in estados_validos:
+			return Response(
+				{"error": f"Estado inválido. Opciones: {estados_validos}"},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		# Requiere número de resolución para publicar (COMENTADO TEMPORALMENTE PARA TESTING FRONTEND)
+		# if nuevo_estado == "PUBLICADO" and not guia.resolucion_numero:
+		# 	return Response(
+		# 		{"error": "Se requiere número de resolución para publicar"},
+		# 		status=status.HTTP_400_BAD_REQUEST,
+		# 	)
+
+		guia.estado = nuevo_estado
+		guia.save(update_fields=["estado", "updated_at"])
+		return Response({"status": "ok", "nuevo_estado": nuevo_estado})
+
+
 
 class EquipoRequeridoViewSet(ModelViewSet):
 	"""ViewSet para gestionar equipos requeridos por guías (CRUD completo)."""

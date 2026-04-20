@@ -1,14 +1,14 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.usuarios.views import ListaUsuariosView, PerfilView
+from apps.usuarios.views import PerfilView, UsuarioAdminViewSet
 
 app_name = "usuarios"
 
 router = DefaultRouter()
+router.register(r"", UsuarioAdminViewSet, basename="usuarios")
 
 urlpatterns = [
-	path("", include(router.urls)),
-	path("", ListaUsuariosView.as_view(), name="usuarios-lista"),
 	path("perfil/", PerfilView.as_view(), name="perfil"),
+	path("", include(router.urls)),
 ]

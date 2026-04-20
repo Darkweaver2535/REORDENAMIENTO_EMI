@@ -12,7 +12,7 @@ from apps.estructura_academica.models import (
 class UnidadAcademicaSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = UnidadAcademica
-		fields = ("id", "nombre", "ciudad", "codigo")
+		fields = ("id", "nombre", "ciudad", "codigo", "abreviacion")
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):

@@ -100,15 +100,27 @@ class PerfilView(RetrieveUpdateAPIView):
 		return self.request.user
 
 
-class ListaUsuariosView(ListAPIView):
+from rest_framework.viewsets import ModelViewSet
+
+class UsuarioAdminViewSet(ModelViewSet):
 	serializer_class = UsuarioListaSerializer
-	permission_classes = [EsAdminOJefe]
+	permission_classes = [IsAuthenticated]
+	http_method_names = ["get", "patch", "head", "options"]
 
 	def get_queryset(self):
 		user = self.request.user
-		queryset = Usuario.objects.select_related("unidad_academica").all()
+		if getattr(user, "rol", "") != getattr(user.Rol, "ADMIN", "ADMIN"):
+			return Usuario.objects.none()
+		return Usuario.objects.all().order_by("nombre_completo")
 
-		if user.unidad_academica_id is None:
-			return queryset.none()
-
-		return queryset.filter(unidad_academica_id=user.unidad_academica_id)
+	def partial_update(self, request, *args, **kwargs):
+		campos_permitidos = {"rol", "unidad_academica_id", "is_active"}
+		data_filtrada = {
+			k: v for k, v in request.data.items() if k in campos_permitidos
+		}
+		serializer = self.get_serializer(
+			self.get_object(), data=data_filtrada, partial=True
+		)
+		serializer.is_valid(raise_exception=True)
+		serializer.save()
+		return Response(serializer.data)

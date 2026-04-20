@@ -57,6 +57,7 @@ class UnidadAcademica(BaseModel):
 	nombre = models.CharField(max_length=100)
 	ciudad = models.CharField(max_length=50)
 	codigo = models.CharField(max_length=10, unique=True)
+	abreviacion = models.CharField(max_length=10, blank=True, null=True)
 	is_active = models.BooleanField(default=True)
 
 	class Meta:

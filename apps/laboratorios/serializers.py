@@ -103,18 +103,19 @@ class EvaluacionInsituSerializer(serializers.Serializer):
 	observaciones = serializers.CharField(required=False, allow_blank=True)
 
 	def validate(self, attrs):
-		"""Valida que la suma de cantidades coincida con cantidad_total del equipo."""
-		cantidad_buena = attrs.get("cantidad_buena", 0)
-		cantidad_regular = attrs.get("cantidad_regular", 0)
-		cantidad_mala = attrs.get("cantidad_mala", 0)
-		total_ingresado = cantidad_buena + cantidad_regular + cantidad_mala
+		buena = attrs.get("cantidad_buena", 0)
+		regular = attrs.get("cantidad_regular", 0)
+		mala = attrs.get("cantidad_mala", 0)
+		suma = buena + regular + mala
 
 		equipo = self.context.get("equipo")
-		if equipo and total_ingresado != equipo.cantidad_total:
+
+		# Recalcular automáticamente si la suma es diferente al total
+		attrs["cantidad_total"] = suma
+
+		if suma == 0:
 			raise serializers.ValidationError(
-				f"La suma de cantidades (buena + regular + mala) debe ser "
-				f"{equipo.cantidad_total} (registrado para este equipo), "
-				f"pero ingresó {total_ingresado}."
+				"La suma de las cantidades en la evaluación debe ser mayor a 0."
 			)
 
 		return attrs
