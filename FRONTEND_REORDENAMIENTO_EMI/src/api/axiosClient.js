@@ -1,9 +1,6 @@
 import axios from "axios";
 import { API_ROUTES, BASE_URL, REQUEST_TIMEOUT_MS } from "../constants/api";
 
-let accessToken = null;
-let refreshToken = null;
-
 let isRefreshing = false;
 let refreshSubscribers = [];
 
@@ -23,17 +20,26 @@ const redirectToLogin = () => {
 };
 
 export const setTokens = (access, refresh) => {
-	accessToken = access ?? null;
-	refreshToken = refresh ?? null;
+	if (typeof window !== "undefined") {
+		if (access) localStorage.setItem("access_token", access);
+		if (refresh) localStorage.setItem("refresh_token", refresh);
+	}
 };
 
 export const clearTokens = () => {
-	accessToken = null;
-	refreshToken = null;
+	if (typeof window !== "undefined") {
+		localStorage.removeItem("access_token");
+		localStorage.removeItem("refresh_token");
+	}
 };
 
-export const getAccessToken = () => accessToken;
-export const getRefreshToken = () => refreshToken;
+export const getAccessToken = () => {
+	return typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+};
+
+export const getRefreshToken = () => {
+	return typeof window !== "undefined" ? localStorage.getItem("refresh_token") : null;
+};
 
 const axiosClient = axios.create({
 	baseURL: BASE_URL,
@@ -103,7 +109,7 @@ axiosClient.interceptors.response.use(
 				}
 			);
 
-			const newAccess = refreshResponse.data?.access_token;
+			const newAccess = refreshResponse.data?.access_token || refreshResponse.data?.access;
 
 			if (!newAccess) {
 				throw new Error("Refresh response does not contain access token");
