@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { LoaderCircle, ChevronDown } from "lucide-react";
 import {
@@ -93,11 +94,32 @@ function CascadeSelect({ id, label, value, onChange, options = [], loading, disa
 
 /* ── Componente principal ────────────────────────────────────────── */
 function FiltrosCascada({ onAsignaturaChange, showOnlyActive = true }) {
-	const [unidadId,    setUnidadId]    = useState("");
-	const [deptId,      setDeptId]      = useState("");
-	const [carreraId,   setCarreraId]   = useState("");
-	const [semestreId,  setSemestreId]  = useState("");
-	const [asignaturaId, setAsignaturaId] = useState("");
+	const [searchParams, setSearchParams] = useSearchParams();
+
+	// Leer filtros desde la URL
+	const unidadId     = searchParams.get("unidad")     ?? "";
+	const deptId       = searchParams.get("depto")       ?? "";
+	const carreraId    = searchParams.get("carrera")    ?? "";
+	const semestreId   = searchParams.get("semestre")   ?? "";
+	const asignaturaId = searchParams.get("asignatura") ?? "";
+
+	// Helper para actualizar la URL preservando params existentes
+	const updateParams = (updates, deletes = []) => {
+		setSearchParams((prev) => {
+			const next = new URLSearchParams(prev);
+			for (const key of deletes) {
+				next.delete(key);
+			}
+			for (const [key, val] of Object.entries(updates)) {
+				if (val) {
+					next.set(key, val);
+				} else {
+					next.delete(key);
+				}
+			}
+			return next;
+		}, { replace: true });
+	};
 
 	/* ── Queries ──────────────────────────────────────────────────── */
 	const { data: unidadesRaw, isLoading: loadingUnidades } = useQuery({
@@ -150,34 +172,51 @@ function FiltrosCascada({ onAsignaturaChange, showOnlyActive = true }) {
 	const semestres     = useMemo(() => normalizeList(semestresRaw),   [semestresRaw]);
 	const asignaturas   = useMemo(() => normalizeList(asignaturasRaw), [asignaturasRaw]);
 
+	/* ── Restaurar la asignatura desde la URL al cargar datos ────── */
+	useEffect(() => {
+		if (!asignaturaId || asignaturas.length === 0) return;
+		const found = asignaturas.find((a) => String(getId(a)) === asignaturaId);
+		if (found) {
+			onAsignaturaChange?.(found);
+		}
+	}, [asignaturas, asignaturaId]);
+
 	/* ── Handlers en cascada ─────────────────────────────────────── */
 	const handleUnidad = (e) => {
-		setUnidadId(e.target.value);
-		setDeptId(""); setCarreraId(""); setSemestreId(""); setAsignaturaId("");
+		updateParams(
+			{ unidad: e.target.value },
+			["depto", "carrera", "semestre", "asignatura"]
+		);
 		onAsignaturaChange?.(null);
 	};
 
 	const handleDept = (e) => {
-		setDeptId(e.target.value);
-		setCarreraId(""); setAsignaturaId("");
+		updateParams(
+			{ depto: e.target.value },
+			["carrera", "asignatura"]
+		);
 		onAsignaturaChange?.(null);
 	};
 
 	const handleCarrera = (e) => {
-		setCarreraId(e.target.value);
-		setAsignaturaId("");
+		updateParams(
+			{ carrera: e.target.value },
+			["asignatura"]
+		);
 		onAsignaturaChange?.(null);
 	};
 
 	const handleSemestre = (e) => {
-		setSemestreId(e.target.value);
-		setAsignaturaId("");
+		updateParams(
+			{ semestre: e.target.value },
+			["asignatura"]
+		);
 		onAsignaturaChange?.(null);
 	};
 
 	const handleAsignatura = (e) => {
 		const id = e.target.value;
-		setAsignaturaId(id);
+		updateParams({ asignatura: id });
 		if (!id) { onAsignaturaChange?.(null); return; }
 		const found = asignaturas.find((a) => String(getId(a)) === id);
 		onAsignaturaChange?.(found ?? null);
