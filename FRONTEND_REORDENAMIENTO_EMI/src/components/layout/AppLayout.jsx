@@ -3,7 +3,8 @@ import { useAuth } from '../../store/AuthContext'
 import {
   BookOpen, FlaskConical, ArrowLeftRight,
   BarChart2, LogOut, Menu, X, Settings,
-  Building2, GraduationCap, User, Users, FileText
+  Building2, GraduationCap, User, Users, FileText,
+  LayoutDashboard
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from './NotificationBell'
@@ -80,6 +81,11 @@ export default function AppLayout() {
           <p style={{ padding: "4px 16px 16px", color: "rgba(147,197,253,0.5)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em" }}>
             Módulos
           </p>
+
+          <NavLink to="/dashboard" style={navLinkStyle}>
+            <LayoutDashboard size={20} />
+            <span>Dashboard</span>
+          </NavLink>
 
           <NavLink to="/guias" style={navLinkStyle}>
             <BookOpen size={20} />

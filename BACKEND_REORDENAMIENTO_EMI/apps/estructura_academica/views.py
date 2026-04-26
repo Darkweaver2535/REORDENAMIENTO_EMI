@@ -49,6 +49,8 @@ class CarreraViewSet(ReadOnlyModelViewSet):
 	GET /api/v1/estructura_academica/carreras/
 	Filtros OPCIONALES: ?departamento_id=1 y/o ?unidad_academica_id=1
 	Sin filtros: devuelve TODAS las carreras.
+	Nota: el filtro por unidad_academica_id ahora busca a través de
+	la tabla M2M CarreraUnidadAcademica (carreras ofertadas en esa sede).
 	"""
 
 	permission_classes = [IsAuthenticated]
@@ -56,13 +58,21 @@ class CarreraViewSet(ReadOnlyModelViewSet):
 	filter_backends = [DjangoFilterBackend]
 
 	def get_queryset(self):
-		queryset = Carrera.objects.select_related("departamento").order_by("nombre")
+		queryset = (
+			Carrera.objects
+			.select_related("departamento")
+			.prefetch_related("unidades_academicas")
+			.order_by("nombre")
+		)
 		departamento_id = self.request.query_params.get("departamento_id")
 		unidad_id = self.request.query_params.get("unidad_academica_id")
 		if departamento_id:
 			queryset = queryset.filter(departamento_id=departamento_id)
 		if unidad_id:
-			queryset = queryset.filter(departamento__unidad_academica_id=unidad_id)
+			queryset = queryset.filter(
+				carrera_sedes__unidad_academica_id=unidad_id,
+				carrera_sedes__is_active=True,
+			).distinct()
 		return queryset
 
 

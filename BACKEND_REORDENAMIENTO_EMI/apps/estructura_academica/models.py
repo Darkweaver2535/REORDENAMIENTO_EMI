@@ -96,6 +96,12 @@ class Carrera(BaseModel):
 		on_delete=models.PROTECT,
 		related_name="carreras",
 	)
+	unidades_academicas = models.ManyToManyField(
+		UnidadAcademica,
+		through="CarreraUnidadAcademica",
+		related_name="carreras_m2m",
+		blank=True,
+	)
 
 	class Meta:
 		ordering = ["nombre"]
@@ -110,23 +116,23 @@ class CarreraUnidadAcademica(BaseModel):
 	carrera = models.ForeignKey(
 		Carrera,
 		on_delete=models.CASCADE,
-		related_name="unidades_academicas",
+		related_name="carrera_sedes",
 	)
 	unidad_academica = models.ForeignKey(
 		UnidadAcademica,
 		on_delete=models.CASCADE,
-		related_name="carreras",
+		related_name="sede_carreras",
 	)
 	is_active = models.BooleanField(default=True)
 
 	class Meta:
 		ordering = ["carrera", "unidad_academica"]
-		verbose_name = "Carrera por unidad academica"
-		verbose_name_plural = "Carreras por unidades academicas"
+		verbose_name = "Carrera por sede"
+		verbose_name_plural = "Carreras por sedes"
 		unique_together = (("carrera", "unidad_academica"),)
 
 	def __str__(self):
-		return f"{self.carrera.nombre} - {self.unidad_academica.codigo}"
+		return f"{self.carrera.nombre} — {self.unidad_academica.codigo}"
 
 
 class Semestre(BaseModel):

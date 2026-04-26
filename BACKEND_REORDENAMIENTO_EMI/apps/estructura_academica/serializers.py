@@ -34,10 +34,20 @@ class DepartamentoSerializer(serializers.ModelSerializer):
 		return obj.unidad_academica.nombre
 
 
+class CarreraSedeSerializer(serializers.ModelSerializer):
+	"""Serializer ligero para las sedes de una carrera."""
+
+	class Meta:
+		model = UnidadAcademica
+		fields = ("id", "nombre", "codigo", "abreviacion")
+
+
 class CarreraSerializer(serializers.ModelSerializer):
+	unidades_academicas = CarreraSedeSerializer(many=True, read_only=True)
+
 	class Meta:
 		model = Carrera
-		fields = ("id", "nombre", "codigo_institucional", "departamento_id")
+		fields = ("id", "nombre", "codigo_institucional", "departamento_id", "unidades_academicas")
 
 
 class SemestreSerializer(serializers.ModelSerializer):

@@ -1,12 +1,4 @@
 # App: estructura_academica | Archivo: admin.py
-# TAREA: Registrar todos los modelos en el Django Admin con configuración amigable:
-# - UnidadAcademia: list_display con nombre, ciudad, codigo; search_fields
-# - Departamento: list_display, list_filter por unidad_academica
-# - Carrera: list_display con codigo_institucional; search por nombre y codigo
-# - Asignatura: list_display con codigo_curricular, carrera, semestre, unidad_academica
-#   list_filter por semestre y unidad_academica; search por nombre y codigo_curricular
-# Usar list_select_related=True donde corresponda para evitar N+1 queries
-
 from django.contrib import admin
 
 from apps.estructura_academica.models import (
@@ -21,7 +13,7 @@ from apps.estructura_academica.models import (
 
 @admin.register(UnidadAcademica)
 class UnidadAcademicaAdmin(admin.ModelAdmin):
-	list_display = ("nombre", "ciudad", "codigo", "is_active")
+	list_display = ("nombre", "ciudad", "codigo", "abreviacion", "is_active")
 	search_fields = ("nombre", "ciudad", "codigo")
 
 
@@ -33,11 +25,28 @@ class DepartamentoAdmin(admin.ModelAdmin):
 	list_select_related = ("unidad_academica",)
 
 
+class CarreraUnidadAcademicaInline(admin.TabularInline):
+	model = CarreraUnidadAcademica
+	extra = 1
+	fields = ("unidad_academica", "is_active")
+	verbose_name = "Sede"
+	verbose_name_plural = "Sedes donde existe esta carrera"
+
+
 @admin.register(Carrera)
 class CarreraAdmin(admin.ModelAdmin):
-	list_display = ("nombre", "codigo_institucional", "departamento")
+	list_display = ("nombre", "codigo_institucional", "departamento", "sedes_activas")
 	search_fields = ("nombre", "codigo_institucional")
 	list_select_related = ("departamento",)
+	inlines = [CarreraUnidadAcademicaInline]
+
+	def sedes_activas(self, obj):
+		sedes = obj.unidades_academicas.filter(
+			carreraunidadacademica__is_active=True
+		)
+		return ", ".join(s.nombre for s in sedes) or "—"
+
+	sedes_activas.short_description = "Sedes activas"
 
 
 @admin.register(Semestre)
@@ -67,3 +76,4 @@ class CarreraUnidadAcademicaAdmin(admin.ModelAdmin):
 	list_filter = ("unidad_academica", "is_active")
 	search_fields = ("carrera__nombre", "carrera__codigo_institucional", "unidad_academica__codigo")
 	list_select_related = ("carrera", "unidad_academica")
+	list_editable = ("is_active",)
