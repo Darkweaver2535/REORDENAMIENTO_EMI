@@ -24,7 +24,19 @@ const extractTokens = (data = {}) => ({
 		null,
 });
 
-const extractUser = (data = {}) => data.user ?? data.perfil ?? data.profile ?? null;
+const extractUser = (data = {}) => {
+	if (data.user) return data.user;
+	if (data.perfil) return data.perfil;
+	if (data.profile) return data.profile;
+	// Si el backend devuelve los campos directamente en la raíz:
+	if (data.id || data.rol || data.carnet_identidad) {
+		return {
+			...data,
+			rol: data.rol?.toLowerCase?.() ?? data.rol,
+		};
+	}
+	return null;
+};
 
 export function AuthProvider({ children }) {
 	const [queryClient] = useState(() => new QueryClient({

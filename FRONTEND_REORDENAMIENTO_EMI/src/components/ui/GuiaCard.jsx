@@ -72,7 +72,7 @@ export default function GuiaCard({ guia, onStatusChange, onEdit }) {
 			className="hover:shadow-lg hover:border-gray-300"
 		>
 			{/* ── Imagen / Placeholder ─────────────────────────────── */}
-			<div style={{ position: "relative", aspectRatio: "16 / 9", overflow: "hidden", backgroundColor: "#f3f4f6", flexShrink: 0 }}>
+			<div style={{ position: "relative", aspectRatio: "8.5 / 11", overflow: "hidden", backgroundColor: "#f3f4f6", flexShrink: 0 }}>
 				{portada ? (
 					<img
 						src={portada}
@@ -166,7 +166,7 @@ export default function GuiaCard({ guia, onStatusChange, onEdit }) {
 						className="hover:opacity-90"
 					>
 						<Download size={18} />
-						Descargar PDF
+						Descargar
 					</a>
 				) : (
 					<span
