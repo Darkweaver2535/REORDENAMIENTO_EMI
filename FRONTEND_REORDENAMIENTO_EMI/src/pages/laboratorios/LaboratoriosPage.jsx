@@ -22,7 +22,7 @@ const getLabName       = (l) => l?.nombre ?? l?.nombre_laboratorio ?? l?.descrip
 const getSede          = (l) => l?.unidad_academica_nombre ?? l?.sede_nombre ?? l?.sede ?? l?.unidad_academica ?? "—";
 const getEdificio      = (l) => l?.edificio ?? l?.nombre_edificio ?? "—";
 const getSala          = (l) => l?.sala ?? l?.numero_sala ?? l?.aula ?? "—";
-const getCapacidad     = (l) => l?.capacidad ?? l?.capacidad_equipos ?? l?.total_equipos ?? "—";
+const getCapacidad     = (l) => l?.capacidad_estudiantes ?? l?.capacidad ?? l?.capacidad_equipos ?? l?.total_equipos ?? "—";
 const getLabId         = (l) => l?.id ?? l?.uuid;
 
 /* ── Skeleton ────────────────────────────────────────────────── */
@@ -43,7 +43,7 @@ export default function LaboratoriosPage() {
 	const navigate = useNavigate();
 	const { hasRole } = useAuth();
 
-	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO, ROLES.ENCARGADO_ACTIVOS)) {
+	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS)) {
 		return <Navigate to="/dashboard" replace />;
 	}
 

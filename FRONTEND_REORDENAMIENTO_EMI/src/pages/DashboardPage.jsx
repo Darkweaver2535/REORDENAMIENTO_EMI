@@ -202,17 +202,17 @@ export default function DashboardPage() {
     {
       title: 'Laboratorios', desc: 'Gestión de equipos y evaluaciones',
       icon: FlaskConical, href: '/laboratorios', iconBg: '#ECFDF5', iconColor: '#065f46',
-      visible: hasRole('admin', 'jefe', 'decano', 'encargado_activos'),
+      visible: hasRole('admin', 'jefe', 'encargado_activos'),
     },
     {
       title: 'Reordenamiento', desc: 'Traslados entre sedes',
       icon: ArrowLeftRight, href: '/reordenamientos', iconBg: '#FFFBEB', iconColor: '#92400e',
-      visible: hasRole('admin', 'jefe', 'decano'),
+      visible: hasRole('admin', 'jefe'),
     },
     {
       title: 'Reportes', desc: 'Exportación de datos en PDF',
       icon: FileText, href: '/reportes', iconBg: '#F0F9FF', iconColor: '#0284c7',
-      visible: hasRole('admin', 'jefe', 'decano'),
+      visible: hasRole('admin', 'jefe'),
     },
   ].filter(c => c.visible);
 
@@ -265,7 +265,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Alerta reordenamientos pendientes ───────── */}
-      {!isLoading && pendientes > 0 && hasRole('admin', 'decano') && (
+      {!isLoading && pendientes > 0 && hasRole('admin') && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexWrap: 'wrap', gap: '16px',

@@ -155,7 +155,7 @@ export default function ComparativaSedesPage() {
 	const { hasRole } = useAuth();
 	const inputRef = useRef(null);
 
-	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO)) {
+	if (!hasRole(ROLES.ADMIN, ROLES.JEFE)) {
 		return <Navigate to="/dashboard" replace />;
 	}
 

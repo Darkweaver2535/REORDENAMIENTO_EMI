@@ -22,7 +22,6 @@ const normalize = (d) => {
 const getRoleColor = (rol) => {
 	switch (String(rol).toLowerCase()) {
 		case "admin": return { bg: "#fee2e2", text: "#991b1b" }; // Red
-		case "decano": return { bg: "#fef3c7", text: "#92400e" }; // Amber
 		case "jefe": return { bg: "#e0e7ff", text: "#3730a3" }; // Indigo
 		case "docente": return { bg: "#dcfce7", text: "#166534" }; // Green
 		case "estudiante": return { bg: "#f3f4f6", text: "#374151" }; // Gray
@@ -92,7 +91,6 @@ function ModalRoleEdit({ user, isOpen, onClose }) {
 							<option value="DOCENTE">Docente</option>
 							<option value="JEFE">Jefe de Laboratorio</option>
 							<option value="ENCARGADO_ACTIVOS">Encargado de Activos</option>
-							<option value="DECANO">Decano</option>
 							<option value="ADMIN">Administrador Central</option>
 						</select>
 					</div>

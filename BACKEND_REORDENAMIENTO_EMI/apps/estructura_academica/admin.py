@@ -6,6 +6,7 @@ from apps.estructura_academica.models import (
 	Carrera,
 	CarreraUnidadAcademica,
 	Departamento,
+	DepartamentoUnidadAcademica,
 	Semestre,
 	UnidadAcademica,
 )
@@ -17,12 +18,42 @@ class UnidadAcademicaAdmin(admin.ModelAdmin):
 	search_fields = ("nombre", "ciudad", "codigo")
 
 
+# ── Departamento ──────────────────────────────────────────────────
+
+
+class DepartamentoUnidadAcademicaInline(admin.TabularInline):
+	model = DepartamentoUnidadAcademica
+	extra = 1
+	fields = ("unidad_academica", "is_active")
+	verbose_name = "Sede"
+	verbose_name_plural = "Sedes donde existe este departamento"
+
+
 @admin.register(Departamento)
 class DepartamentoAdmin(admin.ModelAdmin):
-	list_display = ("nombre", "codigo", "unidad_academica")
-	list_filter = ("unidad_academica",)
+	list_display = ("nombre", "codigo", "sedes_activas")
 	search_fields = ("nombre", "codigo")
-	list_select_related = ("unidad_academica",)
+	inlines = [DepartamentoUnidadAcademicaInline]
+
+	def sedes_activas(self, obj):
+		return ", ".join(
+			r.unidad_academica.nombre
+			for r in obj.depto_sedes.filter(is_active=True).select_related("unidad_academica")
+		) or "—"
+
+	sedes_activas.short_description = "Sedes activas"
+
+
+@admin.register(DepartamentoUnidadAcademica)
+class DepartamentoUnidadAcademicaAdmin(admin.ModelAdmin):
+	list_display = ("departamento", "unidad_academica", "is_active")
+	list_filter = ("unidad_academica", "is_active")
+	search_fields = ("departamento__nombre", "unidad_academica__codigo")
+	list_select_related = ("departamento", "unidad_academica")
+	list_editable = ("is_active",)
+
+
+# ── Carrera ───────────────────────────────────────────────────────
 
 
 class CarreraUnidadAcademicaInline(admin.TabularInline):
@@ -41,12 +72,24 @@ class CarreraAdmin(admin.ModelAdmin):
 	inlines = [CarreraUnidadAcademicaInline]
 
 	def sedes_activas(self, obj):
-		sedes = obj.unidades_academicas.filter(
-			carreraunidadacademica__is_active=True
-		)
-		return ", ".join(s.nombre for s in sedes) or "—"
+		return ", ".join(
+			r.unidad_academica.nombre
+			for r in obj.carrera_sedes.filter(is_active=True).select_related("unidad_academica")
+		) or "—"
 
 	sedes_activas.short_description = "Sedes activas"
+
+
+@admin.register(CarreraUnidadAcademica)
+class CarreraUnidadAcademicaAdmin(admin.ModelAdmin):
+	list_display = ("carrera", "unidad_academica", "is_active")
+	list_filter = ("unidad_academica", "is_active")
+	search_fields = ("carrera__nombre", "carrera__codigo_institucional", "unidad_academica__codigo")
+	list_select_related = ("carrera", "unidad_academica")
+	list_editable = ("is_active",)
+
+
+# ── Semestre y Asignatura ─────────────────────────────────────────
 
 
 @admin.register(Semestre)
@@ -62,18 +105,8 @@ class AsignaturaAdmin(admin.ModelAdmin):
 		"codigo_curricular",
 		"carrera",
 		"semestre",
-		"unidad_academica",
 		"is_active",
 	)
-	list_filter = ("semestre", "unidad_academica")
+	list_filter = ("semestre", "carrera")
 	search_fields = ("nombre", "codigo_curricular")
-	list_select_related = ("carrera", "semestre", "unidad_academica")
-
-
-@admin.register(CarreraUnidadAcademica)
-class CarreraUnidadAcademicaAdmin(admin.ModelAdmin):
-	list_display = ("carrera", "unidad_academica", "is_active")
-	list_filter = ("unidad_academica", "is_active")
-	search_fields = ("carrera__nombre", "carrera__codigo_institucional", "unidad_academica__codigo")
-	list_select_related = ("carrera", "unidad_academica")
-	list_editable = ("is_active",)
+	list_select_related = ("carrera", "semestre")

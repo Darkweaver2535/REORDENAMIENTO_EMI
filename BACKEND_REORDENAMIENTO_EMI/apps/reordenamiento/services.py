@@ -17,7 +17,7 @@
 #    - Lanzar excepciones descriptivas (ValidationError) si algo falla
 #
 # 2. autorizar(reordenamiento_id, usuario_autorizador) -> Reordenamiento:
-#    - Verificar que usuario_autorizador.rol in ['decano', 'admin']
+#    - Verificar que usuario_autorizador.rol in ['admin', 'jefe']
 #    - Cambiar estado a 'autorizado', guardar autorizado_por y fecha_autorizacion
 #    - Encolar tarea Celery: generar_pdf_reordenamiento.delay(reordenamiento_id)
 #    - Registrar en AuditLog con accion='APPROVE'
@@ -48,9 +48,9 @@ class ReordenamientoService:
 	@staticmethod
 	def _validar_rol_autorizador(usuario):
 		rol = (getattr(usuario, "rol", "") or "").lower()
-		if rol not in {"decano", "admin"}:
+		if rol not in {"admin", "jefe"}:
 			raise ValidationError(
-				"Solo usuarios con rol DECANO o ADMIN pueden autorizar reordenamientos."
+				"Solo usuarios con rol ADMIN o JEFE pueden autorizar reordenamientos."
 			)
 
 	@staticmethod

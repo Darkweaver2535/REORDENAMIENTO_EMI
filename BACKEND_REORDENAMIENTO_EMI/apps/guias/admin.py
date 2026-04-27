@@ -14,6 +14,6 @@ class GuiaAdmin(admin.ModelAdmin):
 		"aprobado_por",
 		"created_at",
 	)
-	list_filter = ("estado", "asignatura__unidad_academica", "asignatura__semestre")
+	list_filter = ("estado", "asignatura__semestre")
 	search_fields = ("titulo", "codigo_interno", "asignatura__nombre", "asignatura__codigo_curricular")
-	list_select_related = ("asignatura", "aprobado_por", "asignatura__unidad_academica", "asignatura__semestre")
+	list_select_related = ("asignatura", "aprobado_por", "asignatura__semestre")

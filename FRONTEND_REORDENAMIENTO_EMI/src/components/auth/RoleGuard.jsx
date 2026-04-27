@@ -6,7 +6,7 @@ import { useAuth } from "../../store/AuthContext";
  * Si el usuario no tiene ninguno de los roles permitidos, es redirigido.
  * 
  * @param {Object} props
- * @param {string[]} props.allowedRoles - Array de roles permitidos (ej. ['admin', 'decano'])
+ * @param {string[]} props.allowedRoles - Array de roles permitidos (ej. ['admin', 'jefe'])
  * @param {string} [props.redirectTo="/dashboard"] - Ruta a la que se redirige si falla la validación
  * @param {React.ReactNode} props.children - Contenido a renderizar si es válido
  */

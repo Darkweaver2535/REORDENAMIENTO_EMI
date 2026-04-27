@@ -38,7 +38,7 @@ export default function GuiasPage() {
 	// Estado de la asignatura seleccionada (objeto completo del FiltrosCascada)
 	const [selectedAsignatura, setSelectedAsignatura] = useState(null);
 
-	const isManager = hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO);
+	const isManager = hasRole(ROLES.ADMIN, ROLES.JEFE);
 
 	/* ── React Query: guías ───────────────────────────────────── */
 	const {

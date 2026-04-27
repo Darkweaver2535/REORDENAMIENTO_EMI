@@ -14,7 +14,7 @@ from apps.guias.serializers import (
 )
 from apps.laboratorios.models import EquipoRequeridoPorGuia
 from apps.usuarios.models import AuditLog
-from apps.usuarios.permissions import EsAdminOJefe, EsDecanoOAdmin, PuedeGestionarGuias
+from apps.usuarios.permissions import EsAdminOJefe, PuedeGestionarGuias
 
 
 class GuiaViewSet(ModelViewSet):
@@ -28,7 +28,7 @@ class GuiaViewSet(ModelViewSet):
 
 		if rol in {"estudiante", "docente"}:
 			queryset = queryset.filter(estado=Guia.Estado.PUBLICADO)
-		elif rol in {"admin", "jefe", "decano"}:
+		elif rol in {"admin", "jefe"}:
 			pass
 		else:
 			queryset = queryset.none()
@@ -47,7 +47,7 @@ class GuiaViewSet(ModelViewSet):
 		elif self.action in {"destroy"}:
 			permission_classes = [EsAdminOJefe]
 		elif self.action in {"publicar", "rechazar"}:
-			permission_classes = [EsDecanoOAdmin]
+			permission_classes = [EsAdminOJefe]
 		else:
 			permission_classes = [IsAuthenticated]
 
@@ -185,9 +185,9 @@ class GuiaViewSet(ModelViewSet):
 	def cambiar_estado(self, request, pk=None):
 		guia = self.get_object()
 
-		# Solo admin/jefe/decano puede cambiar estado
+		# Solo admin/jefe puede cambiar estado
 		user_rol = getattr(request.user, "rol", "")
-		if user_rol not in [getattr(request.user.Rol, "ADMIN", "ADMIN"), getattr(request.user.Rol, "JEFE", "JEFE"), getattr(request.user.Rol, "DECANO", "DECANO")]:
+		if user_rol not in [getattr(request.user.Rol, "ADMIN", "ADMIN"), getattr(request.user.Rol, "JEFE", "JEFE")]:
 			return Response(
 				{"error": "No autorizado para cambiar el estado"},
 				status=status.HTTP_403_FORBIDDEN,
