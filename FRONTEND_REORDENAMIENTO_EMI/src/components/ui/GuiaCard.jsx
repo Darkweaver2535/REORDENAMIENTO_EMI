@@ -48,7 +48,7 @@ export default function GuiaCard({ guia, onStatusChange, onEdit }) {
 
 	console.log('GUIA DATA:', guia);
 
-	const isManager = hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO);
+	const isManager = hasRole(ROLES.ADMIN, ROLES.JEFE);
 	const pdfUrl = guia?.pdf_url || null;
 	const portada = guia?.portada_url || null;
 	const numero = guia?.numero ?? guia?.numero_practica ?? "";

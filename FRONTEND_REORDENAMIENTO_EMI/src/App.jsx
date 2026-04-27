@@ -22,6 +22,8 @@ const ReordenamientoListPage = React.lazy(() => import("./pages/reordenamiento/R
 const UsuariosPage = React.lazy(() => import("./pages/admin/UsuariosPage"));
 const ConfiguracionPage = React.lazy(() => import("./pages/admin/ConfiguracionPage"));
 const ReportesPage = React.lazy(() => import("./pages/reportes/ReportesPage"));
+const EquiposPage = React.lazy(() => import("./pages/equipos/EquiposPage"));
+const EquipoDetailPage = React.lazy(() => import("./pages/equipos/EquipoDetailPage"));
 
 /* ── Helpers de Ruta Base ───────────────────────────────────── */
 // Rutas que solo requieren estar autenticado (sin rol específico o roles base se manejan internamente)
@@ -90,12 +92,12 @@ export default function App() {
 							<Route index element={<GuiasPage />} />
 							{/* Creación y edición: solo admin, jefe */}
 							<Route path="nueva" element={
-								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO]}>
+								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 									<GuiaFormPage />
 								</RoleGuard>
 							} />
 							<Route path=":id/editar" element={
-								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO]}>
+								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 									<GuiaFormPage />
 								</RoleGuard>
 							} />
@@ -105,7 +107,7 @@ export default function App() {
 
 						{/* ── MÓDULO: Laboratorios ───────────────────────────── */}
 						<Route path="/laboratorios" element={
-							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO, ROLES.ENCARGADO_ACTIVOS]}>
+							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS]}>
 								<Outlet />
 							</RoleGuard>
 						}>
@@ -122,9 +124,19 @@ export default function App() {
 							</RoleGuard>
 						} />
 
+						{/* ── MÓDULO: Equipos (Explorador) ────────────────────── */}
+						<Route path="/equipos" element={
+							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS]}>
+								<Outlet />
+							</RoleGuard>
+						}>
+							<Route index element={<EquiposPage />} />
+							<Route path=":id" element={<EquipoDetailPage />} />
+						</Route>
+
 						{/* ── MÓDULO: Reordenamientos (Sedes) ───────────────── */}
 						<Route path="/reordenamientos" element={
-							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO]}>
+							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 								<Outlet />
 							</RoleGuard>
 						}>
@@ -136,7 +148,7 @@ export default function App() {
 								</RoleGuard>
 							} />
 							<Route path="comparativa" element={
-								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO]}>
+								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 									<ComparativaSedesPage />
 								</RoleGuard>
 							} />
@@ -144,7 +156,7 @@ export default function App() {
 
 						{/* ── MÓDULO: Reportes ───────────────────────────────── */}
 						<Route path="/reportes" element={
-							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO]}>
+							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 								<ReportesPage />
 							</RoleGuard>
 						} />

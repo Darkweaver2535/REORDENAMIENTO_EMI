@@ -43,7 +43,7 @@ function ActionButton({ reordenamiento, onAutorizar, onEjecutar, isPending, pend
 	const id     = getId(reordenamiento);
 	const loading = isPending && pendingId === id;
 
-	if (estado === "pendiente" && hasRole(ROLES.ADMIN, ROLES.DECANO)) {
+	if (estado === "pendiente" && hasRole(ROLES.ADMIN)) {
 		return (
 			<button
 				onClick={() => onAutorizar(id)}
@@ -102,7 +102,7 @@ export default function ReordenamientoListPage() {
 	const { hasRole } = useAuth();
 	const queryClient = useQueryClient();
 
-	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO, ROLES.ENCARGADO_ACTIVOS)) {
+	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS)) {
 		return <Navigate to="/dashboard" replace />;
 	}
 

@@ -135,8 +135,8 @@ export default function GuiaFormPage() {
 	const queryClient = useQueryClient();
 	const isEdit = Boolean(id);
 
-	// Solo admin/jefe/decano pueden acceder
-	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO)) {
+	// Solo admin/jefe pueden acceder
+	if (!hasRole(ROLES.ADMIN, ROLES.JEFE)) {
 		return <Navigate to="/guias" replace />;
 	}
 

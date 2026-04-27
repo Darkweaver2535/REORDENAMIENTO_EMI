@@ -16,7 +16,7 @@ class UnidadAcademicaSerializer(serializers.ModelSerializer):
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):
-	unidad_academica_nombre = serializers.SerializerMethodField()
+	unidades_academicas = UnidadAcademicaSerializer(many=True, read_only=True)
 
 	class Meta:
 		model = Departamento
@@ -24,14 +24,8 @@ class DepartamentoSerializer(serializers.ModelSerializer):
 			"id",
 			"nombre",
 			"codigo",
-			"unidad_academica_id",
-			"unidad_academica_nombre",
+			"unidades_academicas",
 		)
-
-	def get_unidad_academica_nombre(self, obj):
-		if obj.unidad_academica_id is None:
-			return None
-		return obj.unidad_academica.nombre
 
 
 class CarreraSedeSerializer(serializers.ModelSerializer):
@@ -68,7 +62,6 @@ class AsignaturaListSerializer(serializers.ModelSerializer):
 			"codigo_curricular",
 			"carrera_id",
 			"semestre_id",
-			"unidad_academica_id",
 			"carrera_nombre",
 			"semestre_numero",
 		)
@@ -87,11 +80,9 @@ class AsignaturaListSerializer(serializers.ModelSerializer):
 class AsignaturaDetalleSerializer(AsignaturaListSerializer):
 	carrera = CarreraSerializer(read_only=True)
 	semestre = SemestreSerializer(read_only=True)
-	unidad_academica = UnidadAcademicaSerializer(read_only=True)
 
 	class Meta(AsignaturaListSerializer.Meta):
 		fields = AsignaturaListSerializer.Meta.fields + (
 			"carrera",
 			"semestre",
-			"unidad_academica",
 		)

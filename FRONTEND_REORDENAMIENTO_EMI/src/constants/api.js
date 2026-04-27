@@ -65,7 +65,6 @@ export const ROLES = {
   DOCENTE: "docente",
   ADMIN: "admin",
   JEFE: "jefe",
-  DECANO: "decano",
   ENCARGADO_ACTIVOS: "encargado_activos",
 };
 

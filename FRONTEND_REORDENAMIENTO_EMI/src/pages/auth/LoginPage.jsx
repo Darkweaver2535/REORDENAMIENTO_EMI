@@ -83,7 +83,7 @@ function LoginPage() {
                                 Sistema de Gestión de Laboratorios
                             </p>
                             <p style={{ fontSize: "15px", fontWeight: 500, color: "#6b7280", marginTop: "4px" }}>
-                                Escuela Militar de Ingeniería — Bolivia
+                                Escuela Militar de Ingeniería
                             </p>
                         </div>
                     </div>

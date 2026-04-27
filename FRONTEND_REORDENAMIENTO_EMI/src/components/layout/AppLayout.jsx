@@ -4,7 +4,7 @@ import {
   BookOpen, FlaskConical, ArrowLeftRight,
   BarChart2, LogOut, Menu, X, Settings,
   Building2, GraduationCap, User, Users, FileText,
-  LayoutDashboard
+  LayoutDashboard, Monitor
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from './NotificationBell'
@@ -92,14 +92,21 @@ export default function AppLayout() {
             <span>Guías de Laboratorio</span>
           </NavLink>
 
-          {hasRole('admin', 'jefe', 'decano', 'encargado_activos') && (
+          {hasRole('admin', 'jefe', 'encargado_activos') && (
             <NavLink to="/laboratorios" style={navLinkStyle}>
               <FlaskConical size={20} />
               <span>Laboratorios</span>
             </NavLink>
           )}
 
-          {hasRole('admin', 'jefe', 'decano') && (
+          {hasRole('admin', 'jefe', 'encargado_activos') && (
+            <NavLink to="/equipos" style={navLinkStyle}>
+              <Monitor size={20} />
+              <span>Equipos</span>
+            </NavLink>
+          )}
+
+          {hasRole('admin', 'jefe') && (
             <>
               <p style={{ padding: "28px 16px 16px 16px", color: "rgba(147,197,253,0.5)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em" }}>
                 Sedes

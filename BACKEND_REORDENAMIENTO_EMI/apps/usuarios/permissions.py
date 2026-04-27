@@ -1,36 +1,32 @@
 # App: usuarios | Archivo: permissions.py
 # Sistema de gestión de laboratorios universitarios - Django REST Framework
 #
-# TAREA: Crear clases de permisos personalizadas que hereden de BasePermission:
+# Clases de permisos personalizadas que heredan de BasePermission:
 #
 # 1. EsSoloLectura: permite solo métodos GET, HEAD, OPTIONS
 #
-# 2. EsAdminOJefe: permite acceso si rol in ['admin', 'jefe', 'decano']
+# 2. EsAdminOJefe: permite acceso si rol in ['admin', 'jefe']
 #
 # 3. EsEncargadoActivos: permite acceso si rol == 'encargado_activos' OR EsAdminOJefe
 #
-# 4. EsDecanoOAdmin: permite acceso si rol in ['decano', 'admin']
-#   (para aprobar publicaciones de guías y autorizar reordenamientos)
+# 4. PuedeGestionarGuias: permite crear/editar guías si rol in ['admin', 'jefe']
 #
-# 5. PuedeGestionarGuias: permite crear/editar guías si rol in ['admin', 'jefe']
-#   pero NO 'docente' (los docentes no pueden subir guías)
-#
-# 6. PuedeVerGuias: permite GET si la guía tiene estado='publicado'
-#   O si el usuario tiene rol admin/jefe/decano (ellos ven todos los estados)
+# 5. PuedeVerGuias: permite GET si la guía tiene estado='publicado'
+#   O si el usuario tiene rol admin/jefe (ellos ven todos los estados)
 #
 # Para cada clase incluir mensaje de error descriptivo en message y code
 
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-ROL_ADMIN = {"admin", "jefe", "decano"}
+ROL_ADMIN = {"admin", "jefe"}
 
 
 def _rol_usuario(user):
 	return (getattr(user, "rol", "") or "").strip().lower()
 
 
-def _es_admin_jefe_decano(user):
+def _es_admin_o_jefe(user):
 	return _rol_usuario(user) in ROL_ADMIN
 
 
@@ -43,16 +39,16 @@ class EsSoloLectura(BasePermission):
 
 
 class EsAdminOJefe(BasePermission):
-	message = "Acceso restringido a usuarios con rol ADMIN, JEFE o DECANO."
+	message = "Acceso restringido a usuarios con rol ADMIN o JEFE."
 	code = "requiere_admin_o_jefe"
 
 	def has_permission(self, request, view):
 		user = request.user
-		return bool(user and user.is_authenticated and _es_admin_jefe_decano(user))
+		return bool(user and user.is_authenticated and _es_admin_o_jefe(user))
 
 
 class EsEncargadoActivos(BasePermission):
-	message = "Acceso restringido a ENCARGADO_ACTIVOS o perfiles ADMIN/JEFE/DECANO."
+	message = "Acceso restringido a ENCARGADO_ACTIVOS o perfiles ADMIN/JEFE."
 	code = "requiere_encargado_activos"
 
 	def has_permission(self, request, view):
@@ -61,17 +57,6 @@ class EsEncargadoActivos(BasePermission):
 			return False
 		rol = _rol_usuario(user)
 		return rol == "encargado_activos" or rol in ROL_ADMIN
-
-
-class EsDecanoOAdmin(BasePermission):
-	message = "Acceso restringido a usuarios con rol DECANO o ADMIN."
-	code = "requiere_decano_o_admin"
-
-	def has_permission(self, request, view):
-		user = request.user
-		if not (user and user.is_authenticated):
-			return False
-		return _rol_usuario(user) in {"decano", "admin"}
 
 
 class PuedeGestionarGuias(BasePermission):
@@ -91,7 +76,7 @@ class PuedeGestionarGuias(BasePermission):
 
 
 class PuedeVerGuias(BasePermission):
-	message = "Solo se pueden ver guias publicadas, salvo roles ADMIN/JEFE/DECANO."
+	message = "Solo se pueden ver guias publicadas, salvo roles ADMIN/JEFE."
 	code = "guia_no_visible"
 
 	def has_permission(self, request, view):
@@ -108,8 +93,7 @@ class PuedeVerGuias(BasePermission):
 		if request.method not in SAFE_METHODS:
 			return False
 
-		if _es_admin_jefe_decano(request.user):
+		if _es_admin_o_jefe(request.user):
 			return True
 
 		return getattr(obj, "estado", None) == "publicado"
-

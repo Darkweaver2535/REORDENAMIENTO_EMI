@@ -147,6 +147,25 @@ class Equipo(BaseModel):
 		on_delete=models.SET_NULL,
 		related_name="equipos_evaluados",
 	)
+	foto_url = models.URLField(
+		max_length=500,
+		blank=True,
+		null=True,
+		verbose_name="URL de foto del equipo",
+		help_text="Enlace público a imagen alojada en la nube (Drive, S3, Cloudinary, etc.)",
+	)
+	especificaciones = models.JSONField(
+		default=dict,
+		blank=True,
+		verbose_name="Especificaciones técnicas",
+		help_text="Características técnicas del equipo en formato clave-valor",
+	)
+	notas = models.TextField(
+		blank=True,
+		null=True,
+		verbose_name="Notas adicionales",
+		help_text="Observaciones, accesorios incluidos, condiciones especiales",
+	)
 
 	class Meta:
 		ordering = ["codigo_activo"]

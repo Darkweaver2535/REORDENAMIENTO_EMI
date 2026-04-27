@@ -50,6 +50,7 @@ class LaboratorioDetalleSerializer(LaboratorioListSerializer):
 class EquipoListSerializer(serializers.ModelSerializer):
 	laboratorio_nombre = serializers.SerializerMethodField()
 	cantidad_disponible = serializers.SerializerMethodField()
+	evaluado_por_nombre = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Equipo
@@ -60,9 +61,15 @@ class EquipoListSerializer(serializers.ModelSerializer):
 			"laboratorio_id",
 			"laboratorio_nombre",
 			"cantidad_total",
+			"cantidad_buena",
+			"cantidad_regular",
+			"cantidad_mala",
 			"cantidad_disponible",
 			"estatus_general",
 			"evaluado_en",
+			"evaluado_por_nombre",
+			"observaciones",
+			"foto_url",
 		)
 
 	def get_laboratorio_nombre(self, obj):
@@ -73,34 +80,39 @@ class EquipoListSerializer(serializers.ModelSerializer):
 	def get_cantidad_disponible(self, obj):
 		return obj.cantidad_disponible()
 
-
-class EquipoDetalleSerializer(EquipoListSerializer):
-	evaluado_por_nombre = serializers.SerializerMethodField()
-
-	class Meta(EquipoListSerializer.Meta):
-		fields = EquipoListSerializer.Meta.fields + (
-			"cantidad_buena",
-			"cantidad_regular",
-			"cantidad_mala",
-			"ubicacion_sala",
-			"observaciones",
-			"evaluado_por_nombre",
-		)
-
 	def get_evaluado_por_nombre(self, obj):
 		if obj.evaluado_por_id is None:
 			return None
 		return obj.evaluado_por.nombre_completo
 
 
-class EvaluacionInsituSerializer(serializers.Serializer):
-	"""Serializer para registrar evaluación in-situ de equipos."""
+class EquipoDetalleSerializer(EquipoListSerializer):
 
-	cantidad_buena = serializers.IntegerField(min_value=0)
-	cantidad_regular = serializers.IntegerField(min_value=0)
-	cantidad_mala = serializers.IntegerField(min_value=0)
-	ubicacion_sala = serializers.CharField(max_length=100, required=False, allow_blank=True)
-	observaciones = serializers.CharField(required=False, allow_blank=True)
+	class Meta(EquipoListSerializer.Meta):
+		fields = EquipoListSerializer.Meta.fields + (
+			"ubicacion_sala",
+			"especificaciones",
+			"notas",
+		)
+
+
+class EvaluacionInsituSerializer(serializers.Serializer):
+	"""Serializer para registrar evaluación in-situ de equipos.
+
+	Acepta dos modos:
+	  1. Modo rápido: solo condicion + observaciones
+	  2. Modo detallado: cantidades individuales buena/regular/mala
+	"""
+
+	condicion = serializers.ChoiceField(
+		choices=[("bueno", "Bueno"), ("regular", "Regular"), ("malo", "Malo")],
+		required=True,
+		help_text="Estado general del equipo tras la evaluación.",
+	)
+	observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+	cantidad_buena = serializers.IntegerField(min_value=0, required=False, default=0)
+	cantidad_regular = serializers.IntegerField(min_value=0, required=False, default=0)
+	cantidad_mala = serializers.IntegerField(min_value=0, required=False, default=0)
 
 	def validate(self, attrs):
 		buena = attrs.get("cantidad_buena", 0)
@@ -109,13 +121,20 @@ class EvaluacionInsituSerializer(serializers.Serializer):
 		suma = buena + regular + mala
 
 		equipo = self.context.get("equipo")
+		total = equipo.cantidad_total if equipo else 0
 
-		# Recalcular automáticamente si la suma es diferente al total
-		attrs["cantidad_total"] = suma
+		# Si no se proporcionaron cantidades detalladas, auto-fill según condición
+		if suma == 0 and total > 0:
+			condicion = attrs["condicion"]
+			if condicion == "bueno":
+				attrs["cantidad_buena"] = total
+			elif condicion == "regular":
+				attrs["cantidad_regular"] = total
+			else:
+				attrs["cantidad_mala"] = total
+			suma = total
 
-		if suma == 0:
-			raise serializers.ValidationError(
-				"La suma de las cantidades en la evaluación debe ser mayor a 0."
-			)
+		attrs["cantidad_total"] = suma if suma > 0 else max(total, 1)
 
 		return attrs
+

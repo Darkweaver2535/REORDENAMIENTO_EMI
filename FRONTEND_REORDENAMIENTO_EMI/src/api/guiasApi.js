@@ -25,12 +25,11 @@ export async function getSemestres() {
 	return response.data;
 }
 
-export async function getAsignaturas(carreraId, semestreId, unidadId) {
+export async function getAsignaturas(carreraId, semestreId) {
 	const response = await axiosClient.get(API_ROUTES.ESTRUCTURA.ASIGNATURAS, {
 		params: {
 			carrera_id: carreraId,
 			semestre_id: semestreId,
-			unidad_id: unidadId,
 		},
 	});
 	return response.data;

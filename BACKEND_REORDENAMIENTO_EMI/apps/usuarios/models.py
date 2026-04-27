@@ -8,12 +8,12 @@
 #    - saga_username: CharField(100) null=True blank=True
 #    - nombre_completo: CharField(200)
 #    - rol: CharField con choices:
-#      ESTUDIANTE, DOCENTE, ADMIN, JEFE, DECANO, ENCARGADO_ACTIVOS
+#      ESTUDIANTE, DOCENTE, ADMIN, JEFE, ENCARGADO_ACTIVOS
 #    - unidad_academica: ForeignKey a 'estructura_academica.UnidadAcademica'
 #      (null=True para superusuarios)
 #    - USERNAME_FIELD = 'carnet_identidad' (login por CI, no por username)
 #    - Método: get_rol_display() que retorne el nombre legible del rol
-#    - Método: tiene_permiso_admin() que retorne True si rol in [ADMIN, JEFE, DECANO]
+#    - Método: tiene_permiso_admin() que retorne True si rol in [ADMIN, JEFE]
 #
 # 2. Modelo 'AuditLog' con campos:
 #    - tabla_afectada: CharField(100)
@@ -71,7 +71,6 @@ class Usuario(AbstractUser):
 		DOCENTE = "DOCENTE", "Docente"
 		ADMIN = "ADMIN", "Administrador"
 		JEFE = "JEFE", "Jefe"
-		DECANO = "DECANO", "Decano"
 		ENCARGADO_ACTIVOS = "ENCARGADO_ACTIVOS", "Encargado de Activos"
 
 	# Desactiva login por username tradicional para usar carnet_identidad.
@@ -106,7 +105,7 @@ class Usuario(AbstractUser):
 		return dict(self.Rol.choices).get(self.rol, self.rol)
 
 	def tiene_permiso_admin(self):
-		return self.rol in {self.Rol.ADMIN, self.Rol.JEFE, self.Rol.DECANO}
+		return self.rol in {self.Rol.ADMIN, self.Rol.JEFE}
 
 
 class AuditLog(models.Model):

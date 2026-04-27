@@ -146,11 +146,11 @@ function FiltrosCascada({ onAsignaturaChange, showOnlyActive = true }) {
 		staleTime: 5 * 60 * 1000,
 	});
 
-	const asignaturasEnabled = Boolean(carreraId) && Boolean(semestreId) && Boolean(unidadId);
+	const asignaturasEnabled = Boolean(carreraId) && Boolean(semestreId);
 
 	const { data: asignaturasRaw, isLoading: loadingAsignaturas } = useQuery({
-		queryKey: ["asignaturas", carreraId, semestreId, unidadId],
-		queryFn: () => getAsignaturas(carreraId, semestreId, unidadId),
+		queryKey: ["asignaturas", carreraId, semestreId],
+		queryFn: () => getAsignaturas(carreraId, semestreId),
 		enabled: asignaturasEnabled,
 	});
 

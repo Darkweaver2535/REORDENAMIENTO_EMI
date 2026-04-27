@@ -14,7 +14,7 @@ from apps.reordenamiento.serializers import (
 	CrearReordenamientoSerializer,
 )
 from apps.reordenamiento.services import ReordenamientoService
-from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos, EsDecanoOAdmin
+from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos
 
 
 class ReordenamientoViewSet(ModelViewSet):
@@ -68,7 +68,7 @@ class ReordenamientoViewSet(ModelViewSet):
 		elif self.action in {"create", "update", "partial_update", "destroy"}:
 			permission_classes = [EsAdminOJefe]
 		elif self.action in {"autorizar"}:
-			permission_classes = [EsDecanoOAdmin]
+			permission_classes = [EsAdminOJefe]
 		elif self.action in {"ejecutar"}:
 			permission_classes = [EsEncargadoActivos]
 		elif self.action in {"comparativa_sedes"}:

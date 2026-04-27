@@ -1,6 +1,6 @@
 // src/pages/laboratorios/LaboratorioDetallePage.jsx
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, FlaskConical, Wrench, ClipboardCheck } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
@@ -9,6 +9,8 @@ import { ROLES } from "../../constants/api";
 import PageWrapper from "../../components/layout/PageWrapper";
 import Button from "../../components/ui/Button";
 import ModalEvaluacionInsitu from "../../components/laboratorios/ModalEvaluacionInsitu";
+import FotoEquipo from "../../components/equipos/FotoEquipo";
+import EstadoBadge from "../../components/equipos/EstadoBadge";
 import { Navigate } from "react-router-dom";
 
 /* ── Helpers ─────────────────────────────────────────────────── */
@@ -19,7 +21,7 @@ const getId      = (e) => e?.id ?? e?.uuid ?? e?.codigo_activo;
 const getCode    = (e) => e?.codigo_activo ?? e?.codigo ?? e?.serial ?? "—";
 const getName    = (e) => e?.nombre ?? e?.nombre_equipo ?? e?.descripcion ?? "Equipo";
 const getUltEval = (e) => {
-	const d = e?.ultima_evaluacion ?? e?.last_evaluation ?? e?.evaluacion_fecha;
+	const d = e?.evaluado_en ?? e?.ultima_evaluacion ?? e?.evaluacion_fecha;
 	if (!d) return "Sin evaluación";
 	return new Date(d).toLocaleDateString("es-BO", { day: "2-digit", month: "short", year: "numeric" });
 };
@@ -31,7 +33,7 @@ export default function LaboratorioDetallePage() {
 	const { hasRole } = useAuth();
 	const [evaluandoEquipo, setEvaluandoEquipo] = useState(null);
 
-	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.DECANO, ROLES.ENCARGADO_ACTIVOS)) {
+	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS)) {
 		return <Navigate to="/dashboard" replace />;
 	}
 
@@ -80,10 +82,11 @@ export default function LaboratorioDetallePage() {
 					}}>
 						{[
 							{ label: "Sede",        value: lab?.unidad_academica_nombre ?? lab?.sede ?? "—" },
+							{ label: "Campus",      value: lab?.campus ?? "—" },
 							{ label: "Edificio",    value: lab?.edificio  ?? "—" },
 							{ label: "Sala",        value: lab?.sala ?? lab?.aula ?? "—" },
-							{ label: "Capacidad",   value: lab?.capacidad ?? lab?.capacidad_equipos ?? "—" },
-							{ label: "Responsable", value: lab?.responsable ?? "—" },
+							{ label: "Capacidad",   value: lab?.capacidad_estudiantes ?? lab?.capacidad ?? "—" },
+							{ label: "Total Equipos", value: lab?.total_equipos ?? equipos.length },
 						].map(({ label, value }) => (
 							<div
 								key={label}
@@ -117,7 +120,7 @@ export default function LaboratorioDetallePage() {
 						<table style={{ minWidth: "750px", borderCollapse: "collapse", width: "100%" }}>
 							<thead>
 								<tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-									{["Código", "Equipo", "Disponibles", "Malos", "Total", "Última Evaluación", "Acción"].map((h) => (
+									{["Código", "Equipo", "Estado", "Disponibles", "Total", "Última Evaluación", "Acción"].map((h) => (
 										<th
 											key={h}
 											style={{ padding: "13px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.12em", whiteSpace: "nowrap" }}
@@ -153,8 +156,9 @@ export default function LaboratorioDetallePage() {
 								{/* Filas */}
 								{!loadingEquipos && equipos.map((eq, idx) => {
 									const disponibles = safe(eq?.cantidad_disponible ?? eq?.disponible ?? eq?.buenas);
-									const malos       = safe(eq?.malas ?? eq?.cantidad_mala);
 									const total       = safe(eq?.cantidad_total ?? eq?.total ?? eq?.cantidad);
+									const evaluadoEn  = eq?.evaluado_en;
+									const yaEvaluado  = !!evaluadoEn;
 
 									return (
 										<tr
@@ -166,10 +170,25 @@ export default function LaboratorioDetallePage() {
 												{getCode(eq)}
 											</td>
 											<td style={{ padding: "16px 20px" }}>
-												<p style={{ fontSize: "15px", fontWeight: 700, color: "#111827" }}>{getName(eq)}</p>
-												{eq?.ubicacion_actual && (
-													<p style={{ fontSize: "13px", color: "#9ca3af", marginTop: "2px" }}>{eq.ubicacion_actual}</p>
-												)}
+												<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+													<FotoEquipo url={eq?.foto_url} nombre={getName(eq)} size="sm" />
+													<div>
+														<Link
+															to={`/equipos/${getId(eq)}`}
+															style={{ fontSize: "15px", fontWeight: 700, color: "#1d4ed8", textDecoration: "none" }}
+															className="hover:underline"
+															onClick={(e) => e.stopPropagation()}
+														>
+															{getName(eq)}
+														</Link>
+														{eq?.ubicacion_sala && (
+															<p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}>{eq.ubicacion_sala}</p>
+														)}
+													</div>
+												</div>
+											</td>
+											<td style={{ padding: "16px 20px" }}>
+												<EstadoBadge estado={eq?.estatus_general} />
 											</td>
 											<td style={{ padding: "16px 20px" }}>
 												<span style={{
@@ -181,17 +200,7 @@ export default function LaboratorioDetallePage() {
 													{disponibles}
 												</span>
 											</td>
-											<td style={{ padding: "16px 20px" }}>
-												<span style={{
-													display: "inline-flex", alignItems: "center", justifyContent: "center",
-													minWidth: "36px", height: "28px", borderRadius: "6px", padding: "0 10px",
-													backgroundColor: malos > 0 ? "#fef2f2" : "#f9fafb",
-													color: malos > 0 ? "#b91c1c" : "#9ca3af",
-													fontSize: "14px", fontWeight: 700,
-												}}>
-													{malos}
-												</span>
-											</td>
+
 											<td style={{ padding: "16px 20px", fontSize: "15px", fontWeight: 700, color: "#374151" }}>
 												{total || "—"}
 											</td>
@@ -199,43 +208,36 @@ export default function LaboratorioDetallePage() {
 												{getUltEval(eq)}
 											</td>
 											<td style={{ padding: "16px 20px" }}>
-												{(() => {
-													const evaluadoEn = eq?.evaluado_en ?? eq?.evaluacion_fecha ?? eq?.ultima_evaluacion;
-													const yaEvaluado = !!evaluadoEn;
-
-													return (
-														<div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-															<button
-																onClick={() => setEvaluandoEquipo(eq)}
-																style={{
-																	display: "inline-flex", alignItems: "center", gap: "7px",
-																	padding: "8px 14px", borderRadius: "8px",
-																	backgroundColor: yaEvaluado ? "#dcfce7" : "#2b5ea5",
-																	border: yaEvaluado ? "1px solid #22c55e" : "1px solid #2b5ea5",
-																	color: yaEvaluado ? "#166534" : "#ffffff",
-																	fontSize: "14px", fontWeight: 700,
-																	cursor: "pointer", whiteSpace: "nowrap",
-																}}
-																className={yaEvaluado ? "hover:bg-green-200" : "hover:bg-blue-800"}
-															>
-																<ClipboardCheck size={15} />
-																{yaEvaluado ? "✓ Evaluado" : "Evaluar"}
-															</button>
-															
-															{yaEvaluado && (
-																<span className="text-xs text-green-600 font-medium whitespace-nowrap">
-																	{new Date(evaluadoEn).toLocaleDateString("es-BO", {
-																		day: "2-digit",
-																		month: "short",
-																		year: "numeric",
-																		hour: "2-digit",
-																		minute: "2-digit"
-																	})}
-																</span>
-															)}
-														</div>
-													);
-												})()}
+												<div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+													<button
+														onClick={() => setEvaluandoEquipo(eq)}
+														style={{
+															display: "inline-flex", alignItems: "center", gap: "7px",
+															padding: "8px 14px", borderRadius: "8px",
+															backgroundColor: yaEvaluado ? "#dcfce7" : "#2b5ea5",
+															border: yaEvaluado ? "1px solid #22c55e" : "1px solid #2b5ea5",
+															color: yaEvaluado ? "#166534" : "#ffffff",
+															fontSize: "14px", fontWeight: 700,
+															cursor: "pointer", whiteSpace: "nowrap",
+														}}
+														className={yaEvaluado ? "hover:bg-green-200" : "hover:bg-blue-800"}
+													>
+														<ClipboardCheck size={15} />
+														{yaEvaluado ? "✓ Evaluado" : "Evaluar"}
+													</button>
+													
+													{yaEvaluado && (
+														<span className="text-xs text-green-600 font-medium whitespace-nowrap">
+															{new Date(evaluadoEn).toLocaleDateString("es-BO", {
+																day: "2-digit",
+																month: "short",
+																year: "numeric",
+																hour: "2-digit",
+																minute: "2-digit"
+															})}
+														</span>
+													)}
+												</div>
 											</td>
 										</tr>
 									);
