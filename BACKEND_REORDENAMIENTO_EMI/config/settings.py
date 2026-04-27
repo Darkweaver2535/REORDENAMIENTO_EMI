@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.notificaciones",
     "apps.reportes",
     "apps.configuracion",
+    "apps.evaluaciones",
 ]
 
 AUTH_USER_MODEL = "usuarios.Usuario"

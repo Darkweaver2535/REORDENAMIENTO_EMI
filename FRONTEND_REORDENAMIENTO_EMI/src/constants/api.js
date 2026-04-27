@@ -57,6 +57,15 @@ export const API_ROUTES = {
   CONFIGURACION: {
     BASE: `${BASE_URL}/api/v1/configuracion/`,
   },
+
+  EVALUACIONES: {
+    LIST:   `${BASE_URL}/api/v1/evaluaciones/`,
+    CREATE: `${BASE_URL}/api/v1/evaluaciones/`,
+    DETAIL: (id) => `${BASE_URL}/api/v1/evaluaciones/${id}/`,
+    UPDATE: (id) => `${BASE_URL}/api/v1/evaluaciones/${id}/`,
+    BY_EQUIPO: (eqId) => `${BASE_URL}/api/v1/evaluaciones/?equipo=${eqId}`,
+    ULTIMA: (eqId) => `${BASE_URL}/api/v1/evaluaciones/ultima-por-equipo/${eqId}/`,
+  },
 };
 
 
@@ -121,5 +130,12 @@ export const API_ENDPOINTS = {
     autorizar: API_ROUTES.REORDENAMIENTO.AUTORIZAR,
     ejecutar: API_ROUTES.REORDENAMIENTO.EJECUTAR,
     comparativaSedes: API_ROUTES.REORDENAMIENTO.COMPARATIVA_SEDES,
+  },
+  evaluaciones: {
+    base: API_ROUTES.EVALUACIONES.LIST,
+    create: API_ROUTES.EVALUACIONES.CREATE,
+    byId: API_ROUTES.EVALUACIONES.DETAIL,
+    byEquipo: API_ROUTES.EVALUACIONES.BY_EQUIPO,
+    ultima: API_ROUTES.EVALUACIONES.ULTIMA,
   },
 };

@@ -20,11 +20,6 @@ const safe       = (v) => { const n = Number(v); return Number.isFinite(n) ? n :
 const getId      = (e) => e?.id ?? e?.uuid ?? e?.codigo_activo;
 const getCode    = (e) => e?.codigo_activo ?? e?.codigo ?? e?.serial ?? "—";
 const getName    = (e) => e?.nombre ?? e?.nombre_equipo ?? e?.descripcion ?? "Equipo";
-const getUltEval = (e) => {
-	const d = e?.evaluado_en ?? e?.ultima_evaluacion ?? e?.evaluacion_fecha;
-	if (!d) return "Sin evaluación";
-	return new Date(d).toLocaleDateString("es-BO", { day: "2-digit", month: "short", year: "numeric" });
-};
 
 /* ── Página principal ────────────────────────────────────────── */
 export default function LaboratorioDetallePage() {
@@ -157,8 +152,8 @@ export default function LaboratorioDetallePage() {
 								{!loadingEquipos && equipos.map((eq, idx) => {
 									const disponibles = safe(eq?.cantidad_disponible ?? eq?.disponible ?? eq?.buenas);
 									const total       = safe(eq?.cantidad_total ?? eq?.total ?? eq?.cantidad);
-									const evaluadoEn  = eq?.evaluado_en;
-									const yaEvaluado  = !!evaluadoEn;
+									const ev          = eq?.ultima_evaluacion;
+									const yaEvaluado  = !!ev;
 
 									return (
 										<tr
@@ -204,40 +199,46 @@ export default function LaboratorioDetallePage() {
 											<td style={{ padding: "16px 20px", fontSize: "15px", fontWeight: 700, color: "#374151" }}>
 												{total || "—"}
 											</td>
-											<td style={{ padding: "16px 20px", fontSize: "14px", color: "#6b7280", fontWeight: 500 }}>
-												{getUltEval(eq)}
+											<td style={{ padding: "16px 20px" }}>
+												{ev ? (
+													<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+														<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+															<span title="Buenas" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 700, color: "#15803d" }}>
+																<span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#22c55e", display: "inline-block" }} />{ev.cantidad_bueno}
+															</span>
+															<span title="Regulares" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 700, color: "#92400e" }}>
+																<span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#f59e0b", display: "inline-block" }} />{ev.cantidad_regular}
+															</span>
+															<span title="Malas" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 700, color: "#991b1b" }}>
+																<span style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: "#ef4444", display: "inline-block" }} />{ev.cantidad_malo}
+															</span>
+														</div>
+														<span style={{ fontSize: 12, color: "#9ca3af" }}>
+															{new Date(ev.fecha).toLocaleDateString("es-BO", { day: "2-digit", month: "short", year: "numeric" })}
+														</span>
+													</div>
+												) : (
+													<span style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>Sin evaluación</span>
+												)}
 											</td>
 											<td style={{ padding: "16px 20px" }}>
-												<div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
-													<button
-														onClick={() => setEvaluandoEquipo(eq)}
-														style={{
-															display: "inline-flex", alignItems: "center", gap: "7px",
-															padding: "8px 14px", borderRadius: "8px",
-															backgroundColor: yaEvaluado ? "#dcfce7" : "#2b5ea5",
-															border: yaEvaluado ? "1px solid #22c55e" : "1px solid #2b5ea5",
-															color: yaEvaluado ? "#166534" : "#ffffff",
-															fontSize: "14px", fontWeight: 700,
-															cursor: "pointer", whiteSpace: "nowrap",
-														}}
-														className={yaEvaluado ? "hover:bg-green-200" : "hover:bg-blue-800"}
-													>
-														<ClipboardCheck size={15} />
-														{yaEvaluado ? "✓ Evaluado" : "Evaluar"}
-													</button>
-													
-													{yaEvaluado && (
-														<span className="text-xs text-green-600 font-medium whitespace-nowrap">
-															{new Date(evaluadoEn).toLocaleDateString("es-BO", {
-																day: "2-digit",
-																month: "short",
-																year: "numeric",
-																hour: "2-digit",
-																minute: "2-digit"
-															})}
-														</span>
-													)}
-												</div>
+												<button
+													onClick={() => setEvaluandoEquipo(eq)}
+													style={{
+														display: "inline-flex", alignItems: "center", gap: "6px",
+														padding: "7px 14px", borderRadius: "8px",
+														backgroundColor: yaEvaluado ? "#f0fdf4" : "#EFF6FF",
+														border: yaEvaluado ? "1px solid #bbf7d0" : "1px solid #bfdbfe",
+														color: yaEvaluado ? "#15803d" : "#1d4ed8",
+														fontSize: "13px", fontWeight: 700,
+														cursor: "pointer", whiteSpace: "nowrap",
+														transition: "all 150ms ease",
+													}}
+													className={yaEvaluado ? "hover:bg-green-100" : "hover:bg-blue-100"}
+												>
+													<ClipboardCheck size={14} />
+													{yaEvaluado ? "✓ Evaluado" : "Evaluar"}
+												</button>
 											</td>
 										</tr>
 									);

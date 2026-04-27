@@ -22,7 +22,7 @@ class DashboardMetricasView(APIView):
 
     def get(self, request):
         # ── Guías publicadas ──────────────────────────────────────────────────
-        total_guias = Guia.objects.filter(estado=Guia.Estado.PUBLICADO).count()
+        total_guias = Guia.objects.filter(estado__iexact=Guia.Estado.PUBLICADO).count()
 
         # ── Equipos: totales y en mal estado ─────────────────────────────────
         totales = Equipo.objects.aggregate(

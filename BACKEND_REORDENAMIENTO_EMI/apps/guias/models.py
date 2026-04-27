@@ -72,6 +72,11 @@ class Guia(BaseModel):
 		verbose_name_plural = "Guias"
 		unique_together = (("asignatura", "numero_practica"),)
 
+	def save(self, *args, **kwargs):
+		if self.estado:
+			self.estado = self.estado.lower().strip()
+		super().save(*args, **kwargs)
+
 	def __str__(self):
 		return f"Práctica {self.numero_practica} - {self.asignatura.nombre}"
 

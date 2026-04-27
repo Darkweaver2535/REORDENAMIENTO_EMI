@@ -1,10 +1,11 @@
 from django.core.cache import cache
 from django.utils import timezone
-from rest_framework import status
+from rest_framework import status, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.pagination import PageNumberPagination
 
 from apps.laboratorios.models import Laboratorio, Equipo
 from apps.laboratorios.serializers import (
@@ -19,10 +20,20 @@ from apps.usuarios.models import AuditLog
 from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos
 
 
+class LaboratorioPagination(PageNumberPagination):
+	page_size = 20
+	page_size_query_param = "page_size"
+	max_page_size = 50
+
+
 class LaboratorioViewSet(ModelViewSet):
 	"""ViewSet para gestión de laboratorios con analytics cacheados."""
 
 	queryset = Laboratorio.objects.none()
+	pagination_class = LaboratorioPagination
+	filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+	search_fields = ["nombre", "sala", "unidad_academica__nombre"]
+	ordering_fields = ["nombre", "created_at"]
 
 	def get_queryset(self):
 		queryset = Laboratorio.objects.select_related("unidad_academica")
