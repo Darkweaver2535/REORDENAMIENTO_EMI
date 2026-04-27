@@ -49,6 +49,9 @@ urlpatterns = [
 
     # Configuración
     path(f"{API_PREFIX}configuracion/", include("apps.configuracion.urls")),
+
+    # Evaluaciones
+    path(f"{API_PREFIX}", include("apps.evaluaciones.urls")),
 ]
 
 if settings.DEBUG:

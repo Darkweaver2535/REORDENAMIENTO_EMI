@@ -51,6 +51,7 @@ class EquipoListSerializer(serializers.ModelSerializer):
 	laboratorio_nombre = serializers.SerializerMethodField()
 	cantidad_disponible = serializers.SerializerMethodField()
 	evaluado_por_nombre = serializers.SerializerMethodField()
+	ultima_evaluacion = serializers.SerializerMethodField()
 
 	class Meta:
 		model = Equipo
@@ -70,6 +71,7 @@ class EquipoListSerializer(serializers.ModelSerializer):
 			"evaluado_por_nombre",
 			"observaciones",
 			"foto_url",
+			"ultima_evaluacion",
 		)
 
 	def get_laboratorio_nombre(self, obj):
@@ -84,6 +86,25 @@ class EquipoListSerializer(serializers.ModelSerializer):
 		if obj.evaluado_por_id is None:
 			return None
 		return obj.evaluado_por.nombre_completo
+
+	def get_ultima_evaluacion(self, obj):
+		ev = obj.evaluaciones.first()  # ordered by -fecha
+		if not ev:
+			return None
+		return {
+			"id": ev.id,
+			"cantidad_bueno": ev.cantidad_bueno,
+			"cantidad_regular": ev.cantidad_regular,
+			"cantidad_malo": ev.cantidad_malo,
+			"total_unidades": ev.total_unidades,
+			"condicion_predominante": ev.condicion_predominante,
+			"porcentaje_bueno": ev.porcentaje_bueno,
+			"observaciones": ev.observaciones,
+			"fecha": ev.fecha,
+			"evaluador_nombre": (
+				ev.evaluador.nombre_completo or ev.evaluador.username
+			) if ev.evaluador else "Sin registrar",
+		}
 
 
 class EquipoDetalleSerializer(EquipoListSerializer):
