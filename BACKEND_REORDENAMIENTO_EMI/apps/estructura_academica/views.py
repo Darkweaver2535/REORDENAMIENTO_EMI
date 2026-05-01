@@ -58,7 +58,7 @@ class CarreraViewSet(ReadOnlyModelViewSet):
 	Filtros OPCIONALES: ?departamento_id=1 y/o ?unidad_academica_id=1
 	Sin filtros: devuelve TODAS las carreras.
 	Nota: el filtro por unidad_academica_id ahora busca a través de
-	la tabla M2M CarreraUnidadAcademica (carreras ofertadas en esa sede).
+	la tabla M2M CarreraUnidadAcademica (carreras ofertadas en esa unidad académica).
 	"""
 
 	permission_classes = [IsAuthenticated]
@@ -101,7 +101,7 @@ class AsignaturaViewSet(ReadOnlyModelViewSet):
 	GET /api/v1/estructura_academica/asignaturas/
 	Filtros OPCIONALES: ?carrera_id=1 y/o ?semestre_id=5
 	Sin filtros: devuelve TODAS las asignaturas activas.
-	Las asignaturas son compartidas entre todas las sedes (no dependen de unidad_academica).
+	Las asignaturas son compartidas entre todas las unidades académicas (no dependen de unidad_academica).
 	"""
 
 	permission_classes = [IsAuthenticated]

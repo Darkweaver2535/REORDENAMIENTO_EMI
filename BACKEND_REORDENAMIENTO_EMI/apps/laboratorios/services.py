@@ -24,7 +24,7 @@
 #
 # 4. comparar_sedes_para_equipo(nombre_equipo_teorico) -> list[dict]:
 #    Busca un equipo por nombre aproximado (icontains) en TODOS los laboratorios.
-#    Compara disponibilidad vs. demanda teórica entre sedes.
+#    Compara disponibilidad vs. demanda teórica entre unidades académicas.
 #    Retorna lista ordenada por déficit descendente:
 #    [{sede, laboratorio, cantidad_disponible, cantidad_requerida, deficit, ratio}]
 #    ESTA función detecta la desproporción La Paz (100 estudiantes, 4 balanzas)
@@ -32,7 +32,7 @@
 #
 # 5. detectar_excedentes(laboratorio_id) -> list[dict]:
 #    Equipos con pct_uso < 10% O cantidad_disponible > (max_requerido * 2)
-#    Candidatos para reordenamiento a otra sede.
+#    Candidatos para reordenamiento a otra unidad académica.
 #    Retorna: [{equipo_id, nombre, cantidad_disponible, max_requerido, excedente}]
 #
 # Usar select_related y prefetch_related para evitar N+1 queries.

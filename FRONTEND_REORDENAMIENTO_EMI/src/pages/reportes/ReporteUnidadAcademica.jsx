@@ -247,60 +247,76 @@ export default function ReporteUnidadAcademica() {
 
 				{unidadSel === "todas" && (
 					<GraficoSeccion titulo="Equipos por Unidad Académica" subtitulo="Barras apiladas por estado" isLoading={isLoading}>
-						<ResponsiveContainer width="100%" height="100%">
-							<BarChart data={barrasUA} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
-								<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-								<XAxis type="number" tick={{ fontSize: 12 }} />
-								<YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 12, fontWeight: 600 }} />
-								<Tooltip content={<ChartTooltip />} />
-								<Legend wrapperStyle={{ fontSize: 12 }} />
-								<Bar dataKey="bueno" stackId="a" fill={COLORES_ESTADO.bueno} name="Bueno" radius={[0, 0, 0, 0]} />
-								<Bar dataKey="regular" stackId="a" fill={COLORES_ESTADO.regular} name="Regular" />
-								<Bar dataKey="malo" stackId="a" fill={COLORES_ESTADO.malo} name="Malo" radius={[0, 4, 4, 0]} />
-							</BarChart>
-						</ResponsiveContainer>
+						{barrasUA.length > 0 ? (
+							<ResponsiveContainer width="100%" height="100%">
+								<BarChart data={barrasUA} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 5 }}>
+									<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+									<XAxis type="number" tick={{ fontSize: 12 }} />
+									<YAxis dataKey="name" type="category" width={55} tick={{ fontSize: 12, fontWeight: 600 }} />
+									<Tooltip content={<ChartTooltip />} />
+									<Legend wrapperStyle={{ fontSize: 12 }} />
+									<Bar dataKey="bueno" stackId="a" fill={COLORES_ESTADO.bueno} name="Bueno" radius={[0, 0, 0, 0]} />
+									<Bar dataKey="regular" stackId="a" fill={COLORES_ESTADO.regular} name="Regular" />
+									<Bar dataKey="malo" stackId="a" fill={COLORES_ESTADO.malo} name="Malo" radius={[0, 4, 4, 0]} />
+								</BarChart>
+							</ResponsiveContainer>
+						) : (
+							<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+						)}
 					</GraficoSeccion>
 				)}
 
 				<GraficoSeccion titulo="Distribución de Estados" subtitulo={unidadSel === "todas" ? "General" : unidades.find(u => String(u.id) === String(unidadSel))?.nombre} isLoading={isLoading}>
-					<ResponsiveContainer width="100%" height="100%">
-						<PieChart>
-							<Pie data={donutData} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ strokeWidth: 1 }}>
-								{donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
-							</Pie>
-							<Tooltip formatter={(v, n) => [`${v} equipos`, n]} />
-							<Legend wrapperStyle={{ fontSize: 12 }} />
-						</PieChart>
-					</ResponsiveContainer>
+					{donutData.length > 0 ? (
+						<ResponsiveContainer width="100%" height="100%">
+							<PieChart>
+								<Pie data={donutData} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ strokeWidth: 1 }}>
+									{donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+								</Pie>
+								<Tooltip formatter={(v, n) => [`${v} equipos`, n]} />
+								<Legend wrapperStyle={{ fontSize: 12 }} />
+							</PieChart>
+						</ResponsiveContainer>
+					) : (
+						<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+					)}
 				</GraficoSeccion>
 
 				{unidadSel !== "todas" && (
 					<GraficoSeccion titulo="Equipos por Tipo" subtitulo="Top 8 tipos más comunes" isLoading={isLoading}>
-						<ResponsiveContainer width="100%" height="100%">
-							<BarChart data={barrasTipo} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-								<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-								<XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
-								<YAxis tick={{ fontSize: 12 }} />
-								<Tooltip content={<ChartTooltip />} />
-								<Bar dataKey="value" fill="#002B5E" radius={[6, 6, 0, 0]} name="Cantidad" />
-							</BarChart>
-						</ResponsiveContainer>
+						{barrasTipo.length > 0 ? (
+							<ResponsiveContainer width="100%" height="100%">
+								<BarChart data={barrasTipo} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+									<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+									<XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
+									<YAxis tick={{ fontSize: 12 }} />
+									<Tooltip content={<ChartTooltip />} />
+									<Bar dataKey="value" fill="#002B5E" radius={[6, 6, 0, 0]} name="Cantidad" />
+								</BarChart>
+							</ResponsiveContainer>
+						) : (
+							<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+						)}
 					</GraficoSeccion>
 				)}
 
 				{unidadSel !== "todas" && (
 					<GraficoSeccion titulo="Reordenamientos en el Tiempo" subtitulo="Últimos 6 meses" isLoading={isLoading}>
-						<ResponsiveContainer width="100%" height="100%">
-							<LineChart data={lineaReord} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-								<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-								<XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-								<YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-								<Tooltip content={<ChartTooltip />} />
-								<Legend wrapperStyle={{ fontSize: 12 }} />
-								<Line type="monotone" dataKey="enviados" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} name="Enviados" />
-								<Line type="monotone" dataKey="recibidos" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} name="Recibidos" />
-							</LineChart>
-						</ResponsiveContainer>
+						{lineaReord.length > 0 ? (
+							<ResponsiveContainer width="100%" height="100%">
+								<LineChart data={lineaReord} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+									<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+									<XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+									<YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+									<Tooltip content={<ChartTooltip />} />
+									<Legend wrapperStyle={{ fontSize: 12 }} />
+									<Line type="monotone" dataKey="enviados" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} name="Enviados" />
+									<Line type="monotone" dataKey="recibidos" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} name="Recibidos" />
+								</LineChart>
+							</ResponsiveContainer>
+						) : (
+							<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+						)}
 					</GraficoSeccion>
 				)}
 			</div>

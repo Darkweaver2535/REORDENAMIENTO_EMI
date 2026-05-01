@@ -96,7 +96,7 @@ class EquipoViewSet(ModelViewSet):
 	queryset = Equipo.objects.none()
 
 	def get_queryset(self):
-		queryset = Equipo.objects.select_related("laboratorio", "evaluado_por")
+		queryset = Equipo.objects.select_related("laboratorio", "laboratorio__unidad_academica", "evaluado_por")
 
 		laboratorio_id = self.request.query_params.get("laboratorio_id")
 		if laboratorio_id:

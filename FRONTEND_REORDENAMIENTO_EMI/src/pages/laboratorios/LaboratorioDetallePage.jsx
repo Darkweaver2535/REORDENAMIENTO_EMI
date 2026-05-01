@@ -49,7 +49,7 @@ export default function LaboratorioDetallePage() {
 	const equipos = useMemo(() => normalize(equiposData), [equiposData]);
 
 	const labName = lab?.nombre ?? lab?.nombre_laboratorio ?? "Laboratorio";
-	const sede    = lab?.unidad_academica_nombre ?? lab?.sede ?? "—";
+	const unidadNombre = lab?.unidad_academica_nombre ?? lab?.sede ?? "—";
 
 	/* ── Render ───────────────────────────────────────────────── */
 	return (
@@ -58,7 +58,7 @@ export default function LaboratorioDetallePage() {
 				title={loadingLab ? "Cargando..." : labName}
 				description={
 					loadingLab ? "" :
-					`Sede: ${sede} · ${equipos.length} equipo${equipos.length === 1 ? "" : "s"} registrado${equipos.length === 1 ? "" : "s"}`
+					`Unidad Académica: ${unidadNombre} · ${equipos.length} equipo${equipos.length === 1 ? "" : "s"} registrado${equipos.length === 1 ? "" : "s"}`
 				}
 				actions={
 					<Button variant="secondary" onClick={() => navigate("/laboratorios")}>
@@ -76,7 +76,7 @@ export default function LaboratorioDetallePage() {
 						marginBottom: "28px",
 					}}>
 						{[
-							{ label: "Sede",        value: lab?.unidad_academica_nombre ?? lab?.sede ?? "—" },
+							{ label: "Unidad Académica", value: lab?.unidad_academica_nombre ?? lab?.sede ?? "—" },
 							{ label: "Campus",      value: lab?.campus ?? "—" },
 							{ label: "Edificio",    value: lab?.edificio  ?? "—" },
 							{ label: "Sala",        value: lab?.sala ?? lab?.aula ?? "—" },
@@ -115,7 +115,7 @@ export default function LaboratorioDetallePage() {
 						<table style={{ minWidth: "750px", borderCollapse: "collapse", width: "100%" }}>
 							<thead>
 								<tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-									{["Código", "Equipo", "Estado", "Disponibles", "Total", "Última Evaluación", "Acción"].map((h) => (
+								{["Código", "Equipo", "Estado", "Disponible", "No Disponible", "Total", "Última Evaluación", "Acción"].map((h) => (
 										<th
 											key={h}
 											style={{ padding: "13px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.12em", whiteSpace: "nowrap" }}
@@ -130,7 +130,7 @@ export default function LaboratorioDetallePage() {
 								{/* Skeleton */}
 								{loadingEquipos && [1, 2, 3, 4].map((i) => (
 									<tr key={i}>
-										{[1, 2, 3, 4, 5, 6, 7].map((j) => (
+										{[1, 2, 3, 4, 5, 6, 7, 8].map((j) => (
 											<td key={j} style={{ padding: "16px 20px" }}>
 												<div style={{ height: "14px", borderRadius: "6px", backgroundColor: "#f3f4f6" }} className="animate-pulse" />
 											</td>
@@ -141,7 +141,7 @@ export default function LaboratorioDetallePage() {
 								{/* Empty */}
 								{!loadingEquipos && equipos.length === 0 && (
 									<tr>
-										<td colSpan={7} style={{ padding: "56px 24px", textAlign: "center" }}>
+										<td colSpan={8} style={{ padding: "56px 24px", textAlign: "center" }}>
 											<FlaskConical size={40} color="#d1d5db" style={{ margin: "0 auto 12px" }} />
 											<p style={{ fontSize: "17px", fontWeight: 700, color: "#374151" }}>Sin equipos registrados</p>
 										</td>
@@ -150,10 +150,11 @@ export default function LaboratorioDetallePage() {
 
 								{/* Filas */}
 								{!loadingEquipos && equipos.map((eq, idx) => {
-									const disponibles = safe(eq?.cantidad_disponible ?? eq?.disponible ?? eq?.buenas);
-									const total       = safe(eq?.cantidad_total ?? eq?.total ?? eq?.cantidad);
-									const ev          = eq?.ultima_evaluacion;
-									const yaEvaluado  = !!ev;
+									const disponible    = safe(eq?.cantidad_disponible ?? (safe(eq?.cantidad_buena) + safe(eq?.cantidad_regular)));
+									const noDisponible  = safe(eq?.cantidad_mala);
+									const total         = safe(eq?.cantidad_total ?? eq?.total ?? eq?.cantidad);
+									const ev            = eq?.ultima_evaluacion;
+									const yaEvaluado    = !!ev;
 
 									return (
 										<tr
@@ -185,14 +186,27 @@ export default function LaboratorioDetallePage() {
 											<td style={{ padding: "16px 20px" }}>
 												<EstadoBadge estado={eq?.estatus_general} />
 											</td>
+											{/* Disponible = buena + regular */}
 											<td style={{ padding: "16px 20px" }}>
 												<span style={{
-													display: "inline-flex", alignItems: "center", justifyContent: "center",
+													display: "inline-flex", alignItems: "center", gap: 5,
 													minWidth: "36px", height: "28px", borderRadius: "6px", padding: "0 10px",
 													backgroundColor: "#f0fdf4", color: "#15803d",
 													fontSize: "14px", fontWeight: 700,
 												}}>
-													{disponibles}
+													🟢 {disponible}
+												</span>
+											</td>
+											{/* No Disponible = mala */}
+											<td style={{ padding: "16px 20px" }}>
+												<span style={{
+													display: "inline-flex", alignItems: "center", gap: 5,
+													minWidth: "36px", height: "28px", borderRadius: "6px", padding: "0 10px",
+													backgroundColor: noDisponible > 0 ? "#fef2f2" : "#f3f4f6",
+													color: noDisponible > 0 ? "#991b1b" : "#9ca3af",
+													fontSize: "14px", fontWeight: 700,
+												}}>
+													🔴 {noDisponible}
 												</span>
 											</td>
 

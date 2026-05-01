@@ -49,7 +49,7 @@ class DashboardMetricasView(APIView):
             estado=Reordenamiento.Estado.PENDIENTE
         ).count()
 
-        # ── Equipos por Sede (para gráfico de barras) ─────────────────────────
+        # ── Equipos por Unidad Académica (para gráfico de barras) ─────────────────────
         equipos_por_sede = (
             Equipo.objects.values(
                 sede=models.F("laboratorio__unidad_academica__abreviacion"),

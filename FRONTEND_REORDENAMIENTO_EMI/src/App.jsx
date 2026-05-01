@@ -134,7 +134,7 @@ export default function App() {
 							<Route path=":id" element={<EquipoDetailPage />} />
 						</Route>
 
-						{/* ── MÓDULO: Reordenamientos (Sedes) ───────────────── */}
+						{/* ── MÓDULO: Reordenamientos (Unidades Académicas) ─ */}
 						<Route path="/reordenamientos" element={
 							<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 								<Outlet />

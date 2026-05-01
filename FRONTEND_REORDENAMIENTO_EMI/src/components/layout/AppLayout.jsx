@@ -102,14 +102,14 @@ export default function AppLayout() {
           {hasRole('admin', 'jefe', 'encargado_activos') && (
             <NavLink to="/equipos" style={navLinkStyle}>
               <Monitor size={20} />
-              <span>Equipos</span>
+              <span>Ficha Técnica</span>
             </NavLink>
           )}
 
           {hasRole('admin', 'jefe') && (
             <>
               <p style={{ padding: "28px 16px 16px 16px", color: "rgba(147,197,253,0.5)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em" }}>
-                Sedes
+                Unidades Académicas
               </p>
 
               <NavLink to="/reordenamientos" style={navLinkStyle}>
@@ -119,7 +119,7 @@ export default function AppLayout() {
 
               <NavLink to="/reordenamientos/comparativa" style={navLinkStyle}>
                 <BarChart2 size={20} />
-                <span>Comparativa Sedes</span>
+                <span>Comparativa U.A.</span>
               </NavLink>
 
               <NavLink to="/reportes" style={navLinkStyle}>
@@ -133,7 +133,7 @@ export default function AppLayout() {
                     <Users size={20} />
                     <span>Usuarios</span>
                   </NavLink>
-                  
+
                   <NavLink to="/admin/configuracion" style={navLinkStyle}>
                     <Settings size={20} />
                     <span>Configuración</span>

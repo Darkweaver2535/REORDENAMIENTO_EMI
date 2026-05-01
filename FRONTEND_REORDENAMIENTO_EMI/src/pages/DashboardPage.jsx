@@ -21,7 +21,7 @@ const normalize = (d) => d?.data ?? d ?? {};
 const safeNum   = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
 /* ── Fallback data (nunca dejar gráficos vacíos) ─────────────── */
-const FALLBACK_SEDES = [
+const FALLBACK_UNIDADES = [
   { sede: 'UALP', total: 45, buenos: 32, regulares: 8, malos: 5 },
   { sede: 'UASC', total: 38, buenos: 28, regulares: 7, malos: 3 },
   { sede: 'UACB', total: 30, buenos: 22, regulares: 5, malos: 3 },
@@ -181,9 +181,9 @@ export default function DashboardPage() {
   const pctMalos = safeNum(metrics?.equipos_malos_porcentaje);
 
   /* ── Chart data (API real o fallback) ─────────────── */
-  const equiposPorSede = Array.isArray(metrics?.equipos_por_sede) && metrics.equipos_por_sede.length > 0
+  const equiposPorUnidad = Array.isArray(metrics?.equipos_por_sede) && metrics.equipos_por_sede.length > 0
     ? metrics.equipos_por_sede
-    : FALLBACK_SEDES;
+    : FALLBACK_UNIDADES;
 
   const estadoEquipos = Array.isArray(metrics?.estado_equipos) && metrics.estado_equipos.some(e => e.value > 0)
     ? metrics.estado_equipos
@@ -205,7 +205,7 @@ export default function DashboardPage() {
       visible: hasRole('admin', 'jefe', 'encargado_activos'),
     },
     {
-      title: 'Reordenamiento', desc: 'Traslados entre sedes',
+      title: 'Reordenamiento', desc: 'Traslados entre unidades académicas',
       icon: ArrowLeftRight, href: '/reordenamientos', iconBg: '#FFFBEB', iconColor: '#92400e',
       visible: hasRole('admin', 'jefe'),
     },
@@ -339,39 +339,43 @@ export default function DashboardPage() {
         gap: '20px',
         marginBottom: '20px',
       }}>
-        {/* Barras: Equipos por Sede */}
+        {/* Barras: Equipos por Unidad Académica */}
         <ChartCard
-          title="Equipos por Sede"
+          title="Equipos por Unidad Académica"
           subtitle="Distribución de activos en las unidades académicas"
         >
           {isLoading ? (
             <div style={{ height: '300px', backgroundColor: '#f9fafb', borderRadius: '12px' }} className="animate-pulse" />
+          ) : equiposPorUnidad.length > 0 ? (
+            <div style={{ width: '100%', minHeight: 300, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={equiposPorUnidad} barSize={24} barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis
+                    dataKey="sede"
+                    tick={{ fontSize: 13, fontWeight: 600, fill: '#6b7280' }}
+                    axisLine={{ stroke: '#e5e7eb' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: '#9ca3af' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ paddingTop: '16px', fontSize: '13px', fontWeight: 600 }}
+                    iconType="circle"
+                    iconSize={8}
+                  />
+                  <Bar dataKey="buenos" name="Buenos" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="regulares" name="Regulares" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="malos" name="Malos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={equiposPorSede} barSize={24} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis
-                  dataKey="sede"
-                  tick={{ fontSize: 13, fontWeight: 600, fill: '#6b7280' }}
-                  axisLine={{ stroke: '#e5e7eb' }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 12, fill: '#9ca3af' }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  wrapperStyle={{ paddingTop: '16px', fontSize: '13px', fontWeight: 600 }}
-                  iconType="circle"
-                  iconSize={8}
-                />
-                <Bar dataKey="buenos" name="Buenos" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="regulares" name="Regulares" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="malos" name="Malos" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 14, fontWeight: 500, backgroundColor: '#f9fafb', borderRadius: 12 }}>Sin datos disponibles</div>
           )}
         </ChartCard>
 
@@ -384,32 +388,38 @@ export default function DashboardPage() {
             <div style={{ height: '300px', backgroundColor: '#f9fafb', borderRadius: '12px' }} className="animate-pulse" />
           ) : (
             <div>
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={estadoEquipos}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={65}
-                    outerRadius={100}
-                    paddingAngle={4}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {estadoEquipos.map((entry, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v) => v}
-                    contentStyle={{
-                      backgroundColor: '#1f2937', borderRadius: '10px', border: 'none',
-                      padding: '10px 14px', fontSize: '13px', fontWeight: 600, color: '#fff',
-                    }}
-                    itemStyle={{ color: '#fff' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {estadoEquipos.length > 0 ? (
+                <div style={{ width: '100%', minHeight: 240, minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <PieChart>
+                      <Pie
+                        data={estadoEquipos}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={65}
+                        outerRadius={100}
+                        paddingAngle={4}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {estadoEquipos.map((entry, i) => (
+                          <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(v) => v}
+                        contentStyle={{
+                          backgroundColor: '#1f2937', borderRadius: '10px', border: 'none',
+                          padding: '10px 14px', fontSize: '13px', fontWeight: 600, color: '#fff',
+                        }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 14, fontWeight: 500, backgroundColor: '#f9fafb', borderRadius: 12 }}>Sin datos disponibles</div>
+              )}
               {/* Legend manual for cleaner layout */}
               <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '4px' }}>
                 {estadoEquipos.map((entry, i) => (
@@ -437,41 +447,45 @@ export default function DashboardPage() {
       >
         {isLoading ? (
           <div style={{ height: '240px', backgroundColor: '#f9fafb', borderRadius: '12px' }} className="animate-pulse" />
+        ) : reordenamientosMensual.length > 0 ? (
+          <div style={{ width: '100%', minHeight: 240, minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={reordenamientosMensual}>
+                <defs>
+                  <linearGradient id="gradientTraslados" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis
+                  dataKey="mes"
+                  tick={{ fontSize: 13, fontWeight: 600, fill: '#6b7280' }}
+                  axisLine={{ stroke: '#e5e7eb' }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: '#9ca3af' }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="traslados"
+                  name="Traslados"
+                  stroke="#2563eb"
+                  strokeWidth={2.5}
+                  fill="url(#gradientTraslados)"
+                  dot={{ fill: '#2563eb', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, stroke: '#2563eb', strokeWidth: 2, fill: '#fff' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={reordenamientosMensual}>
-              <defs>
-                <linearGradient id="gradientTraslados" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-              <XAxis
-                dataKey="mes"
-                tick={{ fontSize: 13, fontWeight: 600, fill: '#6b7280' }}
-                axisLine={{ stroke: '#e5e7eb' }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: '#9ca3af' }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="traslados"
-                name="Traslados"
-                stroke="#2563eb"
-                strokeWidth={2.5}
-                fill="url(#gradientTraslados)"
-                dot={{ fill: '#2563eb', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, stroke: '#2563eb', strokeWidth: 2, fill: '#fff' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', fontSize: 14, fontWeight: 500, backgroundColor: '#f9fafb', borderRadius: 12 }}>Sin datos disponibles</div>
         )}
       </ChartCard>
 

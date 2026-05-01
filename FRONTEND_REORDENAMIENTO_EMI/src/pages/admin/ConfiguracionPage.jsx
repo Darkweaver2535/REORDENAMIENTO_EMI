@@ -156,13 +156,13 @@ export default function ConfiguracionPage() {
 	// Modales
 	const [modalConfig, setModalConfig] = useState(null); // { isOpen, type, isEdit, entity, title, fields, api, queryKey, typeLabel }
 
-	const handleOpenSede = (sede = null) => {
+	const handleOpenUnidad = (unidad = null) => {
 		setModalConfig({
-			isOpen: true, isEdit: !!sede, entity: sede,
-			title: sede ? "Editar Sede" : "Agregar Sede", typeLabel: "Sede",
+			isOpen: true, isEdit: !!unidad, entity: unidad,
+			title: unidad ? "Editar Unidad Académica" : "Agregar Unidad Académica", typeLabel: "Unidad Académica",
 			queryKey: "unidades", api: crudApi.unidades,
 			fields: [
-				{ name: "nombre", label: "Nombre de la Sede", required: true, placeholder: "Ej. Sede Central (La Paz)" },
+				{ name: "nombre", label: "Nombre de la Unidad Académica", required: true, placeholder: "Ej. Unidad Académica La Paz" },
 				{ name: "abreviacion", label: "Abreviación", required: true, placeholder: "Ej. LPZ" },
 				{ name: "ciudad", label: "Ciudad", required: true, placeholder: "Ej. La Paz" }
 			]
@@ -176,7 +176,7 @@ export default function ConfiguracionPage() {
 			queryKey: "departamentos", api: crudApi.departamentos,
 			fields: [
 				{ name: "nombre", label: "Nombre del Departamento", required: true, placeholder: "Ej. Ciencias Básicas" },
-				{ name: "unidad_academica_id", label: "Unidad / Sede", type: "select", required: true, options: unidades.map(u => ({ label: u.nombre, value: u.id })) }
+				{ name: "unidad_academica_id", label: "Unidad Académica", type: "select", required: true, options: unidades.map(u => ({ label: u.nombre, value: u.id })) }
 			]
 		});
 	};
@@ -245,15 +245,15 @@ export default function ConfiguracionPage() {
 			{/* Módulos en Tablas/Secciones */}
 			<div style={{ display: "flex", flexDirection: "column", gap: "32px", paddingBottom: "60px" }}>
 
-				{/* ══ Sección 1: Unidades / Sedes ══ */}
+				{/* ══ Sección 1: Unidades Académicas ══ */}
 				<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
 					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
 						<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 							<Building2 size={24} color="#002B5E" />
-							<h2 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: 0 }}>Unidades Académicas (Sedes)</h2>
+							<h2 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: 0 }}>Unidades Académicas</h2>
 						</div>
-						<button onClick={() => handleOpenSede()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#002B5E", color: "#fff", padding: "8px 16px", borderRadius: "8px", border: "none", fontSize: "14px", fontWeight: 700, cursor: "pointer" }} className="hover:bg-blue-900 transition-colors">
-							<Plus size={16} /> Agregar Sede
+						<button onClick={() => handleOpenUnidad()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#002B5E", color: "#fff", padding: "8px 16px", borderRadius: "8px", border: "none", fontSize: "14px", fontWeight: 700, cursor: "pointer" }} className="hover:bg-blue-900 transition-colors">
+							<Plus size={16} /> Agregar Unidad Académica
 						</button>
 					</div>
 
@@ -261,7 +261,7 @@ export default function ConfiguracionPage() {
 						<table style={{ width: "100%", borderCollapse: "collapse" }}>
 							<thead style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
 								<tr>
-									{["Sede", "Abreviación", "Ciudad", "Acciones"].map(h => (
+									{["Unidad Académica", "Abreviación", "Ciudad", "Acciones"].map(h => (
 										<th key={h} style={{ padding: "12px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase" }}>{h}</th>
 									))}
 								</tr>
@@ -273,13 +273,13 @@ export default function ConfiguracionPage() {
 										<td style={{ padding: "14px 20px", fontSize: "14px", color: "#4b5563" }}>{u.abreviacion || "—"}</td>
 										<td style={{ padding: "14px 20px", fontSize: "14px", color: "#4b5563" }}>{u.ciudad || "—"}</td>
 										<td style={{ padding: "14px 20px" }}>
-											<button onClick={() => handleOpenSede(u)} style={{ background: "none", border: "none", color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600 }} className="hover:text-blue-600">
+											<button onClick={() => handleOpenUnidad(u)} style={{ background: "none", border: "none", color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600 }} className="hover:text-blue-600">
 												<Edit size={14} /> Editar
 											</button>
 										</td>
 									</tr>
 								))}
-								{unidades.length === 0 && <tr><td colSpan={4} style={{ padding: "24px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>No hay sedes registradas.</td></tr>}
+								{unidades.length === 0 && <tr><td colSpan={4} style={{ padding: "24px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>No hay unidades académicas registradas.</td></tr>}
 							</tbody>
 						</table>
 					</div>
@@ -371,7 +371,7 @@ export default function ConfiguracionPage() {
 
 						<Toggle
 							label="Módulo de Reactivos"
-							description="Habilita la sección de gestión de reactivos químicos y caducidad para todas las sedes."
+							description="Habilita la sección de gestión de reactivos químicos y caducidad para todas las unidades académicas."
 							checked={reactivosEnabled}
 							onChange={setReactivosEnabled}
 						/>

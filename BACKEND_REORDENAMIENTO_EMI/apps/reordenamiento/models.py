@@ -2,7 +2,7 @@
 # Sistema de gestión de laboratorios universitarios - Django 5.x + PostgreSQL
 #
 # TAREA: Crear el modelo 'Reordenamiento' que registra el movimiento oficial
-# de equipos entre laboratorios (puede ser entre sedes diferentes).
+# de equipos entre laboratorios (puede ser entre unidades académicas diferentes).
 # Hereda de BaseModel (created_at, updated_at).
 #
 # Campos:

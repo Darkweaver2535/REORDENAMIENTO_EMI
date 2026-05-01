@@ -62,8 +62,8 @@ class UnidadAcademica(BaseModel):
 
 	class Meta:
 		ordering = ["nombre"]
-		verbose_name = "Unidad academica"
-		verbose_name_plural = "Unidades academicas"
+		verbose_name = "Unidad Académica"
+		verbose_name_plural = "Unidades Académicas"
 
 	def __str__(self):
 		return f"{self.codigo} - {self.nombre}"
@@ -111,8 +111,8 @@ class DepartamentoUnidadAcademica(BaseModel):
 
 	class Meta:
 		ordering = ["departamento", "unidad_academica"]
-		verbose_name = "Departamento por sede"
-		verbose_name_plural = "Departamentos por sedes"
+		verbose_name = "Departamento por Unidad Académica"
+		verbose_name_plural = "Departamentos por Unidades Académicas"
 		unique_together = (("departamento", "unidad_academica"),)
 
 	def __str__(self):
@@ -158,8 +158,8 @@ class CarreraUnidadAcademica(BaseModel):
 
 	class Meta:
 		ordering = ["carrera", "unidad_academica"]
-		verbose_name = "Carrera por sede"
-		verbose_name_plural = "Carreras por sedes"
+		verbose_name = "Carrera por Unidad Académica"
+		verbose_name_plural = "Carreras por Unidades Académicas"
 		unique_together = (("carrera", "unidad_academica"),)
 
 	def __str__(self):

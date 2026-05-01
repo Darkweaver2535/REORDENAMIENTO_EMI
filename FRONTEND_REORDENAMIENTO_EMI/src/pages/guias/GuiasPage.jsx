@@ -76,7 +76,7 @@ export default function GuiasPage() {
 	return (
 		<PageWrapper
 			title="Guías de Laboratorio"
-			description="Busca y descarga prácticas por asignatura y sede."
+			description="Busca y descarga prácticas por asignatura y unidad académica."
 			actions={
 				isManager ? (
 					<Button onClick={() => navigate("/guias/nueva")}>

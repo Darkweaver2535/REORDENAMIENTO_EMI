@@ -25,23 +25,23 @@ class DepartamentoUnidadAcademicaInline(admin.TabularInline):
 	model = DepartamentoUnidadAcademica
 	extra = 1
 	fields = ("unidad_academica", "is_active")
-	verbose_name = "Sede"
-	verbose_name_plural = "Sedes donde existe este departamento"
+	verbose_name = "Unidad Académica"
+	verbose_name_plural = "Unidades Académicas donde existe este departamento"
 
 
 @admin.register(Departamento)
 class DepartamentoAdmin(admin.ModelAdmin):
-	list_display = ("nombre", "codigo", "sedes_activas")
+	list_display = ("nombre", "codigo", "unidades_activas")
 	search_fields = ("nombre", "codigo")
 	inlines = [DepartamentoUnidadAcademicaInline]
 
-	def sedes_activas(self, obj):
+	def unidades_activas(self, obj):
 		return ", ".join(
 			r.unidad_academica.nombre
 			for r in obj.depto_sedes.filter(is_active=True).select_related("unidad_academica")
 		) or "—"
 
-	sedes_activas.short_description = "Sedes activas"
+	unidades_activas.short_description = "Unidades Académicas activas"
 
 
 @admin.register(DepartamentoUnidadAcademica)
@@ -60,24 +60,24 @@ class CarreraUnidadAcademicaInline(admin.TabularInline):
 	model = CarreraUnidadAcademica
 	extra = 1
 	fields = ("unidad_academica", "is_active")
-	verbose_name = "Sede"
-	verbose_name_plural = "Sedes donde existe esta carrera"
+	verbose_name = "Unidad Académica"
+	verbose_name_plural = "Unidades Académicas donde existe esta carrera"
 
 
 @admin.register(Carrera)
 class CarreraAdmin(admin.ModelAdmin):
-	list_display = ("nombre", "codigo_institucional", "departamento", "sedes_activas")
+	list_display = ("nombre", "codigo_institucional", "departamento", "unidades_activas")
 	search_fields = ("nombre", "codigo_institucional")
 	list_select_related = ("departamento",)
 	inlines = [CarreraUnidadAcademicaInline]
 
-	def sedes_activas(self, obj):
+	def unidades_activas(self, obj):
 		return ", ".join(
 			r.unidad_academica.nombre
 			for r in obj.carrera_sedes.filter(is_active=True).select_related("unidad_academica")
 		) or "—"
 
-	sedes_activas.short_description = "Sedes activas"
+	unidades_activas.short_description = "Unidades Académicas activas"
 
 
 @admin.register(CarreraUnidadAcademica)

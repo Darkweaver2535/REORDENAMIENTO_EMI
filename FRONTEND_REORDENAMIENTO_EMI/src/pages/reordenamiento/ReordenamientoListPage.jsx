@@ -148,7 +148,7 @@ export default function ReordenamientoListPage() {
 	return (
 		<PageWrapper
 			title="Reordenamientos"
-			description="Historial de traslados de equipos entre laboratorios y sedes."
+			description="Historial de traslados de equipos entre laboratorios y unidades académicas."
 			actions={
 				hasRole(ROLES.ADMIN, ROLES.JEFE) ? (
 					<button
