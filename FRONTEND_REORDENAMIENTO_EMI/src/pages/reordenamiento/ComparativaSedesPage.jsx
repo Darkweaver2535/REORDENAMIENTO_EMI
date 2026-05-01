@@ -15,7 +15,7 @@ import { Navigate } from "react-router-dom";
 /* ── Helpers ─────────────────────────────────────────────────── */
 const normalize    = (d) => { if (!d) return []; const p = d?.data ?? d; if (Array.isArray(p)) return p; return p?.results ?? p?.sedes ?? p?.data ?? []; };
 const safe         = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
-const getSede      = (s) => s?.sede ?? s?.nombre_sede ?? s?.sede_nombre ?? s?.nombre ?? "Sede";
+const getUnidadNombre = (s) => s?.sede ?? s?.nombre_sede ?? s?.sede_nombre ?? s?.nombre ?? "Unidad Académica";
 const getDisp      = (s) => safe(s?.disponibles ?? s?.cantidad_disponible ?? s?.disponible);
 const getReq       = (s) => safe(s?.requerido ?? s?.cantidad_requerida ?? s?.requeridos);
 const getRatio     = (s) => { const req = getReq(s); return req > 0 ? getDisp(s) / req : getDisp(s) > 0 ? 2 : 0; };
@@ -59,7 +59,7 @@ function SedeCard({ sede, maxDisp, maxReq }) {
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
 				<div>
 					<h3 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>
-						{getSede(sede)}
+						{getUnidadNombre(sede)}
 					</h3>
 					{sede?.unidad_academica && (
 						<p style={{ fontSize: "13px", color: "#9ca3af", fontWeight: 500, marginTop: "3px" }}>
@@ -188,8 +188,8 @@ export default function ComparativaSedesPage() {
 
 	return (
 		<PageWrapper
-			title="Comparativa por Sedes"
-			description="Detecta desproporciones de equipos y justifica reordenamientos entre sedes."
+			title="Comparativa por Unidades Académicas"
+			description="Detecta desproporciones de equipos y justifica reordenamientos entre unidades académicas."
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
 
@@ -288,7 +288,7 @@ export default function ComparativaSedesPage() {
 							Busca un tipo de equipo
 						</h3>
 						<p style={{ fontSize: "15px", color: "#9ca3af", fontWeight: 500, maxWidth: "380px" }}>
-							Escribe el nombre del equipo que quieres comparar entre las distintas sedes y presiona "Buscar".
+							Escribe el nombre del equipo que quieres comparar entre las distintas unidades académicas y presiona "Buscar".
 						</p>
 					</div>
 				)}
@@ -330,7 +330,7 @@ export default function ComparativaSedesPage() {
 				{searchTerm && !loading && sedes.length > 0 && (
 					<>
 						{/* Propuesta de reordenamiento automática */}
-						{bestOrigen && bestDestino && getSede(bestOrigen) !== getSede(bestDestino) && (
+						{bestOrigen && bestDestino && getUnidadNombre(bestOrigen) !== getUnidadNombre(bestDestino) && (
 							<div style={{
 								display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between",
 								gap: "16px",
@@ -347,8 +347,8 @@ export default function ComparativaSedesPage() {
 										<strong style={{ color: "#002B5E" }}>
 											{Math.min(getExcedente(bestOrigen), getDeficit(bestDestino))} unidad(es)
 										</strong>
-										{" desde "}<strong>{getSede(bestOrigen)}</strong>
-										{" hacia "}<strong>{getSede(bestDestino)}</strong>
+										{" desde "}<strong>{getUnidadNombre(bestOrigen)}</strong>
+										{" hacia "}<strong>{getUnidadNombre(bestDestino)}</strong>
 									</p>
 								</div>
 								<button
@@ -371,7 +371,7 @@ export default function ComparativaSedesPage() {
 						{/* Leyenda */}
 						<div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "center" }}>
 							<span style={{ fontSize: "14px", fontWeight: 700, color: "#374151" }}>
-								{sedes.length} sede{sedes.length === 1 ? "" : "s"} · "{searchTerm}"
+								{sedes.length} unidad{sedes.length === 1 ? "" : "es"} académica{sedes.length === 1 ? "" : "s"} · "{searchTerm}"
 							</span>
 							<div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
 								{[
@@ -412,7 +412,7 @@ export default function ComparativaSedesPage() {
 								<table style={{ minWidth: "600px", borderCollapse: "collapse", width: "100%" }}>
 									<thead>
 										<tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-											{["Sede", "Disponibles", "Requeridos", "Déficit", "Excedente", "Cobertura"].map((h) => (
+											{["Unidad Académica", "Disponibles", "Requeridos", "Déficit", "Excedente", "Cobertura"].map((h) => (
 												<th key={h} style={{ padding: "12px 20px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.12em" }}>
 													{h}
 												</th>
@@ -429,7 +429,7 @@ export default function ComparativaSedesPage() {
 											const exc     = getExcedente(s);
 											return (
 												<tr key={i} style={{ borderBottom: i < sedes.length - 1 ? "1px solid #f3f4f6" : "none" }} className="hover:bg-gray-50">
-													<td style={{ padding: "13px 20px", fontSize: "15px", fontWeight: 700, color: "#111827" }}>{getSede(s)}</td>
+													<td style={{ padding: "13px 20px", fontSize: "15px", fontWeight: 700, color: "#111827" }}>{getUnidadNombre(s)}</td>
 													<td style={{ padding: "13px 20px", fontSize: "15px", fontWeight: 600, color: config.bar }}>{disp}</td>
 													<td style={{ padding: "13px 20px", fontSize: "15px", fontWeight: 600, color: "#374151" }}>{req}</td>
 													<td style={{ padding: "13px 20px" }}>

@@ -49,6 +49,8 @@ class LaboratorioDetalleSerializer(LaboratorioListSerializer):
 
 class EquipoListSerializer(serializers.ModelSerializer):
 	laboratorio_nombre = serializers.SerializerMethodField()
+	laboratorio_unidad_academica_id = serializers.SerializerMethodField()
+	laboratorio_unidad_academica_nombre = serializers.SerializerMethodField()
 	cantidad_disponible = serializers.SerializerMethodField()
 	evaluado_por_nombre = serializers.SerializerMethodField()
 	ultima_evaluacion = serializers.SerializerMethodField()
@@ -61,6 +63,8 @@ class EquipoListSerializer(serializers.ModelSerializer):
 			"codigo_activo",
 			"laboratorio_id",
 			"laboratorio_nombre",
+			"laboratorio_unidad_academica_id",
+			"laboratorio_unidad_academica_nombre",
 			"cantidad_total",
 			"cantidad_buena",
 			"cantidad_regular",
@@ -78,6 +82,16 @@ class EquipoListSerializer(serializers.ModelSerializer):
 		if obj.laboratorio_id is None:
 			return None
 		return obj.laboratorio.nombre
+
+	def get_laboratorio_unidad_academica_id(self, obj):
+		if obj.laboratorio_id is None:
+			return None
+		return obj.laboratorio.unidad_academica_id
+
+	def get_laboratorio_unidad_academica_nombre(self, obj):
+		if obj.laboratorio_id is None or obj.laboratorio.unidad_academica_id is None:
+			return None
+		return obj.laboratorio.unidad_academica.nombre
 
 	def get_cantidad_disponible(self, obj):
 		return obj.cantidad_disponible()

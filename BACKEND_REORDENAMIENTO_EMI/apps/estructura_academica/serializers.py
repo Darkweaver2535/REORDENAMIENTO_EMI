@@ -29,7 +29,7 @@ class DepartamentoSerializer(serializers.ModelSerializer):
 
 
 class CarreraSedeSerializer(serializers.ModelSerializer):
-	"""Serializer ligero para las sedes de una carrera."""
+	"""Serializer ligero para las unidades académicas de una carrera."""
 
 	class Meta:
 		model = UnidadAcademica

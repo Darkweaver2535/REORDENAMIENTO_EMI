@@ -29,8 +29,8 @@ const normalize = (d) => { if (!d) return []; const p = d?.data ?? d; if (Array.
 const getId = (l) => l?.id ?? l?.uuid;
 const getLabName = (l) => {
 	const nombre = l?.nombre ?? l?.nombre_laboratorio ?? l?.descripcion ?? "Laboratorio";
-	const sede = l?.sede_nombre ?? l?.unidad_academica_nombre ?? l?.sede ?? "";
-	return sede ? `${nombre} — ${sede}` : nombre;
+	const unidadNombre = l?.sede_nombre ?? l?.unidad_academica_nombre ?? l?.sede ?? "";
+	return unidadNombre ? `${nombre} — ${unidadNombre}` : nombre;
 };
 
 const PIE_COLORS = [COLORES_ESTADO.bueno, COLORES_ESTADO.regular, COLORES_ESTADO.malo];
@@ -48,7 +48,7 @@ const fechasSchema = z.object({
 const TABS = [
 	{ id: "inventario", label: "Inventario", icon: FlaskConical },
 	{ id: "movimientos", label: "Movimientos", icon: CalendarRange },
-	{ id: "comparativa", label: "Comparativa Sedes", icon: BarChart2 },
+	{ id: "comparativa", label: "Comparativa Unidades Académicas", icon: BarChart2 },
 	{ id: "unidad_academica", label: "Por Unidad Académica", icon: Building2, isNew: true },
 ];
 
@@ -170,7 +170,7 @@ export default function ReportesPage() {
 	});
 	const handleComparativa = () => {
 		if (!nombreEquipo.trim()) { toast.error("Ingresa el nombre del equipo a comparar"); return; }
-		downloadComparativa(`${BASE_URL}/api/v1/reportes/comparativa-sedes/?nombre_equipo=${encodeURIComponent(nombreEquipo.trim())}`, "comparativa-sedes.pdf");
+		downloadComparativa(`${BASE_URL}/api/v1/reportes/comparativa-sedes/?nombre_equipo=${encodeURIComponent(nombreEquipo.trim())}`, "comparativa-unidades-academicas.pdf");
 	};
 
 	const chartsLoading = loadingEquipos || loadingReord;
@@ -213,27 +213,35 @@ export default function ReportesPage() {
 					{/* Charts */}
 					<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
 						<GraficoSeccion titulo="Distribución por Estado" subtitulo="Todos los equipos" isLoading={chartsLoading}>
-							<ResponsiveContainer width="100%" height="100%">
-								<PieChart>
-									<Pie data={invDonut} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-										{invDonut.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-									</Pie>
-									<Tooltip />
-									<Legend wrapperStyle={{ fontSize: 12 }} />
-								</PieChart>
-							</ResponsiveContainer>
+							{invDonut.length > 0 ? (
+								<ResponsiveContainer width="100%" height="100%">
+									<PieChart>
+										<Pie data={invDonut} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+											{invDonut.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+										</Pie>
+										<Tooltip />
+										<Legend wrapperStyle={{ fontSize: 12 }} />
+									</PieChart>
+								</ResponsiveContainer>
+							) : (
+								<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+							)}
 						</GraficoSeccion>
 
 						<GraficoSeccion titulo="Top 5 Tipos de Equipo" subtitulo="Por cantidad total" isLoading={chartsLoading}>
-							<ResponsiveContainer width="100%" height="100%">
-								<BarChart data={invTopTipos} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-									<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-									<XAxis dataKey="name" tick={{ fontSize: 11 }} />
-									<YAxis tick={{ fontSize: 12 }} />
-									<Tooltip content={<ChartTooltip />} />
-									<Bar dataKey="value" fill="#002B5E" radius={[6, 6, 0, 0]} name="Cantidad" />
-								</BarChart>
-							</ResponsiveContainer>
+							{invTopTipos.length > 0 ? (
+								<ResponsiveContainer width="100%" height="100%">
+									<BarChart data={invTopTipos} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+										<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+										<XAxis dataKey="name" tick={{ fontSize: 11 }} />
+										<YAxis tick={{ fontSize: 12 }} />
+										<Tooltip content={<ChartTooltip />} />
+										<Bar dataKey="value" fill="#002B5E" radius={[6, 6, 0, 0]} name="Cantidad" />
+									</BarChart>
+								</ResponsiveContainer>
+							) : (
+								<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+							)}
 						</GraficoSeccion>
 					</div>
 
@@ -273,27 +281,35 @@ export default function ReportesPage() {
 					{/* Charts */}
 					<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
 						<GraficoSeccion titulo="Traslados por Mes" subtitulo="Últimos 6 meses" isLoading={chartsLoading}>
-							<ResponsiveContainer width="100%" height="100%">
-								<LineChart data={movMensual} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-									<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-									<XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-									<YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-									<Tooltip content={<ChartTooltip />} />
-									<Line type="monotone" dataKey="traslados" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 4, fill: "#8b5cf6" }} name="Traslados" />
-								</LineChart>
-							</ResponsiveContainer>
+							{movMensual.length > 0 ? (
+								<ResponsiveContainer width="100%" height="100%">
+									<LineChart data={movMensual} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
+										<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+										<XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+										<YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+										<Tooltip content={<ChartTooltip />} />
+										<Line type="monotone" dataKey="traslados" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 4, fill: "#8b5cf6" }} name="Traslados" />
+									</LineChart>
+								</ResponsiveContainer>
+							) : (
+								<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+							)}
 						</GraficoSeccion>
 
 						<GraficoSeccion titulo="Top 5 Rutas Frecuentes" subtitulo="Origen → Destino" isLoading={chartsLoading}>
-							<ResponsiveContainer width="100%" height="100%">
-								<BarChart data={topRutas} layout="vertical" margin={{ left: 30, right: 20, top: 5, bottom: 5 }}>
-									<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-									<XAxis type="number" tick={{ fontSize: 12 }} />
-									<YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} />
-									<Tooltip content={<ChartTooltip />} />
-									<Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} name="Traslados" />
-								</BarChart>
-							</ResponsiveContainer>
+							{topRutas.length > 0 ? (
+								<ResponsiveContainer width="100%" height="100%">
+									<BarChart data={topRutas} layout="vertical" margin={{ left: 30, right: 20, top: 5, bottom: 5 }}>
+										<CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+										<XAxis type="number" tick={{ fontSize: 12 }} />
+										<YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} />
+										<Tooltip content={<ChartTooltip />} />
+										<Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} name="Traslados" />
+									</BarChart>
+								</ResponsiveContainer>
+							) : (
+								<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af", fontSize: 14, fontWeight: 500 }}>Sin datos para mostrar</div>
+							)}
 						</GraficoSeccion>
 					</div>
 
@@ -321,7 +337,7 @@ export default function ReportesPage() {
 
 			{/* ══ TAB: Comparativa ══════════════════════════════ */}
 			{activeTab === "comparativa" && (
-				<ReportCard icon={BarChart2} title="Comparativa General de Sedes" description="Resumen ejecutivo con disponibilidades y déficits de equipos por sede.">
+				<ReportCard icon={BarChart2} title="Comparativa General de Unidades Académicas" description="Resumen ejecutivo con disponibilidades y déficits de equipos por unidad académica.">
 					<div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap", justifyContent: "space-between" }}>
 						<div style={{ flex: 1, minWidth: 260, maxWidth: 480 }}>
 							<label htmlFor="equipo-input" style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 8 }}>Nombre del Equipo a comparar <span style={{ color: "#ef4444" }}>*</span></label>

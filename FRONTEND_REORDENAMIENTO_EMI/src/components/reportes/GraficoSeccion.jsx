@@ -1,8 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Maximize2, X } from "lucide-react";
 
+/**
+ * Wrapper para gráficos Recharts.
+ *
+ * Resuelve el warning "width(-1) / height(-1)" de tres formas:
+ *  1. minWidth: 0          → evita desbordamiento en flex/grid
+ *  2. montaje diferido     → espera a que el DOM calcule dimensiones
+ *  3. altura fija interna  → el div del chart tiene height explícito
+ *     sin padding que reduzca el espacio útil
+ */
 export default function GraficoSeccion({ titulo, subtitulo, children, isLoading }) {
 	const [expanded, setExpanded] = useState(false);
+	const [montado, setMontado] = useState(false);
+
+	useEffect(() => {
+		const t = setTimeout(() => setMontado(true), 80);
+		return () => clearTimeout(t);
+	}, []);
 
 	if (isLoading) {
 		return (
@@ -20,14 +35,21 @@ export default function GraficoSeccion({ titulo, subtitulo, children, isLoading 
 					<button onClick={() => setExpanded(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#6b7280" }}><X size={22} /></button>
 					<h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", marginBottom: 4 }}>{titulo}</h3>
 					{subtitulo && <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 20 }}>{subtitulo}</p>}
-					<div style={{ height: 500 }}>{children}</div>
+					<div style={{ height: 500, minWidth: 0 }}>{children}</div>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+		<div style={{
+			backgroundColor: "#fff",
+			border: "1px solid #e5e7eb",
+			borderRadius: "14px",
+			boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+			minWidth: 0,          /* FIX 1: prevent flex/grid overflow */
+		}}>
+			{/* Header */}
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #f3f4f6" }}>
 				<div>
 					<h3 style={{ fontSize: 15, fontWeight: 800, color: "#111827", margin: 0 }}>{titulo}</h3>
@@ -37,7 +59,15 @@ export default function GraficoSeccion({ titulo, subtitulo, children, isLoading 
 					<Maximize2 size={16} />
 				</button>
 			</div>
-			<div style={{ padding: "16px 20px", height: 280 }}>{children}</div>
+
+			{/* Chart area — padding is OUTSIDE the height so ResponsiveContainer gets the full 248px */}
+			<div style={{ padding: "16px 20px" }}>
+				<div style={{ width: "100%", height: 248, minWidth: 0 }}>
+					{montado ? children : (
+						<div style={{ height: "100%", backgroundColor: "#f9fafb", borderRadius: 10 }} className="animate-pulse" />
+					)}
+				</div>
+			</div>
 		</div>
 	);
 }

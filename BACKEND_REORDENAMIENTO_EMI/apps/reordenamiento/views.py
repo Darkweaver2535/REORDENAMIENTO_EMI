@@ -18,7 +18,7 @@ from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos
 
 
 class ReordenamientoViewSet(ModelViewSet):
-	"""ViewSet para el flujo completo de reordenamiento inter-sede."""
+	"""ViewSet para el flujo completo de reordenamiento entre unidades académicas."""
 
 	queryset = Reordenamiento.objects.none()
 
@@ -150,7 +150,7 @@ class ReordenamientoViewSet(ModelViewSet):
 
 	@action(detail=False, methods=["get"], url_path="comparativa-sedes")
 	def comparativa_sedes(self, request):
-		"""Compara disponibilidad de equipos por nombre en todas las sedes."""
+		"""Compara disponibilidad de equipos por nombre en todas las unidades académicas."""
 		nombre_equipo = request.query_params.get("nombre_equipo")
 
 		if not nombre_equipo:

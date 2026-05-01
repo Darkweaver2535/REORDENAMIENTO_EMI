@@ -96,13 +96,13 @@ function ModalRoleEdit({ user, isOpen, onClose }) {
 					</div>
 
 					<div style={{ marginBottom: "24px" }}>
-						<label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>Sede / Unidad Académica</label>
+						<label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>Unidad Académica</label>
 						<select
 							value={form.unidad_academica_id}
 							onChange={(e) => setForm({ ...form, unidad_academica_id: e.target.value })}
 							style={{ width: "100%", height: "42px", borderRadius: "8px", border: "1px solid #d1d5db", padding: "0 12px", fontSize: "14px", backgroundColor: "#fff", color: "#111827", outline: "none" }}
 						>
-							<option value="">Sin sede específica (Nacional)</option>
+							<option value="">Sin unidad académica específica (Nacional)</option>
 							{unidades.map((u) => (
 								<option key={u.id} value={u.id}>{u.nombre}</option>
 							))}
@@ -168,7 +168,7 @@ export default function UsuariosPage() {
 	return (
 		<PageWrapper
 			title="Gestión de Usuarios"
-			description="Administra los roles, sedes y accesos de los usuarios en el sistema."
+			description="Administra los roles, unidades académicas y accesos de los usuarios en el sistema."
 		>
 			<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
 				<div style={{ padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "10px" }}>
@@ -180,7 +180,7 @@ export default function UsuariosPage() {
 					<table style={{ minWidth: "900px", width: "100%", borderCollapse: "collapse" }}>
 						<thead>
 							<tr style={{ backgroundColor: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-								{["CI", "Nombre Completo", "Rol Asignado", "Sede / Unidad", "Estado", "Acciones"].map(h => (
+								{["CI", "Nombre Completo", "Rol Asignado", "Unidad Académica", "Estado", "Acciones"].map(h => (
 									<th key={h} style={{ padding: "14px 20px", textAlign: "left", fontSize: "12px", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>{h}</th>
 								))}
 							</tr>
@@ -194,7 +194,7 @@ export default function UsuariosPage() {
 								const id = u?.id ?? u?.uuid;
 								const ci = u?.ci ?? u?.documento_identidad ?? "—";
 								const roleColors = getRoleColor(u?.rol);
-								const sede = u?.unidad_academica_nombre ?? "—";
+								const unidadNombre = u?.unidad_academica_nombre ?? "—";
 								
 								return (
 									<tr key={id || i} style={{ borderBottom: i < users.length - 1 ? "1px solid #f3f4f6" : "none" }} className="hover:bg-gray-50">
@@ -208,7 +208,7 @@ export default function UsuariosPage() {
 												{u?.rol}
 											</span>
 										</td>
-										<td style={{ padding: "14px 20px", fontSize: "14px", color: "#4b5563", fontWeight: 500 }}>{sede}</td>
+										<td style={{ padding: "14px 20px", fontSize: "14px", color: "#4b5563", fontWeight: 500 }}>{unidadNombre}</td>
 										<td style={{ padding: "14px 20px" }}>
 											<button
 												onClick={() => handleToggleActive(u)}

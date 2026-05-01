@@ -43,7 +43,7 @@ class ReporteInventarioLaboratorioView(APIView):
         numero_pagina = 1
 
         subtitulo = (
-            f"Sede: {laboratorio.unidad_academica.nombre}  |  "
+            f"Unidad Académica: {laboratorio.unidad_academica.nombre}  |  "
             f"Sala: {laboratorio.sala}  |  "
             f"Fecha: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
         )
@@ -165,12 +165,12 @@ class ReporteReordenamientosView(APIView):
                             content_type="application/pdf")
 
 
-# ── REPORTE 3: Comparativa de disponibilidad de equipos entre sedes ──────────
+# ── REPORTE 3: Comparativa de disponibilidad de equipos entre unidades académicas ──
 
 class ReporteComparativaSedesView(APIView):
     """
     GET /api/v1/reportes/comparativa-sedes/?nombre_equipo=Microscopio
-    Genera un PDF comparando disponibilidad vs. demanda de un equipo en todas las sedes.
+    Genera un PDF comparando disponibilidad vs. demanda de un equipo en todas las unidades académicas.
     El parámetro ?nombre_equipo es requerido.
     """
 
@@ -198,10 +198,10 @@ class ReporteComparativaSedesView(APIView):
             f"Equipo buscado: \"{nombre_equipo}\"  |  "
             f"Generado: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
         )
-        y = dibujar_encabezado(p, "Comparativa de Disponibilidad por Sede", subtitulo)
+        y = dibujar_encabezado(p, "Comparativa de Disponibilidad por Unidad Académica", subtitulo)
 
         # ── Cabecera de tabla ────────────────────────────────────────────────
-        headers = ["Sede",        "Laboratorio",  "Disponible", "Requerido", "Déficit", "Ratio/Est."]
+        headers = ["Unidad Acad.", "Laboratorio",  "Disponible", "Requerido", "Déficit", "Ratio/Est."]
         x_pos   = [MARGEN,        MARGEN + 120,   295,          355,         415,       470]
         anchos  = [115,           130,            55,           55,          55,        80]
 
@@ -213,7 +213,7 @@ class ReporteComparativaSedesView(APIView):
                 dibujar_pie(p, numero_pagina)
                 p.showPage()
                 numero_pagina += 1
-                y = dibujar_encabezado(p, "Comparativa de Sedes (cont.)")
+                y = dibujar_encabezado(p, "Comparativa de Unidades Académicas (cont.)")
                 y = dibujar_fila_tabla(p, y, headers, x_pos, anchos, es_encabezado=True)
 
             deficit = fila_data.get("deficit", 0)
@@ -232,7 +232,7 @@ class ReporteComparativaSedesView(APIView):
         buffer.seek(0)
 
         nombre_archivo = nombre_equipo.replace(" ", "_").lower()
-        filename = f"comparativa_sedes_{nombre_archivo}_{timezone.now().strftime('%Y%m%d')}.pdf"
+        filename = f"comparativa_unidades_{nombre_archivo}_{timezone.now().strftime('%Y%m%d')}.pdf"
         return FileResponse(buffer, as_attachment=True, filename=filename,
                             content_type="application/pdf")
 
