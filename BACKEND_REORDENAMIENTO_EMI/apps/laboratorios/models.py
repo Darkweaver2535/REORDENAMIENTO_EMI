@@ -166,6 +166,11 @@ class Equipo(BaseModel):
 		verbose_name="Notas adicionales",
 		help_text="Observaciones, accesorios incluidos, condiciones especiales",
 	)
+	requiere_mantenimiento = models.BooleanField(
+		default=False,
+		verbose_name="Requiere mantenimiento periódico",
+		help_text="Activar solo para equipos que requieren mantenimiento o calibración periódica (microscopios, balanzas, etc.)",
+	)
 
 	class Meta:
 		ordering = ["codigo_activo"]

@@ -128,6 +128,7 @@ class EquipoDetalleSerializer(EquipoListSerializer):
 			"ubicacion_sala",
 			"especificaciones",
 			"notas",
+			"requiere_mantenimiento",
 		)
 
 

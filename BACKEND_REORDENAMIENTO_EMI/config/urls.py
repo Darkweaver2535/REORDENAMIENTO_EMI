@@ -52,6 +52,9 @@ urlpatterns = [
 
     # Evaluaciones
     path(f"{API_PREFIX}", include("apps.evaluaciones.urls")),
+
+    # Mantenimientos (Bitácora)
+    path(f"{API_PREFIX}", include("apps.mantenimientos.urls")),
 ]
 
 if settings.DEBUG:
