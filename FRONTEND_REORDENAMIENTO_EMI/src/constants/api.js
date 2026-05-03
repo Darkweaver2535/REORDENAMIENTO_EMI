@@ -66,6 +66,15 @@ export const API_ROUTES = {
     BY_EQUIPO: (eqId) => `${BASE_URL}/api/v1/evaluaciones/?equipo=${eqId}`,
     ULTIMA: (eqId) => `${BASE_URL}/api/v1/evaluaciones/ultima-por-equipo/${eqId}/`,
   },
+
+  MANTENIMIENTOS: {
+    LIST:       `${BASE_URL}/api/v1/mantenimientos/`,
+    CREATE:     `${BASE_URL}/api/v1/mantenimientos/`,
+    DETAIL:     (id) => `${BASE_URL}/api/v1/mantenimientos/${id}/`,
+    UPDATE:     (id) => `${BASE_URL}/api/v1/mantenimientos/${id}/`,
+    DELETE:     (id) => `${BASE_URL}/api/v1/mantenimientos/${id}/`,
+    BY_EQUIPO:  (eqId) => `${BASE_URL}/api/v1/mantenimientos/?equipo=${eqId}`,
+  },
 };
 
 
