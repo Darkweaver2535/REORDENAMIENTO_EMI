@@ -174,3 +174,57 @@ class EvaluacionInsituSerializer(serializers.Serializer):
 
 		return attrs
 
+
+# ── Serializer de árbol jerárquico ────────────────────────────────────────────
+
+class LaboratorioTreeSerializer(serializers.ModelSerializer):
+	"""
+	Serializer recursivo para representar el árbol padre-hijo de laboratorios.
+	Cada nodo incluye su lista de hijos anidados (recursión via get_hijos).
+
+	Uso:
+	    raices = Laboratorio.objects.filter(parent=None).prefetch_related('hijos__hijos__hijos__hijos')
+	    data = LaboratorioTreeSerializer(raices, many=True).data
+	"""
+	unidad_academica_nombre = serializers.SerializerMethodField()
+	es_hoja = serializers.SerializerMethodField()
+	hijos = serializers.SerializerMethodField()
+
+	class Meta:
+		model = Laboratorio
+		fields = (
+			'id',
+			'nombre',
+			'clase_nodo',
+			'subtipo_espacio',
+			'parent',
+			'unidad_academica_id',
+			'unidad_academica_nombre',
+			'campus',
+			'sala',
+			'superficie_m2',
+			'ubicacion',
+			'norma',
+			'capacidad_estudiantes',
+			'actividad_pea',
+			'actividad_investigacion',
+			'actividad_servicios',
+			'is_active',
+			'es_hoja',
+			'hijos',
+		)
+
+	def get_unidad_academica_nombre(self, obj):
+		if obj.unidad_academica_id is None:
+			return None
+		return obj.unidad_academica.nombre
+
+	def get_es_hoja(self, obj):
+		return obj.es_hoja()
+
+	def get_hijos(self, obj):
+		# La recursión se detiene naturalmente cuando hijos.all() retorna queryset vacío
+		hijos_qs = obj.hijos.all()
+		if not hijos_qs.exists():
+			return []
+		return LaboratorioTreeSerializer(hijos_qs, many=True, context=self.context).data

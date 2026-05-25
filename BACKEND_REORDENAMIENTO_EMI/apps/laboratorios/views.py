@@ -14,6 +14,7 @@ from apps.laboratorios.serializers import (
 	EquipoListSerializer,
 	EquipoDetalleSerializer,
 	EvaluacionInsituSerializer,
+	LaboratorioTreeSerializer,
 )
 from apps.laboratorios.services import InventoryAnalyticsService
 from apps.usuarios.models import AuditLog
@@ -64,6 +65,19 @@ class LaboratorioViewSet(ModelViewSet):
 		if self.action in {"create", "update", "partial_update"}:
 			return LaboratorioListSerializer
 		return LaboratorioDetalleSerializer
+
+	@action(detail=False, methods=["get"], url_path="tree")
+	def tree(self, request):
+		"""Devuelve el árbol completo de laboratorios (solo raíces con hijos anidados).
+
+		Cada nodo raíz (parent=None) incluye recursivamente su lista de hijos.
+		Los prefetch de 4 niveles cubren jerarquías de hasta General→Sección→Área→Lab.
+		"""
+		raices = Laboratorio.objects.filter(parent=None).prefetch_related(
+			'hijos__hijos__hijos__hijos'
+		).select_related('unidad_academica')
+		serializer = LaboratorioTreeSerializer(raices, many=True)
+		return Response(serializer.data, status=status.HTTP_200_OK)
 
 	@action(detail=True, methods=["get"], url_path="analytics")
 	def analytics(self, request, pk=None):

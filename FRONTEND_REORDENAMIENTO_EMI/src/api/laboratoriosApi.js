@@ -21,3 +21,7 @@ export const fetchEquipos = (params) =>
 
 export const updateEvaluacionInsitu = (id, payload) =>
   httpClient.patch(API_ENDPOINTS.equipos.evaluacionInSitu(id), payload);
+
+/** Obtiene el árbol completo de laboratorios (solo nodos raíz con hijos anidados). */
+export const fetchLaboratoriosTree = () =>
+  httpClient.get(API_ENDPOINTS.laboratorios.tree);

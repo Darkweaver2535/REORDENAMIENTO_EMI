@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-	ArrowLeft, MapPin, Building2, Calendar, Hash, Wrench, ArrowLeftRight,
+import { ArrowLeft, MapPin, Building2, Calendar, Hash, Wrench, ArrowLeftRight,
 	ClipboardCheck, Plus, Pencil, Trash2, AlertTriangle, Clock,
 	Settings, Sparkles, Hammer, Scale,
 } from "lucide-react";

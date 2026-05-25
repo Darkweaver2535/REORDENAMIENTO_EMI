@@ -254,7 +254,7 @@ function LoginPage() {
 
                 {/* Pie */}
                 <p style={{ textAlign: "center", fontSize: "14px", color: "rgba(147,197,253,0.6)", fontWeight: 500, marginTop: "24px" }}>
-                    © 2026 EMI Bolivia · SGL v1.0.0
+                    © 2026 EMI Bolivia · SGL v1.4
                 </p>
             </div>
         </div>

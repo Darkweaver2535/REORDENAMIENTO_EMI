@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../store/AuthContext'
+import { getRolDisplay } from '../../config/roles'
 import {
   BookOpen, FlaskConical, ArrowLeftRight,
   BarChart2, LogOut, Menu, X, Settings,
@@ -117,10 +118,12 @@ export default function AppLayout() {
                 <span>Reordenamiento</span>
               </NavLink>
 
-              <NavLink to="/reordenamientos/comparativa" style={navLinkStyle}>
-                <BarChart2 size={20} />
-                <span>Comparativa U.A.</span>
-              </NavLink>
+              {
+                <NavLink to="/reordenamientos/comparativa" style={navLinkStyle}>
+                  <BarChart2 size={20} />
+                  <span>Comparativa U.A.</span>
+                </NavLink>
+              }
 
               <NavLink to="/reportes" style={navLinkStyle}>
                 <FileText size={20} />
@@ -159,7 +162,7 @@ export default function AppLayout() {
                 {user?.nombre_completo}
               </p>
               <p style={{ color: "#93c5fd", fontSize: "13px", fontWeight: 500, marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {user?.rol} · {user?.unidad_academica_nombre || 'EMI'}
+                {getRolDisplay(user?.rol)} · {user?.unidad_academica_nombre || 'EMI'}
               </p>
             </div>
           </div>

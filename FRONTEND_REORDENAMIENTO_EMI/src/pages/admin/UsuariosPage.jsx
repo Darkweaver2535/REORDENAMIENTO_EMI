@@ -8,6 +8,7 @@ import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../../store/AuthContext";
 import { ROLES, API_ROUTES } from "../../constants/api";
+import { getRolDisplay, ROLES_DISPLAY } from "../../config/roles";
 import { usuariosApi, httpClient } from "../../api";
 import PageWrapper from "../../components/layout/PageWrapper";
 
@@ -87,11 +88,9 @@ function ModalRoleEdit({ user, isOpen, onClose }) {
 							onChange={(e) => setForm({ ...form, rol: e.target.value })}
 							style={{ width: "100%", height: "42px", borderRadius: "8px", border: "1px solid #d1d5db", padding: "0 12px", fontSize: "14px", backgroundColor: "#fff", color: "#111827", outline: "none" }}
 						>
-							<option value="ESTUDIANTE">Estudiante</option>
-							<option value="DOCENTE">Docente</option>
-							<option value="JEFE">Jefe de Laboratorio</option>
-							<option value="ENCARGADO_ACTIVOS">Encargado de Activos</option>
-							<option value="ADMIN">Administrador Central</option>
+							{Object.entries(ROLES_DISPLAY).map(([value, label]) => (
+								<option key={value} value={value.toUpperCase()}>{label}</option>
+							))}
 						</select>
 					</div>
 
@@ -205,7 +204,7 @@ export default function UsuariosPage() {
 										</td>
 										<td style={{ padding: "14px 20px" }}>
 											<span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "6px", backgroundColor: roleColors.bg, color: roleColors.text, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-												{u?.rol}
+												{getRolDisplay(u?.rol)}
 											</span>
 										</td>
 										<td style={{ padding: "14px 20px", fontSize: "14px", color: "#4b5563", fontWeight: 500 }}>{unidadNombre}</td>

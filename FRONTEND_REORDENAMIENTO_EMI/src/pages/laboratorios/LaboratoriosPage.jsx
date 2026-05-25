@@ -2,13 +2,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FlaskConical, MapPin, Building, Users, ArrowRight, AlertCircle, Search, X } from "lucide-react";
+import { FlaskConical, MapPin, Building, Users, ArrowRight, AlertCircle, Search, X, LayoutList, Network } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
 import { fetchLaboratorios } from "../../api/laboratoriosApi";
 import { ROLES, API_ROUTES } from "../../constants/api";
 import PageWrapper from "../../components/layout/PageWrapper";
 import { Navigate } from "react-router-dom";
 import axiosClient from "../../api/httpClient";
+import LabTree from "../../components/laboratorios/LabTree";
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 const normalizeList = (data) => {
@@ -64,6 +65,7 @@ export default function LaboratoriosPage() {
 	const [pagina, setPagina] = useState(1);
 	const [filtroUA, setFiltroUA] = useState("");
 	const [filtroDepto, setFiltroDepto] = useState("");
+	const [viewMode, setViewMode] = useState("lista"); // 'lista' | 'arbol'
 	const PAGE_SIZE = 20;
 
 	// Fetch unidades académicas for filter dropdown
@@ -156,7 +158,60 @@ export default function LaboratoriosPage() {
 				</div>
 			)}
 
-			{/* ── Filtros ─────────────────────────────────────── */}
+			{/* ── Toggle de vista ─────────────────────────────────── */}
+			<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 12 }}>
+				<p style={{ fontSize: 13, color: "#6b7280", fontWeight: 500, margin: 0 }}>
+					{viewMode === "lista"
+						? "Vista de tabla paginada"
+						: "Vista jerárquica (árbol de espacios)"}
+				</p>
+				<div
+					role="group"
+					aria-label="Cambiar vista"
+					style={{
+						display: "inline-flex",
+						background: "#f3f4f6",
+						borderRadius: 10,
+						padding: 3,
+						gap: 2,
+					}}
+				>
+					{[
+						{ key: "lista", label: "Lista",  Icon: LayoutList },
+						{ key: "arbol", label: "Árbol",  Icon: Network },
+					].map(({ key, label, Icon }) => (
+						<button
+							key={key}
+							id={`view-mode-${key}`}
+							onClick={() => setViewMode(key)}
+							aria-pressed={viewMode === key}
+							style={{
+								display: "inline-flex", alignItems: "center", gap: 6,
+								padding: "6px 14px", borderRadius: 8,
+								fontSize: 13, fontWeight: 600,
+								border: "none", cursor: "pointer",
+								transition: "all 180ms ease",
+								...(viewMode === key
+									? { background: "#ffffff", color: "#002B5E", boxShadow: "0 1px 3px rgba(0,0,0,0.10)" }
+									: { background: "transparent", color: "#6b7280" }),
+							}}
+						>
+							<Icon size={14} />
+							{label}
+						</button>
+					))}
+				</div>
+			</div>
+
+			{/* ── Vista Árbol ─────────────────────────────────────── */}
+			{viewMode === "arbol" && (
+				<LabTree />
+			)}
+
+			{/* ── Vista Lista (tabla + filtros) ───────────────────── */}
+			{viewMode === "lista" && (
+			<>
+
 			<div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
 				{/* UA Dropdown */}
 				<select
@@ -416,6 +471,8 @@ export default function LaboratoriosPage() {
 					</div>
 				)}
 			</div>
+			</> {/* cierre lista */}
+			)}
 		</PageWrapper>
 	);
 }

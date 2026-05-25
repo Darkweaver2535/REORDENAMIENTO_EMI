@@ -31,6 +31,7 @@ export const API_ROUTES = {
     BASE: `${BASE_URL}/api/v1/laboratorios/`,
     DETALLE: (id) => `${BASE_URL}/api/v1/laboratorios/${id}/`,
     ANALYTICS: (id) => `${BASE_URL}/api/v1/laboratorios/${id}/analytics/`,
+    TREE: `${BASE_URL}/api/v1/laboratorios/tree/`,
     EQUIPOS: `${BASE_URL}/api/v1/laboratorios/equipos/`,
     EQUIPO_DETALLE: (id) => `${BASE_URL}/api/v1/laboratorios/equipos/${id}/`,
     EVALUACION_INSITU: (id) =>
@@ -120,6 +121,7 @@ export const API_ENDPOINTS = {
     base: API_ROUTES.LABORATORIOS.BASE,
     byId: API_ROUTES.LABORATORIOS.DETALLE,
     analytics: API_ROUTES.LABORATORIOS.ANALYTICS,
+    tree: API_ROUTES.LABORATORIOS.TREE,
   },
   equipos: {
     base: API_ROUTES.LABORATORIOS.EQUIPOS,

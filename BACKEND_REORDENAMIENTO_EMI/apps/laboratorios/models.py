@@ -1,63 +1,15 @@
 # App: laboratorios | Archivo: models.py
-# Sistema de gestión de laboratorios universitarios - Django 5.x + PostgreSQL
+# Sistema de gestión de laboratorios universitarios - Django 6.x + PostgreSQL
 #
-# TAREA: Crear tres modelos para gestionar laboratorios físicos y equipos (activos).
-# Todos heredan de BaseModel (created_at, updated_at).
+# Modelos: Laboratorio (con jerarquía padre-hijo), LaboratorioAsignatura,
+#          Equipo, EquipoRequeridoPorGuia
 #
-# 1. Modelo 'Laboratorio':
-#    - nombre: CharField(150) (ej: "Laboratorio de Química")
-#    - unidad_academica: ForeignKey('estructura_academica.UnidadAcademica', on_delete=PROTECT)
-#    - campus: CharField(100)
-#    - edificio: CharField(50) blank=True
-#    - piso: SmallIntegerField null=True
-#    - sala: CharField(50) (sala específica, ej: "Sala 203-B")
-#    - capacidad_estudiantes: IntegerField default=0
-#    - is_active: BooleanField(default=True)
-#    - asignaturas: ManyToManyField('estructura_academica.Asignatura',
-#      through='LaboratorioAsignatura', related_name='laboratorios')
-#
-# 2. Modelo 'LaboratorioAsignatura' (tabla M2M con datos extra):
-#    - laboratorio: ForeignKey(Laboratorio, on_delete=CASCADE)
-#    - asignatura: ForeignKey('estructura_academica.Asignatura', on_delete=CASCADE)
-#    - unique_together: (laboratorio, asignatura)
-#
-# 3. Modelo 'Equipo' (activo físico):
-#    - nombre: CharField(150)
-#    - codigo_activo: CharField(50) UNIQUE (código del sistema de activos universitario)
-#    - laboratorio: ForeignKey(Laboratorio, on_delete=PROTECT, related_name='equipos')
-#    - cantidad_total: IntegerField(default=0)
-#    - cantidad_buena: IntegerField(default=0)
-#    - cantidad_regular: IntegerField(default=0)
-#    - cantidad_mala: IntegerField(default=0)
-#    - estatus_general: CharField choices: BUENO='bueno', REGULAR='regular', MALO='malo'
-#    - ubicacion_sala: CharField(100) blank=True (ubicación exacta dentro del laboratorio)
-#    - observaciones: TextField blank=True (ej: "le falta la tapa", "guardado en caja 3")
-#    - evaluado_en: DateTimeField null=True (cuándo se hizo la última evaluación in-situ)
-#    - evaluado_por: ForeignKey('usuarios.Usuario', null=True, blank=True, on_delete=SET_NULL)
-#
-#    Métodos del modelo Equipo:
-#    - cantidad_disponible(): retorna cantidad_buena + cantidad_regular
-#      (REGLA: los malos NO cuentan para atender prácticas)
-#    - clean(): validar que buena + regular + mala == total (consistencia)
-#    - __str__: retorna "{codigo_activo} - {nombre} ({laboratorio.nombre})"
-#
-# 4. Modelo 'EquipoRequeridoPorGuia' (TABLA PIVOTE CRÍTICA - cruce teórico vs real):
-#    - guia: ForeignKey('guias.Guia', on_delete=CASCADE, related_name='equipos_requeridos')
-#    - nombre_equipo_teorico: CharField(150)
-#      (nombre como aparece en el PDF de la guía, ej: "Manómetro en U")
-#    - equipo: ForeignKey(Equipo, null=True, blank=True, on_delete=SET_NULL,
-#      related_name='guias_que_requieren')
-#      (NULL si aún no se vinculó al activo físico real)
-#    - cantidad_requerida: IntegerField(default=1)
-#    - notas: TextField blank=True
-#
-#    Métodos de EquipoRequeridoPorGuia:
-#    - tiene_deficit(): retorna True si equipo is not None y
-#      equipo.cantidad_disponible() < cantidad_requerida
-#    - cantidad_deficit(): retorna max(0, cantidad_requerida - equipo.cantidad_disponible())
-#      si equipo is not None, else retorna cantidad_requerida
-#
-# Incluir Meta con verbose_names en español y ordering apropiado para cada modelo
+# Jerarquía Laboratorio:
+#   - clase_nodo: GENERAL (raíz, parent=None) | SUBESPACIO (hijo, parent!=None)
+#   - subtipo_espacio: SALA, AREA, SECCION, LABORATORIO (solo para SUBESPACIO)
+#   - parent: FK self-referencial (SET_NULL para evitar cascada destructiva)
+#   - Los equipos solo se pueden asignar a nodos hoja (sin hijos)
+#   - unidad_academica se hereda automáticamente del padre en save()
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -66,6 +18,42 @@ from apps.estructura_academica.models import BaseModel
 
 
 class Laboratorio(BaseModel):
+	# ── Jerarquía ────────────────────────────────────────────────────────────
+	class ClaseNodo(models.TextChoices):
+		GENERAL    = 'GENERAL',    'General (raíz)'
+		SUBESPACIO = 'SUBESPACIO', 'Subespacio (hijo)'
+
+	class SubtipoEspacio(models.TextChoices):
+		SALA        = 'SALA',        'Sala'
+		AREA        = 'AREA',        'Área'
+		SECCION     = 'SECCION',     'Sección'
+		LABORATORIO = 'LABORATORIO', 'Laboratorio'
+
+	parent = models.ForeignKey(
+		'self',
+		null=True,
+		blank=True,
+		on_delete=models.SET_NULL,
+		related_name='hijos',
+		verbose_name='Espacio padre',
+	)
+	clase_nodo = models.CharField(
+		max_length=20,
+		choices=ClaseNodo.choices,
+		default=ClaseNodo.GENERAL,
+		verbose_name='Clase de nodo',
+		help_text='GENERAL para raíces; SUBESPACIO para nodos hijo.',
+	)
+	subtipo_espacio = models.CharField(
+		max_length=20,
+		choices=SubtipoEspacio.choices,
+		null=True,
+		blank=True,
+		verbose_name='Subtipo de espacio',
+		help_text='Obligatorio para nodos SUBESPACIO; nulo para nodos GENERAL.',
+	)
+
+	# ── Identidad / Localización ─────────────────────────────────────────────
 	nombre = models.CharField(max_length=150)
 	unidad_academica = models.ForeignKey(
 		"estructura_academica.UnidadAcademica",
@@ -75,7 +63,7 @@ class Laboratorio(BaseModel):
 	campus = models.CharField(max_length=100)
 	edificio = models.CharField(max_length=50, blank=True)
 	piso = models.SmallIntegerField(null=True, blank=True)
-	sala = models.CharField(max_length=50)
+	sala = models.CharField(max_length=50, blank=True)
 	capacidad_estudiantes = models.IntegerField(default=0)
 	is_active = models.BooleanField(default=True)
 	asignaturas = models.ManyToManyField(
@@ -84,13 +72,126 @@ class Laboratorio(BaseModel):
 		related_name="laboratorios",
 	)
 
+	# ── Campos descriptivos nuevos ───────────────────────────────────────────
+	superficie_m2 = models.DecimalField(
+		max_digits=8,
+		decimal_places=2,
+		null=True,
+		blank=True,
+		verbose_name='Superficie (m²)',
+	)
+	ubicacion = models.CharField(
+		max_length=255,
+		blank=True,
+		verbose_name='Ubicación',
+		help_text='Descripción textual de la ubicación física (ej: "Bloque B, planta baja").',
+	)
+	norma = models.CharField(
+		max_length=255,
+		blank=True,
+		verbose_name='Norma aplicable',
+		help_text='Norma de bioseguridad, calidad o reglamento institucional.',
+	)
+	actividad_pea = models.TextField(
+		blank=True,
+		verbose_name='Actividad PEA',
+		help_text='Actividades de enseñanza-aprendizaje realizadas en este espacio.',
+	)
+	actividad_investigacion = models.TextField(
+		blank=True,
+		verbose_name='Actividad de Investigación',
+	)
+	actividad_servicios = models.TextField(
+		blank=True,
+		verbose_name='Actividad de Servicios',
+	)
+
+	# ── Meta ─────────────────────────────────────────────────────────────────
 	class Meta:
 		ordering = ["nombre"]
 		verbose_name = "Laboratorio"
 		verbose_name_plural = "Laboratorios"
 
 	def __str__(self):
-		return f"{self.nombre} ({self.sala})"
+		if self.sala:
+			return f"{self.nombre} ({self.sala})"
+		return self.nombre
+
+	# ── Helpers ──────────────────────────────────────────────────────────────
+	def es_hoja(self):
+		"""Retorna True si este nodo no tiene hijos (puede recibir equipos)."""
+		return not self.hijos.exists()
+
+	# ── Ciclo de vida ────────────────────────────────────────────────────────
+	def save(self, *args, **kwargs):
+		"""Auto-hereda unidad_academica del padre si no fue proporcionada."""
+		if self.parent_id and not self.unidad_academica_id:
+			try:
+				parent = Laboratorio.objects.get(pk=self.parent_id)
+				self.unidad_academica_id = parent.unidad_academica_id
+			except Laboratorio.DoesNotExist:
+				pass
+		super().save(*args, **kwargs)
+
+	def clean(self):
+		super().clean()
+
+		# ── Regla 1: nodo raíz → clase_nodo debe ser GENERAL
+		if self.parent_id is None:
+			if self.clase_nodo != self.ClaseNodo.GENERAL:
+				raise ValidationError({
+					'clase_nodo': 'Un nodo raíz (sin padre) debe tener clase_nodo = GENERAL.'
+				})
+		else:
+			# ── Regla 2: nodo hijo → clase_nodo debe ser SUBESPACIO
+			if self.clase_nodo != self.ClaseNodo.SUBESPACIO:
+				raise ValidationError({
+					'clase_nodo': 'Un nodo hijo (con padre) debe tener clase_nodo = SUBESPACIO.'
+				})
+
+			# ── Regla 3: hijo debe compartir unidad_academica con el padre
+			try:
+				padre = Laboratorio.objects.get(pk=self.parent_id)
+			except Laboratorio.DoesNotExist:
+				raise ValidationError({'parent': 'El laboratorio padre no existe.'})
+
+			# unidad_academica_id puede venir de herencia (puede no estar seteado aún)
+			ua_hijo = self.unidad_academica_id or padre.unidad_academica_id
+			if ua_hijo and padre.unidad_academica_id and ua_hijo != padre.unidad_academica_id:
+				raise ValidationError({
+					'unidad_academica': (
+						'El nodo hijo debe pertenecer a la misma unidad académica que su padre '
+						f'({padre.unidad_academica}).'
+					)
+				})
+
+			# ── Regla 4: prevenir ciclos en la jerarquía ─────────────────────
+			# Un nodo no puede ser su propio padre (directo) ni antecesor (indirecto).
+			if self.pk is not None:
+				# Caso 1: self-referencia directa
+				if self.parent_id == self.pk:
+					raise ValidationError({
+						'parent': 'Un laboratorio no puede ser su propio padre.'
+					})
+				# Caso 2: ciclo indirecto — recorremos la cadena de ancestros
+				visitados = set()
+				cursor_id = self.parent_id
+				while cursor_id is not None:
+					if cursor_id == self.pk:
+						raise ValidationError({
+							'parent': (
+								'Asignar este padre crearía un ciclo en la jerarquía. '
+								'Verifica que el nodo padre no sea descendiente de este laboratorio.'
+							)
+						})
+					if cursor_id in visitados:
+						# Ciclo preexistente en datos (no debería ocurrir en BD sana)
+						break
+					visitados.add(cursor_id)
+					try:
+						cursor_id = Laboratorio.objects.values_list('parent_id', flat=True).get(pk=cursor_id)
+					except Laboratorio.DoesNotExist:
+						break
 
 
 class LaboratorioAsignatura(BaseModel):
@@ -117,9 +218,9 @@ class LaboratorioAsignatura(BaseModel):
 
 class Equipo(BaseModel):
 	class EstatusGeneral(models.TextChoices):
-		BUENO = "bueno", "Bueno"
+		BUENO   = "bueno",   "Bueno"
 		REGULAR = "regular", "Regular"
-		MALO = "malo", "Malo"
+		MALO    = "malo",    "Malo"
 
 	nombre = models.CharField(max_length=150)
 	codigo_activo = models.CharField(max_length=50, unique=True)
@@ -185,6 +286,8 @@ class Equipo(BaseModel):
 
 	def clean(self):
 		super().clean()
+
+		# ── Validación 1: consistencia de cantidades
 		total_calculado = self.cantidad_buena + self.cantidad_regular + self.cantidad_mala
 		if self.cantidad_total != total_calculado:
 			raise ValidationError(
@@ -194,6 +297,20 @@ class Equipo(BaseModel):
 					)
 				}
 			)
+
+		# ── Validación 2: solo se pueden registrar equipos en nodos hoja
+		if self.laboratorio_id:
+			try:
+				lab = Laboratorio.objects.get(pk=self.laboratorio_id)
+			except Laboratorio.DoesNotExist:
+				return
+			if not lab.es_hoja():
+				raise ValidationError({
+					'laboratorio': (
+						f'El laboratorio "{lab.nombre}" tiene subespacios registrados. '
+						'Solo se pueden asignar equipos a nodos hoja (sin hijos).'
+					)
+				})
 
 
 class EquipoRequeridoPorGuia(BaseModel):

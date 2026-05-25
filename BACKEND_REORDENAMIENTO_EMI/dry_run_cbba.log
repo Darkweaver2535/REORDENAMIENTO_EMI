@@ -1,0 +1,89 @@
+
+⚠  DRY-RUN activado — no se guardará nada en BD.
+📚 Unidad académica : 0003 - UACB (id=3)
+📄 Archivo          : /Users/alvaroencinas/Desktop/REORDENAMIENTO_EMI/COCHABAMBA-SISTEMA DE GESTIÓN DE LABORATORIOS 2026 U.A. CBBA.xlsx
+   Hoja            : Hoja1  |  B2:N74
+   Cabecera fila #6 → nom=2 | tipo=3 | sec=4 | sup=5 | ubi=6 | asigs_desde=7
+  F  7 [90mSKIP_NORM_ROW    [0m sub-cabecera: ['PEA', 'INVESTIGACION']
+  F  8 [92mCREATE_ROOT      [0m lab='AGROINDUSTRIAL'
+  F  8 [32mCREATE_CHILD     [0m [SALA] 'AGROINDUSTRIAL' → 'FISICOQUIMICA' 42m²
+  F  9 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 10 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 11 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 12 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 13 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 14 [32mCREATE_CHILD     [0m [SALA] 'AGROINDUSTRIAL' → 'FiTOQUIMICA' 22.97m²
+  F 15 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 16 [32mCREATE_CHILD     [0m [SALA] 'AGROINDUSTRIAL' → 'CALDERO' 13.23m²
+  F 17 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 18 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 19 [32mCREATE_CHILD     [0m [SALA] 'AGROINDUSTRIAL' → 'LACTEOS' 35.28m²
+  F 20 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 21 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 22 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 23 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 24 [32mCREATE_CHILD     [0m [SALA] 'AGROINDUSTRIAL' → 'PLANTA DE AGUAS Y ALIMENTOS' 300m²
+  F 25 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 26 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 27 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 11]
+  F 28 [32mCREATE_CHILD     [0m [AREA] 'AGROINDUSTRIAL' → 'PRODUCCION' 20m²
+  F 29 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 11]
+  F 30 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 31 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 32 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 33 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 34 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 35 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 36 [92mCREATE_ROOT      [0m lab='QUÍMICA'
+  F 36 [32mCREATE_CHILD     [0m [LABORATORIO] 'QUÍMICA' → 'ANÁLISIS INSTRUMENTAL' 64.59m²
+  F 37 [32mCREATE_CHILD     [0m [LABORATORIO] 'QUÍMICA' → 'QUÍMICA BASICA'
+  F 38 [32mCREATE_CHILD     [0m [LABORATORIO] 'QUÍMICA' → 'QUÍMICA APLICADA'
+  F 39 [92mCREATE_ROOT      [0m lab='FÍSICA'
+  F 39 [32mCREATE_CHILD     [0m [SALA] 'FÍSICA' → 'FÍSICA I' 82.67m²
+  F 41 [32mCREATE_CHILD     [0m [SALA] 'FÍSICA' → 'FÍSICA II'
+  F 44 [92mCREATE_ROOT      [0m lab='CIVIL'
+  F 44 [32mCREATE_CHILD     [0m [SECCION] 'CIVIL' → 'SUELOS' 84.99m²
+  F 45 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 46 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 47 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 48 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 49 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 50 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 51 [32mCREATE_CHILD     [0m [SECCION] 'CIVIL' → 'HORMIGONES' 58.5m²
+  F 52 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 53 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 54 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 55 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 56 [32mCREATE_CHILD     [0m [SECCION] 'CIVIL' → 'ASFALTOS' 21.34m²
+  F 57 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 58 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 59 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 60 [92mCREATE_ROOT      [0m lab='ELECTRONICA'
+  F 60 [32mCREATE_CHILD     [0m [SALA] 'ELECTRONICA' → 'ELECTRONICA BASICA' 80m²
+  F 61 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 62 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 63 [32mCREATE_CHILD     [0m [SALA] 'ELECTRONICA' → 'ELECTRÓNICA DE POTENCIA' 80m²
+  F 64 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 65 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 66 [32mCREATE_CHILD     [0m [SALA] 'ELECTRONICA' → 'TELECOMUNICACIONES' 22m²
+  F 67 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 68 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 69 [32mCREATE_CHILD     [0m [SALA] 'ELECTRONICA' → 'CONTROL Y AUTOMATIZACION INDUSTRIAL' 22m²
+  F 70 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 71 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 72 [92mCREATE_ROOT      [0m lab='SISTEMAS'
+  F 72 [32mCREATE_CHILD     [0m [SALA] 'SISTEMAS' → 'REDES Y TELECOM.' 70m²
+  F 73 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+  F 74 [90mSKIP_SUBJECT_ROW [0m cols=[7, 8, 9, 10]
+
+──────────────────────────────────────────────────────────────
+📊  RESUMEN (DRY-RUN):
+   [92mCREATE_ROOT         [0m  6
+   [92mCREATE_CHILD        [0m  19
+   UPDATE_CHILD        [0m  0
+   EXIST_ROOT          [0m  0
+   EXIST_CHILD         [0m  0
+   SKIP_SUBJECT_ROW    [0m  45
+   SKIP_NORM_ROW       [0m  1
+   AMBIGUOUS           [0m  0
+──────────────────────────────────────────────────────────────
