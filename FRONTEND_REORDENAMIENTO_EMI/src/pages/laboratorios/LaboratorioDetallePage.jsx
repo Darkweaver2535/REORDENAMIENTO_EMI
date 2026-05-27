@@ -100,6 +100,58 @@ export default function LaboratorioDetallePage() {
 					</div>
 				)}
 
+				{/* ── Actividades y Normativa ────────────────────── */}
+				{!loadingLab && lab && (
+					<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "28px" }}>
+						{/* Actividades */}
+						<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "20px" }}>
+							<h3 style={{ fontSize: "15px", fontWeight: 700, color: "#374151", marginBottom: "16px" }}>Actividades desarrolladas</h3>
+							<div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+								<span style={{ padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, backgroundColor: lab.usa_pea ? "#dbeafe" : "#f3f4f6", color: lab.usa_pea ? "#1e40af" : "#9ca3af" }}>PEA {lab.usa_pea ? "✓" : "✗"}</span>
+								<span style={{ padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, backgroundColor: lab.usa_investigacion ? "#dcfce7" : "#f3f4f6", color: lab.usa_investigacion ? "#166534" : "#9ca3af" }}>Investigación {lab.usa_investigacion ? "✓" : "✗"}</span>
+								<span style={{ padding: "6px 12px", borderRadius: "6px", fontSize: "13px", fontWeight: 600, backgroundColor: lab.usa_venta_servicios ? "#fef3c7" : "#f3f4f6", color: lab.usa_venta_servicios ? "#92400e" : "#9ca3af" }}>Venta de Servicios {lab.usa_venta_servicios ? "✓" : "✗"}</span>
+							</div>
+						</div>
+
+						{/* Normativa */}
+						<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", padding: "20px" }}>
+							<h3 style={{ fontSize: "15px", fontWeight: 700, color: "#374151", marginBottom: "16px" }}>Normativa de Infraestructura</h3>
+							<p style={{ fontSize: "14px", color: lab.normativa_infraestructura ? "#4b5563" : "#9ca3af" }}>
+								{lab.normativa_infraestructura || "Sin normativa registrada"}
+							</p>
+						</div>
+					</div>
+				)}
+
+				{/* ── Usos Académicos ───────────────────────────── */}
+				{!loadingLab && lab && lab.usos_academicos?.length > 0 && (
+					<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", marginBottom: "28px" }}>
+						<div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
+							<h3 style={{ fontSize: "15px", fontWeight: 700, color: "#374151" }}>Uso Académico ({lab.usos_academicos.length})</h3>
+						</div>
+						<div style={{ overflowX: "auto" }}>
+							<table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+								<thead>
+									<tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+										<th style={{ padding: "12px 20px", fontSize: "12px", color: "#6b7280", textTransform: "uppercase" }}>Asignatura</th>
+										<th style={{ padding: "12px 20px", fontSize: "12px", color: "#6b7280", textTransform: "uppercase" }}>Semestre</th>
+										<th style={{ padding: "12px 20px", fontSize: "12px", color: "#6b7280", textTransform: "uppercase" }}>Carrera / Programa</th>
+									</tr>
+								</thead>
+								<tbody>
+									{lab.usos_academicos.map((uso) => (
+										<tr key={uso.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+											<td style={{ padding: "12px 20px", fontSize: "14px", fontWeight: 500, color: "#111827" }}>{uso.asignatura}</td>
+											<td style={{ padding: "12px 20px", fontSize: "14px", color: "#4b5563" }}>{uso.semestre || "—"}</td>
+											<td style={{ padding: "12px 20px", fontSize: "14px", color: "#4b5563" }}>{uso.carrera || "—"}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				)}
+
 				{/* ── Tabla de equipos ──────────────────────────── */}
 				<div style={{
 					backgroundColor: "#fff", border: "1px solid #e5e7eb",

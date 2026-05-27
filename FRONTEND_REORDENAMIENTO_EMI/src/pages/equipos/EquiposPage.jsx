@@ -16,11 +16,16 @@ const normalize = (d) => { if (!d) return []; const p = d?.data ?? d; if (Array.
 const INIT_FILTROS = { unidad_academica: "", laboratorio: "", estado: "", busqueda: "" };
 
 export default function EquiposPage() {
-	const { hasRole } = useAuth();
+	const { hasRole, user } = useAuth();
 	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS)) return <Navigate to="/dashboard" replace />;
 
 	const [vistaGrilla, setVistaGrilla] = useState(true);
-	const [filtros, setFiltros] = useState(INIT_FILTROS);
+	const [filtros, setFiltros] = useState({
+		unidad_academica: user?.unidad_academica_id ? String(user.unidad_academica_id) : "",
+		laboratorio: "",
+		estado: "",
+		busqueda: "",
+	});
 	const [pagina, setPagina] = useState(1);
 	const PER_PAGE = 15;
 
@@ -28,7 +33,7 @@ export default function EquiposPage() {
 	const { data: uaData } = useQuery({ queryKey: ["unidades"], queryFn: () => axiosClient.get(API_ROUTES.ESTRUCTURA.UNIDADES), staleTime: 5 * 60 * 1000 });
 	const unidades = normalize(uaData);
 
-	const { data: labsData } = useQuery({ queryKey: ["laboratorios"], queryFn: fetchLaboratorios, staleTime: 5 * 60 * 1000 });
+	const { data: labsData } = useQuery({ queryKey: ["laboratorios"], queryFn: () => fetchLaboratorios({ page_size: 1000 }), staleTime: 5 * 60 * 1000 });
 	const laboratorios = normalize(labsData);
 
 	const { data: eqData, isLoading } = useQuery({ queryKey: ["all-equipos"], queryFn: () => fetchEquipos({ page_size: 1000 }), staleTime: 3 * 60 * 1000 });
@@ -38,8 +43,7 @@ export default function EquiposPage() {
 	const equiposFiltrados = useMemo(() => {
 		let data = allEquipos;
 		if (filtros.unidad_academica) {
-			const labIds = laboratorios.filter(l => String(l.unidad_academica_id) === String(filtros.unidad_academica)).map(l => l.id);
-			data = data.filter(e => labIds.includes(e.laboratorio_id));
+			data = data.filter(e => String(e.unidad_academica_id) === String(filtros.unidad_academica));
 		}
 		if (filtros.laboratorio) data = data.filter(e => String(e.laboratorio_id) === String(filtros.laboratorio));
 		if (filtros.estado) data = data.filter(e => e.estatus_general === filtros.estado);
@@ -58,8 +62,9 @@ export default function EquiposPage() {
 		unidades.forEach(u => { uaMap[u.id] = u; });
 		return equiposFiltrados.map(e => {
 			const lab = labMap[e.laboratorio_id];
-			const ua = lab ? uaMap[lab.unidad_academica_id] : null;
-			return { ...e, laboratorio_nombre: e.laboratorio_nombre || lab?.nombre || "—", unidad_academica_nombre: ua?.nombre || "" };
+			const uaId = e.unidad_academica_id || (lab ? lab.unidad_academica_id : null);
+			const ua = uaId ? uaMap[uaId] : null;
+			return { ...e, laboratorio_nombre: e.laboratorio_nombre || lab?.nombre || "—", unidad_academica_nombre: ua?.nombre || "—" };
 		});
 	}, [equiposFiltrados, laboratorios, unidades]);
 
@@ -74,7 +79,15 @@ export default function EquiposPage() {
 	if (filtros.busqueda) chips.push({ key: "busqueda", label: `"${filtros.busqueda}"` });
 
 	const removeChip = (key) => setFiltros(prev => ({ ...prev, [key]: "" }));
-	const resetFiltros = () => { setFiltros(INIT_FILTROS); setPagina(1); };
+	const resetFiltros = () => { 
+		setFiltros({
+			unidad_academica: user?.unidad_academica_id ? String(user.unidad_academica_id) : "",
+			laboratorio: "",
+			estado: "",
+			busqueda: "",
+		}); 
+		setPagina(1); 
+	};
 
 	/* ── Skeleton cards ──────────────────────────────── */
 	const SkeletonCard = () => (

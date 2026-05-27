@@ -11,7 +11,7 @@
 #   - Los equipos solo se pueden asignar a nodos hoja (sin hijos)
 #   - unidad_academica se hereda automáticamente del padre en save()
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db import models
 
 from apps.estructura_academica.models import BaseModel
@@ -86,24 +86,23 @@ class Laboratorio(BaseModel):
 		verbose_name='Ubicación',
 		help_text='Descripción textual de la ubicación física (ej: "Bloque B, planta baja").',
 	)
-	norma = models.CharField(
+	normativa_infraestructura = models.CharField(
 		max_length=255,
 		blank=True,
-		verbose_name='Norma aplicable',
+		verbose_name='Normativa aplicable',
 		help_text='Norma de bioseguridad, calidad o reglamento institucional.',
 	)
-	actividad_pea = models.TextField(
-		blank=True,
-		verbose_name='Actividad PEA',
-		help_text='Actividades de enseñanza-aprendizaje realizadas en este espacio.',
+	usa_pea = models.BooleanField(
+		default=False,
+		verbose_name='Usa PEA',
 	)
-	actividad_investigacion = models.TextField(
-		blank=True,
-		verbose_name='Actividad de Investigación',
+	usa_investigacion = models.BooleanField(
+		default=False,
+		verbose_name='Usa Investigación',
 	)
-	actividad_servicios = models.TextField(
-		blank=True,
-		verbose_name='Actividad de Servicios',
+	usa_venta_servicios = models.BooleanField(
+		default=False,
+		verbose_name='Usa Venta de Servicios',
 	)
 
 	# ── Meta ─────────────────────────────────────────────────────────────────
@@ -113,9 +112,15 @@ class Laboratorio(BaseModel):
 		verbose_name_plural = "Laboratorios"
 
 	def __str__(self):
-		if self.sala:
-			return f"{self.nombre} ({self.sala})"
-		return self.nombre
+		base = f"{self.nombre} ({self.sala})" if self.sala else self.nombre
+		try:
+			# Desambigua laboratorios homónimos añadiendo la sede (Ej: Química (UALP))
+			if self.unidad_academica_id:
+				return f"{base} ({self.unidad_academica.nombre})"
+		except ObjectDoesNotExist:
+			# Fallback seguro en caso de falta de related object
+			pass
+		return base
 
 	# ── Helpers ──────────────────────────────────────────────────────────────
 	def es_hoja(self):
@@ -216,6 +221,25 @@ class LaboratorioAsignatura(BaseModel):
 		return f"{self.laboratorio.nombre} - {self.asignatura.nombre}"
 
 
+class UsoAcademico(BaseModel):
+	laboratorio = models.ForeignKey(
+		Laboratorio,
+		on_delete=models.CASCADE,
+		related_name='usos_academicos'
+	)
+	asignatura = models.CharField(max_length=255)
+	semestre = models.CharField(max_length=50, blank=True)
+	carrera = models.CharField(max_length=255, blank=True)
+
+	class Meta:
+		ordering = ['laboratorio', 'carrera', 'semestre', 'asignatura']
+		verbose_name = 'Uso Académico'
+		verbose_name_plural = 'Usos Académicos'
+
+	def __str__(self):
+		return f"{self.asignatura} - {self.laboratorio.nombre}"
+
+
 class Equipo(BaseModel):
 	class EstatusGeneral(models.TextChoices):
 		BUENO   = "bueno",   "Bueno"
@@ -224,8 +248,17 @@ class Equipo(BaseModel):
 
 	nombre = models.CharField(max_length=150)
 	codigo_activo = models.CharField(max_length=50, unique=True)
+	unidad_academica = models.ForeignKey(
+		"estructura_academica.UnidadAcademica",
+		null=True,
+		blank=True,
+		on_delete=models.PROTECT,
+		related_name="equipos",
+	)
 	laboratorio = models.ForeignKey(
 		Laboratorio,
+		null=True,
+		blank=True,
 		on_delete=models.PROTECT,
 		related_name="equipos",
 	)
@@ -279,13 +312,29 @@ class Equipo(BaseModel):
 		verbose_name_plural = "Equipos"
 
 	def __str__(self):
-		return f"{self.codigo_activo} - {self.nombre} ({self.laboratorio.nombre})"
+		lab_nombre = self.laboratorio.nombre if self.laboratorio_id else "Sin laboratorio"
+		return f"{self.codigo_activo} - {self.nombre} ({lab_nombre})"
 
 	def cantidad_disponible(self):
 		return self.cantidad_buena + self.cantidad_regular
 
+	def save(self, *args, **kwargs):
+		"""Auto-hereda unidad_academica del laboratorio para mantener consistencia."""
+		if self.laboratorio_id:
+			try:
+				lab = Laboratorio.objects.get(pk=self.laboratorio_id)
+				self.unidad_academica_id = lab.unidad_academica_id
+			except Laboratorio.DoesNotExist:
+				pass
+		super().save(*args, **kwargs)
+
 	def clean(self):
 		super().clean()
+
+		if not self.unidad_academica_id and not self.laboratorio_id:
+			raise ValidationError({
+				'unidad_academica': 'El equipo debe pertenecer a una unidad académica.'
+			})
 
 		# ── Validación 1: consistencia de cantidades
 		total_calculado = self.cantidad_buena + self.cantidad_regular + self.cantidad_mala

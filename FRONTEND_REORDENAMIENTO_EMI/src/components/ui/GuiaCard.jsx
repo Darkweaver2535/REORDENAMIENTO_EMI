@@ -1,12 +1,8 @@
 // src/components/ui/GuiaCard.jsx
 import { useState } from "react";
-import { Download, FileText, MoreVertical, Pencil, RefreshCw, Calendar, CheckCircle, RotateCcw } from "lucide-react";
+import { Download, FileText, MoreVertical, Pencil, Calendar } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
-import Badge from "./Badge";
-import { ESTADOS_GUIA, ROLES } from "../../constants/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
-import { cambiarEstadoGuia } from "../../api/guiasApi";
+import { ROLES } from "../../constants/api";
 
 const PLACEHOLDER_IMAGE =
 	"https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=900&q=80";
@@ -20,33 +16,11 @@ function formatDate(dateStr) {
 	});
 }
 
-function getEstadoKey(guia) {
-	return String(guia?.estado ?? "borrador").toLowerCase();
-}
-
-export default function GuiaCard({ guia, onStatusChange, onEdit }) {
+export default function GuiaCard({ guia, onEdit }) {
 	const { hasRole } = useAuth();
 	const [menuOpen, setMenuOpen] = useState(false);
-	const queryClient = useQueryClient();
 
-	const { mutate: changeStatus } = useMutation({
-		mutationFn: cambiarEstadoGuia,
-		onSuccess: (_, variables) => {
-			toast.success(`Estado cambiado a ${variables.estado}`);
-			queryClient.invalidateQueries({ queryKey: ["guias"] });
-			onStatusChange?.();
-		},
-		onError: (err) => {
-			toast.error(err.response?.data?.error || "Error al cambiar estado");
-		},
-	});
 
-	const handleCambiarEstado = (nuevoEstado) => {
-		if (!guia?.id) return;
-		changeStatus({ id: guia.id, estado: nuevoEstado });
-	};
-
-	console.log('GUIA DATA:', guia);
 
 	const isManager = hasRole(ROLES.ADMIN, ROLES.JEFE);
 	const pdfUrl = guia?.pdf_url || null;
@@ -88,24 +62,6 @@ export default function GuiaCard({ guia, onStatusChange, onEdit }) {
 					</div>
 				)}
 
-				{/* Badge de estado flotante */}
-				{isManager && (
-					<div style={{ position: "absolute", top: "12px", left: "12px" }}>
-						<Badge estado={getEstadoKey(guia)} />
-					</div>
-				)}
-
-				{/* Indicador de solo-gestión para no publicados */}
-				{isManager && getEstadoKey(guia) !== ESTADOS_GUIA.PUBLICADO && (
-					<div style={{
-						position: "absolute", top: "12px", right: "12px",
-						backgroundColor: "rgba(0,0,0,0.6)", borderRadius: "6px",
-						padding: "4px 10px",
-						color: "#ffffff", fontSize: "12px", fontWeight: 600,
-					}}>
-						Solo gestión
-					</div>
-				)}
 			</div>
 
 			{/* ── Cuerpo ───────────────────────────────────────────── */}
@@ -237,55 +193,6 @@ export default function GuiaCard({ guia, onStatusChange, onEdit }) {
 										<Pencil size={16} />
 										Editar
 									</button>
-									<div style={{ height: "1px", backgroundColor: "#f3f4f6" }} />
-									{(() => {
-										const estadoActual = String(guia?.estado || "BORRADOR").toUpperCase();
-										const siguienteEstado = {
-											BORRADOR: { label: "Enviar a revisión", estado: "PENDIENTE_APROBACION", color: "#0369a1", hoverCls: "hover:bg-blue-50" },
-											PENDIENTE_APROBACION: { label: "Aprobar", estado: "APROBADO", color: "#15803d", hoverCls: "hover:bg-green-50" },
-											APROBADO: { label: "Publicar", estado: "PUBLICADO", color: "#7e22ce", hoverCls: "hover:bg-purple-50" },
-											PUBLICADO: null,
-										};
-										const transicion = siguienteEstado[estadoActual === "PENDIENTE" ? "PENDIENTE_APROBACION" : estadoActual];
-
-										return transicion ? (
-											<button
-												onClick={() => {
-													setMenuOpen(false);
-													handleCambiarEstado(transicion.estado);
-												}}
-												style={{
-													display: "flex", alignItems: "center", gap: "10px",
-													width: "100%", padding: "12px 16px",
-													backgroundColor: "transparent", border: "none",
-													fontSize: "14px", fontWeight: 600, color: transicion.color,
-													cursor: "pointer", textAlign: "left",
-												}}
-												className={transicion.hoverCls}
-											>
-												<CheckCircle size={16} />
-												{transicion.label}
-											</button>
-										) : null;
-									})()}
-
-									{/* Siempre permitir forzar a BORRADOR como paracaídas de seguridad */}
-									{String(guia?.estado || "BORRADOR").toUpperCase() !== "BORRADOR" && (
-										<button
-											onClick={() => { setMenuOpen(false); handleCambiarEstado("BORRADOR"); }}
-											style={{
-												display: "flex", alignItems: "center", gap: "10px",
-												width: "100%", padding: "12px 16px",
-												backgroundColor: "transparent", border: "none",
-												fontSize: "14px", fontWeight: 600, color: "#b91c1c",
-												cursor: "pointer", textAlign: "left",
-											}}
-											className="hover:bg-red-50"
-										>
-											<RotateCcw size={16} />
-											Volver a Borrador
-										</button>
-									)}
 								</div>
 							</>
 						)}

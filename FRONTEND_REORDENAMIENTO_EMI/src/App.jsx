@@ -142,7 +142,7 @@ export default function App() {
 						}>
 							<Route index element={<ReordenamientoListPage />} />
 							<Route path="nuevo" element={
-								// Exclusivo para originar traslados
+								// Exclusivo para originar movimientos
 								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 									<ReordenamientoFormPage />
 								</RoleGuard>

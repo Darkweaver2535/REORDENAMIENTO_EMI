@@ -24,7 +24,7 @@ from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos
 class LaboratorioPagination(PageNumberPagination):
 	page_size = 20
 	page_size_query_param = "page_size"
-	max_page_size = 50
+	max_page_size = 1000
 
 
 class LaboratorioViewSet(ModelViewSet):
@@ -43,7 +43,19 @@ class LaboratorioViewSet(ModelViewSet):
 		if unidad_id:
 			queryset = queryset.filter(unidad_academica_id=unidad_id)
 
+		# Regla de negocio: laboratorios operativos son los nodos hoja (sin hijos),
+		# independientemente de si son raíz (parent=None) o hijos (parent!=None).
+		operativos_solo = self.request.query_params.get("operativos_solo")
+		if operativos_solo and operativos_solo.lower() == "true":
+			queryset = queryset.filter(hijos__isnull=True).distinct()
+
 		return queryset
+
+	def paginate_queryset(self, queryset):
+		# Deshabilitar paginación si estamos solicitando operativos (para los dropdowns del frontend)
+		if self.request.query_params.get("operativos_solo", "").lower() == "true":
+			return None
+		return super().paginate_queryset(queryset)
 
 	def get_permissions(self):
 		if self.action in {"list", "retrieve"}:
@@ -108,9 +120,17 @@ class EquipoViewSet(ModelViewSet):
 	"""ViewSet para gestión de equipos con evaluación in-situ."""
 
 	queryset = Equipo.objects.none()
+	pagination_class = LaboratorioPagination
 
 	def get_queryset(self):
-		queryset = Equipo.objects.select_related("laboratorio", "laboratorio__unidad_academica", "evaluado_por")
+		queryset = Equipo.objects.select_related("unidad_academica", "laboratorio", "laboratorio__unidad_academica", "evaluado_por")
+
+		modo = self.request.query_params.get("modo")
+		if modo == "compra":
+			# Para modo COMPRA (recepción/ingreso), listamos estrictamente los equipos
+			# que aún no han sido asignados a ningún laboratorio (laboratorio es NULL).
+			# Esto evita que se "compre" (recepcione) un equipo que ya está operativo.
+			return queryset.filter(laboratorio__isnull=True)
 
 		laboratorio_id = self.request.query_params.get("laboratorio_id")
 		if laboratorio_id:

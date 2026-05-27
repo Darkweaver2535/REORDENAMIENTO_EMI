@@ -471,7 +471,7 @@ export default function LaboratoriosPage() {
 					</div>
 				)}
 			</div>
-			</> {/* cierre lista */}
+			</>
 			)}
 		</PageWrapper>
 	);

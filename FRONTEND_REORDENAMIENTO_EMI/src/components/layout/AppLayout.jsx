@@ -113,7 +113,7 @@ export default function AppLayout() {
                 Unidades Académicas
               </p>
 
-              <NavLink to="/reordenamientos" style={navLinkStyle}>
+              <NavLink to="/reordenamientos" end style={navLinkStyle}>
                 <ArrowLeftRight size={20} />
                 <span>Reordenamiento</span>
               </NavLink>

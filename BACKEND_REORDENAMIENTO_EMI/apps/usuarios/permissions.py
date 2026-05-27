@@ -21,6 +21,55 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 ROL_ADMIN = {"admin", "jefe"}
 
+# ── Helpers de negocio: reordenamientos ──────────────────────────────────────
+
+def can_approve_reordenamiento(user):
+	"""Devuelve True si el usuario puede aprobar reordenamientos.
+
+	Actualmente mapeado a admin|jefe (rol DNCIT aún no existe en el sistema).
+	Cuando se cree el rol DNCIT, actualizar este helper exclusivamente
+	sin tocar ninguna otra lógica. Ej:
+		return _rol_usuario(user) in {"admin", "jefe", "dncit"}
+	"""
+	return _rol_usuario(user) in ROL_ADMIN
+
+
+def notify_activos_fijos(reordenamiento, evento="aprobado"):
+	"""Envía notificación pasiva a todos los usuarios con rol encargado_activos.
+
+	Activos Fijos NO aprueba; solo es notificado para actualizar inventario.
+	eventos esperados: 'aprobado', 'recepcionado'
+	"""
+	try:
+		from apps.notificaciones.models import Notificacion
+		from apps.usuarios.models import Usuario
+
+		ensargados = Usuario.objects.filter(rol="encargado_activos")
+		tipo_movimiento = reordenamiento.get_tipo_movimiento_display()
+		equipo_nombre = reordenamiento.equipo.nombre if reordenamiento.equipo_id else "—"
+		if evento == "aprobado":
+			mensaje = (
+				f"{tipo_movimiento} #{reordenamiento.id} aprobado. "
+				f"Equipo: {equipo_nombre}. Actualiza el inventario cuando corresponda."
+			)
+		else:
+			mensaje = (
+				f"{tipo_movimiento} #{reordenamiento.id} recepcionado. "
+				f"Equipo: {equipo_nombre}. Confirma el inventario en destino."
+			)
+
+		for enc in ensargados:
+			Notificacion.objects.create(
+				usuario=enc,
+				tipo=Notificacion.Tipo.AUTORIZACION,
+				mensaje=mensaje,
+				objeto_id=reordenamiento.id,
+				objeto_url=f"/reordenamientos/{reordenamiento.id}",
+			)
+	except Exception:
+		# Nunca bloquear el flujo principal por un error de notificación
+		pass
+
 
 def _rol_usuario(user):
 	return (getattr(user, "rol", "") or "").strip().lower()
@@ -97,3 +146,17 @@ class PuedeVerGuias(BasePermission):
 			return True
 
 		return getattr(obj, "estado", None) == "publicado"
+
+
+class EsDNCIT(BasePermission):
+	"""Permite acceso a quienes pueden aprobar reordenamientos.
+
+	Actualmente equivale a EsAdminOJefe. Cuando exista el rol DNCIT,
+	actualizar can_approve_reordenamiento() en este mismo archivo.
+	"""
+	message = "Acceso restringido a DNCIT o ADMIN/JEFE para aprobar reordenamientos."
+	code = "requiere_dncit"
+
+	def has_permission(self, request, view):
+		user = request.user
+		return bool(user and user.is_authenticated and can_approve_reordenamiento(user))

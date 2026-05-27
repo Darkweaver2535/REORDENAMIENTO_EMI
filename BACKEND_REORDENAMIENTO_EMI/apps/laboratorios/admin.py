@@ -49,7 +49,7 @@ class EquipoAdmin(admin.ModelAdmin):
 		"estatus_general",
 		"foto_preview_small",
 	)
-	list_filter = ("estatus_general", "laboratorio__unidad_academica")
+	list_filter = ("estatus_general", "unidad_academica")
 	list_select_related = ("laboratorio", "laboratorio__unidad_academica")
 	search_fields = ("codigo_activo", "nombre", "laboratorio__nombre")
 	readonly_fields = ("foto_preview",)
@@ -101,6 +101,23 @@ class EquipoAdmin(admin.ModelAdmin):
 		return "—"
 	foto_preview_small.short_description = "Foto"
 
+
+	def get_form(self, request, obj=None, **kwargs):
+		# Guardamos el objeto actual en el request para poder consultarlo en formfield_for_foreignkey de forma robusta
+		request._current_obj = obj
+		return super().get_form(request, obj, **kwargs)
+
+	def formfield_for_foreignkey(self, db_field, request, **kwargs):
+		if db_field.name == "laboratorio":
+			from django.db.models import Q
+			q = Q(hijos__isnull=True)
+			# Si estamos editando, incluimos explícitamente el ID asignado actualmente
+			obj = getattr(request, '_current_obj', None)
+			if obj and obj.laboratorio_id:
+				q |= Q(id=obj.laboratorio_id)
+			kwargs["queryset"] = db_field.related_model.objects.filter(q).select_related("unidad_academica").distinct()
+			kwargs["required"] = False
+		return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 @admin.register(EquipoRequeridoPorGuia)
 class EquipoRequeridoPorGuiaAdmin(admin.ModelAdmin):

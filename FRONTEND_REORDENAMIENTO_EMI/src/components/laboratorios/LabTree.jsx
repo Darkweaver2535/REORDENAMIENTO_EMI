@@ -13,6 +13,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { fetchLaboratoriosTree } from "../../api/laboratoriosApi";
 
 // ── Paleta de colores por clase/subtipo ────────────────────────────────────────
@@ -120,7 +121,7 @@ function parseCssString(str) {
 }
 
 // ── Nodo del árbol ────────────────────────────────────────────────────────────
-function LabTreeNode({ node, level = 0, defaultOpen = false }) {
+function LabTreeNode({ node, level = 0, defaultOpen = false, navigate }) {
   const [open, setOpen] = useState(defaultOpen || level === 0);
   const contentRef = useRef(null);
 
@@ -143,16 +144,24 @@ function LabTreeNode({ node, level = 0, defaultOpen = false }) {
     >
       {/* ── Fila del nodo ──────────────────────────────────────────────── */}
       <div
-        onClick={handleToggle}
-        role={tieneHijos ? "button" : undefined}
-        tabIndex={tieneHijos ? 0 : undefined}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleToggle(); }}
+        onClick={() => {
+          if (tieneHijos) handleToggle();
+          else if (node.es_hoja) navigate(`/laboratorios/${node.id}`);
+        }}
+        role={tieneHijos ? "button" : node.es_hoja ? "link" : undefined}
+        tabIndex={tieneHijos || node.es_hoja ? 0 : undefined}
+        onKeyDown={(e) => { 
+          if (e.key === "Enter" || e.key === " ") {
+            if (tieneHijos) handleToggle();
+            else if (node.es_hoja) navigate(`/laboratorios/${node.id}`);
+          }
+        }}
         style={{
           display: "flex",
           alignItems: "center",
           gap: "8px",
           padding: `7px 12px 7px ${16 + paddingLeft}px`,
-          cursor: tieneHijos ? "pointer" : "default",
+          cursor: tieneHijos || node.es_hoja ? "pointer" : "default",
           borderRadius: "8px",
           transition: "background 160ms ease",
           userSelect: "none",
@@ -181,6 +190,11 @@ function LabTreeNode({ node, level = 0, defaultOpen = false }) {
           title={node.nombre}
         >
           {node.nombre}
+          {tieneHijos && (
+            <span style={{ color: "#9ca3af", fontSize: "11px", marginLeft: "6px", fontWeight: 500 }}>
+              ({node.hijos.length} subespacios)
+            </span>
+          )}
         </span>
 
         {/* Badges */}
@@ -194,6 +208,11 @@ function LabTreeNode({ node, level = 0, defaultOpen = false }) {
           {node.superficie_m2 && (
             <span style={{ fontSize: "10px", color: "#6b7280", fontWeight: 500 }}>
               {Number(node.superficie_m2).toLocaleString("es")} m²
+            </span>
+          )}
+          {node.es_hoja && node.ubicacion && (
+            <span style={{ fontSize: "10px", color: "#6b7280", fontWeight: 500, display: "flex", alignItems: "center", gap: "2px", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={node.ubicacion}>
+              📍 {node.ubicacion}
             </span>
           )}
           {node.es_hoja && (
@@ -234,6 +253,7 @@ function LabTreeNode({ node, level = 0, defaultOpen = false }) {
                 key={hijo.id}
                 node={hijo}
                 level={level + 1}
+                navigate={navigate}
               />
             ))}
           </ul>
@@ -262,6 +282,7 @@ function SkeletonRow({ width = "60%" }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function LabTree() {
+  const navigate = useNavigate();
   const [tree, setTree]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
@@ -499,6 +520,7 @@ export default function LabTree() {
                   node={nodo}
                   level={0}
                   defaultOpen={i === 0}
+                  navigate={navigate}
                 />
               ))}
             </ul>

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.estructura_academica.serializers import AsignaturaListSerializer
-from apps.laboratorios.models import Equipo, Laboratorio
+from apps.laboratorios.models import Equipo, Laboratorio, UsoAcademico
 
 
 class LaboratorioListSerializer(serializers.ModelSerializer):
@@ -27,16 +27,31 @@ class LaboratorioListSerializer(serializers.ModelSerializer):
 		return obj.unidad_academica.nombre
 
 
+	def get_total_equipos_disponibles(self, obj):
+		equipos = Equipo.objects.filter(laboratorio=obj)
+		return sum(eq.cantidad_disponible() for eq in equipos)
+
+
+class UsoAcademicoSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = UsoAcademico
+		fields = ("id", "asignatura", "semestre", "carrera")
+
+
 class LaboratorioDetalleSerializer(LaboratorioListSerializer):
 	total_equipos = serializers.SerializerMethodField()
 	total_equipos_disponibles = serializers.SerializerMethodField()
-	asignaturas = AsignaturaListSerializer(many=True, read_only=True)
+	usos_academicos = UsoAcademicoSerializer(many=True, read_only=True)
 
 	class Meta(LaboratorioListSerializer.Meta):
 		fields = LaboratorioListSerializer.Meta.fields + (
 			"total_equipos",
 			"total_equipos_disponibles",
-			"asignaturas",
+			"usos_academicos",
+			"usa_pea",
+			"usa_investigacion",
+			"usa_venta_servicios",
+			"normativa_infraestructura",
 		)
 
 	def get_total_equipos(self, obj):
@@ -54,6 +69,12 @@ class EquipoListSerializer(serializers.ModelSerializer):
 	cantidad_disponible = serializers.SerializerMethodField()
 	evaluado_por_nombre = serializers.SerializerMethodField()
 	ultima_evaluacion = serializers.SerializerMethodField()
+	laboratorio_id = serializers.PrimaryKeyRelatedField(
+		source="laboratorio",
+		queryset=Laboratorio.objects.all(),
+		required=False,
+		allow_null=True,
+	)
 
 	class Meta:
 		model = Equipo
@@ -61,6 +82,7 @@ class EquipoListSerializer(serializers.ModelSerializer):
 			"id",
 			"nombre",
 			"codigo_activo",
+			"unidad_academica_id",
 			"laboratorio_id",
 			"laboratorio_nombre",
 			"laboratorio_unidad_academica_id",
@@ -204,11 +226,7 @@ class LaboratorioTreeSerializer(serializers.ModelSerializer):
 			'sala',
 			'superficie_m2',
 			'ubicacion',
-			'norma',
 			'capacidad_estudiantes',
-			'actividad_pea',
-			'actividad_investigacion',
-			'actividad_servicios',
 			'is_active',
 			'es_hoja',
 			'hijos',

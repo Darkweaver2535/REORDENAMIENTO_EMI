@@ -41,8 +41,10 @@ export const API_ROUTES = {
   REORDENAMIENTO: {
     BASE: `${BASE_URL}/api/v1/reordenamientos/`,
     DETALLE: (id) => `${BASE_URL}/api/v1/reordenamientos/${id}/`,
+    APROBAR: (id) => `${BASE_URL}/api/v1/reordenamientos/${id}/aprobar/`,
     AUTORIZAR: (id) => `${BASE_URL}/api/v1/reordenamientos/${id}/autorizar/`,
     EJECUTAR: (id) => `${BASE_URL}/api/v1/reordenamientos/${id}/ejecutar/`,
+    RECEPCIONAR: (id) => `${BASE_URL}/api/v1/reordenamientos/${id}/recepcionar/`,
     COMPARATIVA_SEDES: `${BASE_URL}/api/v1/reordenamientos/comparativa-sedes/`,
   },
 
@@ -131,15 +133,19 @@ export const API_ENDPOINTS = {
   reordenamiento: {
     base: API_ROUTES.REORDENAMIENTO.BASE,
     byId: API_ROUTES.REORDENAMIENTO.DETALLE,
+    aprobar: API_ROUTES.REORDENAMIENTO.APROBAR,
     autorizar: API_ROUTES.REORDENAMIENTO.AUTORIZAR,
     ejecutar: API_ROUTES.REORDENAMIENTO.EJECUTAR,
+    recepcionar: API_ROUTES.REORDENAMIENTO.RECEPCIONAR,
     comparativaSedes: API_ROUTES.REORDENAMIENTO.COMPARATIVA_SEDES,
   },
   reordenamientos: {
     base: API_ROUTES.REORDENAMIENTO.BASE,
     byId: API_ROUTES.REORDENAMIENTO.DETALLE,
+    aprobar: API_ROUTES.REORDENAMIENTO.APROBAR,
     autorizar: API_ROUTES.REORDENAMIENTO.AUTORIZAR,
     ejecutar: API_ROUTES.REORDENAMIENTO.EJECUTAR,
+    recepcionar: API_ROUTES.REORDENAMIENTO.RECEPCIONAR,
     comparativaSedes: API_ROUTES.REORDENAMIENTO.COMPARATIVA_SEDES,
   },
   evaluaciones: {

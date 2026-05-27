@@ -131,12 +131,12 @@ export default function ReportesPage() {
 		const meses = [];
 		for (let i = 5; i >= 0; i--) {
 			const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-			meses.push({ mes: d.toLocaleString("es", { month: "short" }), y: d.getFullYear(), m: d.getMonth(), traslados: 0 });
+			meses.push({ mes: d.toLocaleString("es", { month: "short" }), y: d.getFullYear(), m: d.getMonth(), movimientos: 0 });
 		}
 		allReord.forEach(r => {
 			const f = new Date(r.created_at || r.fecha_solicitud);
 			const e = meses.find(m => m.y === f.getFullYear() && m.m === f.getMonth());
-			if (e) e.traslados++;
+			if (e) e.movimientos++;
 		});
 		return meses;
 	}, [allReord]);
@@ -271,7 +271,7 @@ export default function ReportesPage() {
 				<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 					{/* Export button */}
 					<div style={{ display: "flex", justifyContent: "flex-end" }}>
-						<button onClick={() => exportMovPDF(`reporte-movimientos-${Date.now()}.pdf`, "Reporte de Movimientos y Traslados")} disabled={isExportingMov || chartsLoading}
+						<button onClick={() => exportMovPDF(`reporte-movimientos-${Date.now()}.pdf`, "Reporte de Movimientos")} disabled={isExportingMov || chartsLoading}
 							style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 10, backgroundColor: (isExportingMov || chartsLoading) ? "#9ca3af" : "#002B5E", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: (isExportingMov || chartsLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)" }}>
 							{isExportingMov ? <><LoaderCircle size={16} className="animate-spin" />Generando...</> : <><FileDown size={16} />Exportar PDF con Gráficos</>}
 						</button>
@@ -280,7 +280,7 @@ export default function ReportesPage() {
 					<div ref={movRef} style={{ display: "flex", flexDirection: "column", gap: 24, backgroundColor: "#fff", padding: 4 }}>
 					{/* Charts */}
 					<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20 }}>
-						<GraficoSeccion titulo="Traslados por Mes" subtitulo="Últimos 6 meses" isLoading={chartsLoading}>
+						<GraficoSeccion titulo="Movimientos por Mes" subtitulo="Últimos 6 meses" isLoading={chartsLoading}>
 							{movMensual.length > 0 ? (
 								<ResponsiveContainer width="100%" height="100%">
 									<LineChart data={movMensual} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
@@ -288,7 +288,7 @@ export default function ReportesPage() {
 										<XAxis dataKey="mes" tick={{ fontSize: 12 }} />
 										<YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
 										<Tooltip content={<ChartTooltip />} />
-										<Line type="monotone" dataKey="traslados" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 4, fill: "#8b5cf6" }} name="Traslados" />
+										<Line type="monotone" dataKey="movimientos" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 4, fill: "#8b5cf6" }} name="Movimientos" />
 									</LineChart>
 								</ResponsiveContainer>
 							) : (
@@ -304,7 +304,7 @@ export default function ReportesPage() {
 										<XAxis type="number" tick={{ fontSize: 12 }} />
 										<YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11 }} />
 										<Tooltip content={<ChartTooltip />} />
-										<Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} name="Traslados" />
+										<Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} name="Movimientos" />
 									</BarChart>
 								</ResponsiveContainer>
 							) : (
@@ -314,7 +314,7 @@ export default function ReportesPage() {
 					</div>
 
 					{/* PDF download card */}
-					<ReportCard icon={CalendarRange} title="Reordenamientos por Rango de Fechas" description="Historial de traslados de equipos ejecutados en el período seleccionado.">
+					<ReportCard icon={CalendarRange} title="Reordenamientos por Rango de Fechas" description="Historial de movimientos de equipos ejecutados en el período seleccionado.">
 						<form onSubmit={handleReordenamientos} noValidate>
 							<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 16, alignItems: "flex-end" }}>
 								<div>

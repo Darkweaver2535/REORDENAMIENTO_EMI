@@ -48,30 +48,20 @@ class GuiaListSerializer(serializers.ModelSerializer):
 			"asignatura_nombre",
 			"portada_url",
 			"pdf_url",
-			"estado",
 			"created_at",
 		)
 
 
 class GuiaDetalleSerializer(GuiaListSerializer):
-	aprobado_por_nombre = serializers.SerializerMethodField()
 	resolucion_numero = serializers.CharField(read_only=True)
-	motivo_rechazo = serializers.CharField(read_only=True)
 	equipos_requeridos = EquipoRequeridoListSerializer(many=True, read_only=True)
 
 	class Meta(GuiaListSerializer.Meta):
 		fields = GuiaListSerializer.Meta.fields + (
 			"resolucion_numero",
-			"motivo_rechazo",
-			"aprobado_por_nombre",
 			"updated_at",
 			"equipos_requeridos",
 		)
-
-	def get_aprobado_por_nombre(self, obj):
-		if obj.aprobado_por_id is None:
-			return None
-		return obj.aprobado_por.nombre_completo
 
 
 class GuiaCrearSerializer(serializers.ModelSerializer):
@@ -83,11 +73,9 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
 			"asignatura",
 			"portada_url",
 			"pdf_url",
-			"estado",
 		)
 		extra_kwargs = {
 			"portada_url": {"required": False, "allow_blank": True, "allow_null": True},
-			"estado": {"required": False},
 		}
 
 	def validate(self, attrs):
@@ -108,7 +96,6 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
 
 	@transaction.atomic
 	def create(self, validated_data):
-		validated_data["estado"] = Guia.Estado.BORRADOR
 		validated_data["codigo_interno"] = self._generar_codigo_interno(validated_data)
 		return super().create(validated_data)
 
@@ -126,30 +113,4 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
 		return codigo
 
 
-class GuiaCambioEstadoSerializer(serializers.Serializer):
-	"""Serializer para cambios de estado en guías (publicar, rechazar, etc.)."""
 
-	resolucion_numero = serializers.CharField(
-		max_length=50,
-		required=False,
-		allow_blank=True,
-	)
-	motivo_rechazo = serializers.CharField(
-		required=False,
-		allow_blank=True,
-	)
-
-	def validate(self, attrs):
-		"""Valida que resolucion_numero esté presente si se va a publicar."""
-		resolucion_numero = attrs.get("resolucion_numero", "").strip()
-
-		if self.context.get("action") == "publicar" and not resolucion_numero:
-			raise serializers.ValidationError(
-				{"resolucion_numero": "Se requiere número de resolución para publicar."}
-			)
-
-		return attrs
-
-
-# Alias para compatibilidad con vistas existentes (opcional)
-GuiaEstadoSerializer = GuiaCambioEstadoSerializer

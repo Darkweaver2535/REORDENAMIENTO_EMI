@@ -214,7 +214,6 @@ export default function GuiaFormPage() {
 				await mutateAsync({ id, data: payload });
 				toast.success("¡Guía actualizada exitosamente!");
 			} else {
-				payload.estado = "BORRADOR";
 				await mutateAsync(payload);
 				toast.success("¡Guía creada exitosamente!");
 			}

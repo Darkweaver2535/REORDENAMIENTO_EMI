@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Plus, Search } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
 import { getGuias } from "../../api/guiasApi";
-import { ESTADOS_GUIA, ROLES } from "../../constants/api";
+import { ROLES } from "../../constants/api";
 import { FiltrosCascada } from "../../components/forms";
 import { GuiaCard } from "../../components/ui";
 import PageWrapper from "../../components/layout/PageWrapper";
@@ -61,13 +61,7 @@ export default function GuiasPage() {
 		return guiasRaw.results ?? guiasRaw.data ?? [];
 	}, [guiasRaw]);
 
-	/* ── Filtrar para estudiantes ─────────────────────────────── */
-	const displayedGuias = useMemo(() => {
-		if (isManager) return guias;
-		return guias.filter(
-			(g) => String(g?.estado ?? "").toLowerCase() === ESTADOS_GUIA.PUBLICADO
-		);
-	}, [guias, isManager]);
+	const displayedGuias = guias;
 
 	const hasAsignatura = Boolean(selectedAsignatura?.id ?? selectedAsignatura);
 	const showSkeleton = hasAsignatura && (isLoading || isFetching);
@@ -134,10 +128,6 @@ export default function GuiasPage() {
 								onEdit={(g) => {
 									const id = g?.id ?? g?.uuid;
 									if (id) navigate(`/guias/${id}/editar`);
-								}}
-								onStatusChange={(g) => {
-									// Placeholder: implementar modal de cambio de estado
-									window.alert(`Cambiar estado de: ${g?.titulo ?? "Guía"}`);
 								}}
 							/>
 						))}

@@ -6,7 +6,7 @@ const CONFIG = {
 	en_uso:        { label: "En Uso",        bg: "#eff6ff", color: "#1e40af", dot: "#3b82f6" },
 	mantenimiento: { label: "Mantenimiento", bg: "#fffbeb", color: "#92400e", dot: "#f59e0b" },
 	baja:          { label: "Baja",          bg: "#fef2f2", color: "#991b1b", dot: "#ef4444" },
-	en_traslado:   { label: "En Traslado",   bg: "#f5f3ff", color: "#5b21b6", dot: "#8b5cf6" },
+	en_traslado:   { label: "En Movimiento",   bg: "#f5f3ff", color: "#5b21b6", dot: "#8b5cf6" },
 };
 
 export default function EstadoBadge({ estado }) {

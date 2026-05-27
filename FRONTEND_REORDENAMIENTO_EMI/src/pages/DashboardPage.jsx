@@ -35,13 +35,13 @@ const FALLBACK_ESTADO = [
   { name: 'Malo', value: 10 },
 ];
 
-const FALLBACK_MENSUAL = [
-  { mes: 'Nov', traslados: 3 },
-  { mes: 'Dic', traslados: 7 },
-  { mes: 'Ene', traslados: 2 },
-  { mes: 'Feb', traslados: 9 },
-  { mes: 'Mar', traslados: 5 },
-  { mes: 'Abr', traslados: 11 },
+const DATA_REORDENAMIENTO = [
+	{ mes: 'Nov', movimientos: 3 },
+	{ mes: 'Dic', movimientos: 7 },
+	{ mes: 'Ene', movimientos: 2 },
+	{ mes: 'Feb', movimientos: 9 },
+	{ mes: 'Mar', movimientos: 5 },
+	{ mes: 'Abr', movimientos: 11 },
 ];
 
 const PIE_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
@@ -191,7 +191,7 @@ export default function DashboardPage() {
 
   const reordenamientosMensual = Array.isArray(metrics?.reordenamientos_mensual) && metrics.reordenamientos_mensual.length > 0
     ? metrics.reordenamientos_mensual
-    : FALLBACK_MENSUAL;
+    : DATA_REORDENAMIENTO;
 
   /* ── Quick access cards ──────────────────────────── */
   const quickCards = [
@@ -205,7 +205,7 @@ export default function DashboardPage() {
       visible: hasRole('admin', 'jefe', 'encargado_activos'),
     },
     {
-      title: 'Reordenamiento', desc: 'Traslados entre unidades académicas',
+      			title: 'Reordenamiento', desc: 'Movimientos entre unidades académicas',
       icon: ArrowLeftRight, href: '/reordenamientos', iconBg: '#FFFBEB', iconColor: '#92400e',
       visible: hasRole('admin', 'jefe'),
     },
@@ -276,7 +276,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <AlertCircle size={24} color="#D97706" />
             <p style={{ fontSize: '15px', fontWeight: 700, color: '#92400E', margin: 0 }}>
-              Tienes {pendientes} traslado{pendientes > 1 ? 's' : ''} pendiente{pendientes > 1 ? 's' : ''} de autorización.
+              							Tienes {pendientes} movimiento{pendientes > 1 ? 's' : ''} pendiente{pendientes > 1 ? 's' : ''} de autorización.
             </p>
           </div>
           <Link to="/reordenamientos" style={{
@@ -285,7 +285,7 @@ export default function DashboardPage() {
             textDecoration: 'none', boxShadow: '0 2px 6px rgba(217,119,6,0.3)',
             transition: 'all 150ms ease',
           }}>
-            Ver traslados
+            						Ver movimientos
           </Link>
         </div>
       )}
@@ -442,7 +442,7 @@ export default function DashboardPage() {
       {/* ── Gráfico de línea: Reordenamientos por mes ── */}
       <ChartCard
         title="Reordenamientos por Mes"
-        subtitle="Historial de traslados de equipos — últimos 6 meses"
+        				subtitle="Historial de movimientos de equipos — últimos 6 meses"
         style={{ marginBottom: '28px' }}
       >
         {isLoading ? (
@@ -452,7 +452,7 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={reordenamientosMensual}>
                 <defs>
-                  <linearGradient id="gradientTraslados" x1="0" y1="0" x2="0" y2="1">
+                  									<linearGradient id="gradientMovimientos" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
                     <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                   </linearGradient>
@@ -473,11 +473,11 @@ export default function DashboardPage() {
                 <Tooltip content={<CustomTooltip />} />
                 <Area
                   type="monotone"
-                  dataKey="traslados"
-                  name="Traslados"
+                  									dataKey="movimientos"
+									name="Movimientos"
                   stroke="#2563eb"
                   strokeWidth={2.5}
-                  fill="url(#gradientTraslados)"
+                  									fill="url(#gradientMovimientos)"
                   dot={{ fill: '#2563eb', r: 4, strokeWidth: 2, stroke: '#fff' }}
                   activeDot={{ r: 6, stroke: '#2563eb', strokeWidth: 2, fill: '#fff' }}
                 />
