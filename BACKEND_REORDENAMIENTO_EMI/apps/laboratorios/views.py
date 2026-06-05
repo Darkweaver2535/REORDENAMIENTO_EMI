@@ -18,7 +18,11 @@ from apps.laboratorios.serializers import (
 )
 from apps.laboratorios.services import InventoryAnalyticsService
 from apps.usuarios.models import AuditLog
-from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos
+from apps.usuarios.permissions import (
+	EsAdminOJefe,
+	EsEncargadoActivos,
+	scope_inventario_por_rol,
+)
 
 
 class LaboratorioPagination(PageNumberPagination):
@@ -48,6 +52,9 @@ class LaboratorioViewSet(ModelViewSet):
 		operativos_solo = self.request.query_params.get("operativos_solo")
 		if operativos_solo and operativos_solo.lower() == "true":
 			queryset = queryset.filter(hijos__isnull=True).distinct()
+
+		# FIX #15: ADMIN/JEFE ven todo; ENCARGADO_ACTIVOS solo su sede; el resto nada.
+		queryset = scope_inventario_por_rol(queryset, self.request.user)
 
 		return queryset
 
@@ -88,6 +95,8 @@ class LaboratorioViewSet(ModelViewSet):
 		raices = Laboratorio.objects.filter(parent=None).prefetch_related(
 			'hijos__hijos__hijos__hijos'
 		).select_related('unidad_academica')
+		# FIX #15: el árbol también respeta la visibilidad por rol/sede.
+		raices = scope_inventario_por_rol(raices, request.user)
 		serializer = LaboratorioTreeSerializer(raices, many=True)
 		return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -130,11 +139,17 @@ class EquipoViewSet(ModelViewSet):
 			# Para modo COMPRA (recepción/ingreso), listamos estrictamente los equipos
 			# que aún no han sido asignados a ningún laboratorio (laboratorio es NULL).
 			# Esto evita que se "compre" (recepcione) un equipo que ya está operativo.
-			return queryset.filter(laboratorio__isnull=True)
+			queryset = queryset.filter(laboratorio__isnull=True)
+			# FIX #15: aplica visibilidad por rol/sede también en modo compra
+			# (todos los equipos tienen unidad_academica, incluso sin laboratorio).
+			return scope_inventario_por_rol(queryset, self.request.user)
 
 		laboratorio_id = self.request.query_params.get("laboratorio_id")
 		if laboratorio_id:
 			queryset = queryset.filter(laboratorio_id=laboratorio_id)
+
+		# FIX #15: ADMIN/JEFE ven todo; ENCARGADO_ACTIVOS solo su sede; el resto nada.
+		queryset = scope_inventario_por_rol(queryset, self.request.user)
 
 		return queryset
 

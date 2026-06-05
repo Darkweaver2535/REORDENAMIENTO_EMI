@@ -5,7 +5,6 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.laboratorios.models import Equipo, Laboratorio
@@ -17,6 +16,7 @@ from apps.reportes.pdf_utils import (
     dibujar_fila_tabla,
     dibujar_pie,
 )
+from apps.usuarios.permissions import EsAdminOJefe
 
 
 # ── REPORTE 1: Inventario de laboratorio ────────────────────────────────────
@@ -27,7 +27,7 @@ class ReporteInventarioLaboratorioView(APIView):
     Genera un PDF con el inventario completo de equipos de un laboratorio.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminOJefe]  # FIX #14: reportes solo para ADMIN/JEFE
 
     def get(self, request, pk):
         laboratorio = get_object_or_404(
@@ -97,7 +97,7 @@ class ReporteReordenamientosView(APIView):
     Genera un PDF con el listado de reordenamientos del período.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminOJefe]  # FIX #14: reportes solo para ADMIN/JEFE
 
     def get(self, request):
         fecha_inicio = request.query_params.get("fecha_inicio")
@@ -177,7 +177,7 @@ class ReporteComparativaSedesView(APIView):
     El parámetro ?nombre_equipo es requerido.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [EsAdminOJefe]  # FIX #14: reportes solo para ADMIN/JEFE
 
     def get(self, request):
         nombre_equipo = request.query_params.get("nombre_equipo", "").strip()

@@ -75,12 +75,54 @@ def notify_activos_fijos(reordenamiento, evento="aprobado"):
 		pass
 
 
+# ── Convención de roles (#18) ────────────────────────────────────────────────
+# El rol se ALMACENA en MAYÚSCULAS (ver Usuario.Rol: 'ADMIN', 'JEFE',
+# 'ENCARGADO_ACTIVOS', etc.). Para comparar SIEMPRE se normaliza con
+# _rol_usuario() (lower) y se contrasta contra las constantes en minúsculas de
+# abajo. Para FILTRAR en la BD úsense las constantes del enum Usuario.Rol (no
+# strings sueltos), porque la query no normaliza el casing.
+ROL_ENCARGADO = "encargado_activos"
+
+
 def _rol_usuario(user):
+	"""Rol normalizado a minúsculas para comparaciones robustas (no para queries)."""
 	return (getattr(user, "rol", "") or "").strip().lower()
 
 
 def _es_admin_o_jefe(user):
 	return _rol_usuario(user) in ROL_ADMIN
+
+
+# ── Helpers públicos de rol (reutilizables en views) ─────────────────────────
+def es_admin_o_jefe(user):
+	"""True si el usuario tiene visibilidad nacional (ADMIN o JEFE)."""
+	return bool(user and user.is_authenticated and _es_admin_o_jefe(user))
+
+
+def es_encargado_activos(user):
+	"""True si el usuario es ENCARGADO_ACTIVOS (visibilidad acotada a su sede)."""
+	return bool(user and user.is_authenticated and _rol_usuario(user) == ROL_ENCARGADO)
+
+
+def scope_inventario_por_rol(queryset, user, campo_unidad="unidad_academica_id"):
+	"""Aplica la regla de visibilidad de inventario (#15) a un queryset.
+
+	- ADMIN / JEFE   → ven todo (visión nacional, necesaria para comparativas
+	                   y reordenamientos entre sedes).
+	- ENCARGADO_ACTIVOS → solo su unidad académica; sin unidad asignada, nada.
+	- Resto (ESTUDIANTE/DOCENTE/anónimo) → queryset vacío.
+
+	`campo_unidad` es el lookup para filtrar por unidad en ese modelo
+	(ej. 'unidad_academica_id' o 'laboratorio__unidad_academica_id').
+	"""
+	if es_admin_o_jefe(user):
+		return queryset
+	if es_encargado_activos(user):
+		unidad_id = getattr(user, "unidad_academica_id", None)
+		if unidad_id:
+			return queryset.filter(**{campo_unidad: unidad_id})
+		return queryset.none()
+	return queryset.none()
 
 
 class EsSoloLectura(BasePermission):

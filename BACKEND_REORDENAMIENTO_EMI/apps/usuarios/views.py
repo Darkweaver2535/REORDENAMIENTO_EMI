@@ -109,13 +109,13 @@ from rest_framework.viewsets import ModelViewSet
 
 class UsuarioAdminViewSet(ModelViewSet):
 	serializer_class = UsuarioListaSerializer
-	permission_classes = [IsAuthenticated]
+	# FIX #16: usar EsAdminOJefe (estándar del sistema) en vez de un chequeo manual
+	# que solo permitía ADMIN. El permiso garantiza ADMIN o JEFE, así que el
+	# get_queryset ya no necesita re-filtrar por rol.
+	permission_classes = [EsAdminOJefe]
 	http_method_names = ["get", "patch", "head", "options"]
 
 	def get_queryset(self):
-		user = self.request.user
-		if getattr(user, "rol", "") != getattr(user.Rol, "ADMIN", "ADMIN"):
-			return Usuario.objects.none()
 		return Usuario.objects.all().order_by("nombre_completo")
 
 	def partial_update(self, request, *args, **kwargs):
