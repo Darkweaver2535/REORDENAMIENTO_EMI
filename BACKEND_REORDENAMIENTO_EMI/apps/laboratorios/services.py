@@ -39,10 +39,24 @@
 # Cachear resultados en Redis con key='analytics:{laboratorio_id}' TTL=3600 segundos.
 # Invalidar caché cuando se actualiza cualquier Equipo del laboratorio (via signal).
 
+import unicodedata
+
 from django.core.cache import cache
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Max, Sum
 
-from apps.laboratorios.models import Equipo, EquipoRequeridoPorGuia, Laboratorio
+from apps.laboratorios.models import (
+    Equipo,
+    EquipoRequeridoPorGuia,
+    Laboratorio,
+    TipoEquipo,
+)
+
+
+def _normalizar_termino(texto):
+    """Mayúsculas, espacios colapsados y sin acentos (para matching de tipos)."""
+    texto = " ".join((texto or "").split()).upper()
+    texto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in texto if not unicodedata.combining(c))
 
 
 class InventoryAnalyticsService:
@@ -149,24 +163,47 @@ class InventoryAnalyticsService:
         }
 
     @classmethod
+    def _resolver_tipo(cls, termino):
+        """Intenta mapear un término de búsqueda a un TipoEquipo canónico (#12).
+
+        Devuelve el TipoEquipo si el término coincide (exacto normalizado, o el
+        tipo está contenido en el término / viceversa), o None para que el caller
+        use el fallback por texto.
+        """
+        norm = _normalizar_termino(termino)
+        if not norm:
+            return None
+        tipo = TipoEquipo.objects.filter(nombre=norm).first()
+        if tipo:
+            return tipo
+        # El término de la guía suele incluir el tipo: "BALANZA DIGITAL" → "BALANZA".
+        primera = norm.split()[0]
+        return TipoEquipo.objects.filter(nombre=primera).first()
+
+    @classmethod
     def comparar_sedes_para_equipo(cls, nombre_equipo_teorico):
-        # FIX #17: búsqueda por término. Se usa icontains (substring) DELIBERADAMENTE
-        # porque la nomenclatura es asimétrica: el nombre teórico de la guía es corto
-        # ("BALANZA DIGITAL") y el nombre físico del equipo es una descripción larga
-        # ("BALANZA DIGITAL CAP.30 KG..."). Un match exacto daría 0 coincidencias.
-        # Se normaliza el término (espacios colapsados) para mayor robustez.
-        # Limitación conocida: un término genérico puede agrupar variantes distintas
-        # (p. ej. "MICROSCOPIO" → óptico y electrónico). Mientras no exista un
-        # catálogo canónico de equipos, esta búsqueda es por coincidencia de texto.
+        # #12: si el término resuelve a un TipoEquipo del catálogo canónico, el
+        # cálculo de disponibilidad y demanda se hace por FK exacta (robusto). Si
+        # no hay tipo (datos aún sin clasificar), se cae al matching por texto
+        # (icontains) que se mantiene por compatibilidad — FIX #17.
         nombre_equipo_teorico = " ".join((nombre_equipo_teorico or "").split())
         if not nombre_equipo_teorico:
             return []
 
+        tipo = cls._resolver_tipo(nombre_equipo_teorico)
+
+        if tipo is not None:
+            equipos_qs = Equipo.objects.filter(tipo=tipo)
+            demanda_qs = EquipoRequeridoPorGuia.objects.filter(tipo=tipo)
+        else:
+            equipos_qs = Equipo.objects.filter(nombre__icontains=nombre_equipo_teorico)
+            demanda_qs = EquipoRequeridoPorGuia.objects.filter(
+                nombre_equipo_teorico__icontains=nombre_equipo_teorico
+            )
+
         disponible_by_lab = {
             row["laboratorio_id"]: row["total_disponible"]
-            for row in Equipo.objects.filter(nombre__icontains=nombre_equipo_teorico)
-            .values("laboratorio_id")
-            .annotate(
+            for row in equipos_qs.values("laboratorio_id").annotate(
                 total_disponible=Sum(
                     ExpressionWrapper(
                         F("cantidad_buena") + F("cantidad_regular"),
@@ -178,11 +215,9 @@ class InventoryAnalyticsService:
 
         demanda_by_lab = {
             row["guia__asignatura__laboratorios__id"]: row["total_requerido"]
-            for row in EquipoRequeridoPorGuia.objects.filter(
-                nombre_equipo_teorico__icontains=nombre_equipo_teorico
+            for row in demanda_qs.values("guia__asignatura__laboratorios__id").annotate(
+                total_requerido=Sum("cantidad_requerida")
             )
-            .values("guia__asignatura__laboratorios__id")
-            .annotate(total_requerido=Sum("cantidad_requerida"))
             if row["guia__asignatura__laboratorios__id"] is not None
         }
 

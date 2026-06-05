@@ -5,7 +5,7 @@ import {
   BookOpen, FlaskConical, ArrowLeftRight,
   BarChart2, LogOut, Menu, X, Settings,
   Building2, GraduationCap, User, Users, FileText,
-  LayoutDashboard, Monitor, ShieldCheck
+  LayoutDashboard, Monitor, ShieldCheck, Tags
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from './NotificationBell'
@@ -145,10 +145,17 @@ export default function AppLayout() {
               )}
 
               {hasRole('admin', 'jefe') && (
-                <NavLink to="/admin/auditoria" style={navLinkStyle}>
-                  <ShieldCheck size={20} />
-                  <span>Auditoría</span>
-                </NavLink>
+                <>
+                  <NavLink to="/admin/tipos-equipo" style={navLinkStyle}>
+                    <Tags size={20} />
+                    <span>Tipos de equipo</span>
+                  </NavLink>
+
+                  <NavLink to="/admin/auditoria" style={navLinkStyle}>
+                    <ShieldCheck size={20} />
+                    <span>Auditoría</span>
+                  </NavLink>
+                </>
               )}
             </>
           )}

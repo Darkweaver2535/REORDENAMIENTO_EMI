@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.laboratorios.models import Equipo, Laboratorio, UsoAcademico
+from apps.laboratorios.models import Equipo, Laboratorio, TipoEquipo, UsoAcademico
 
 
 class LaboratorioListSerializer(serializers.ModelSerializer):
@@ -73,6 +73,14 @@ class EquipoListSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    # Catálogo canónico (#12)
+    tipo_id = serializers.PrimaryKeyRelatedField(
+        source="tipo",
+        queryset=TipoEquipo.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    tipo_nombre = serializers.CharField(source="tipo.nombre", read_only=True, default=None)
 
     class Meta:
         model = Equipo
@@ -85,6 +93,8 @@ class EquipoListSerializer(serializers.ModelSerializer):
             "laboratorio_nombre",
             "laboratorio_unidad_academica_id",
             "laboratorio_unidad_academica_nombre",
+            "tipo_id",
+            "tipo_nombre",
             "cantidad_total",
             "cantidad_buena",
             "cantidad_regular",
@@ -97,6 +107,16 @@ class EquipoListSerializer(serializers.ModelSerializer):
             "foto_url",
             "ultima_evaluacion",
         )
+
+    def validate_cantidad_total(self, value):
+        # #13: cada equipo es una unidad física individual (código y estado
+        # propios). La cantidad solo puede ser 0 (p. ej. recién comprado, aún sin
+        # recepcionar) o 1. El modelo de "lote" (cantidad > 1) quedó obsoleto.
+        if value > 1:
+            raise serializers.ValidationError(
+                "Cada equipo es una unidad individual: la cantidad debe ser 0 o 1."
+            )
+        return value
 
     def get_laboratorio_nombre(self, obj):
         if obj.laboratorio_id is None:
@@ -148,6 +168,23 @@ class EquipoDetalleSerializer(EquipoListSerializer):
             "especificaciones",
             "notas",
             "requiere_mantenimiento",
+        )
+
+
+class TipoEquipoSerializer(serializers.ModelSerializer):
+    """Catálogo canónico de tipos de equipo (#12)."""
+
+    total_equipos = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = TipoEquipo
+        fields = (
+            "id",
+            "nombre",
+            "categoria",
+            "descripcion",
+            "activo",
+            "total_equipos",
         )
 
 

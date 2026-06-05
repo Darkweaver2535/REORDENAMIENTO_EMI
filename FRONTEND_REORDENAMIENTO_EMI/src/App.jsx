@@ -22,6 +22,7 @@ const ReordenamientoListPage = React.lazy(() => import("./pages/reordenamiento/R
 const UsuariosPage = React.lazy(() => import("./pages/admin/UsuariosPage"));
 const ConfiguracionPage = React.lazy(() => import("./pages/admin/ConfiguracionPage"));
 const AuditoriaPage = React.lazy(() => import("./pages/admin/AuditoriaPage"));
+const TiposEquipoPage = React.lazy(() => import("./pages/admin/TiposEquipoPage"));
 const ReportesPage = React.lazy(() => import("./pages/reportes/ReportesPage"));
 const EquiposPage = React.lazy(() => import("./pages/equipos/EquiposPage"));
 const EquipoDetailPage = React.lazy(() => import("./pages/equipos/EquipoDetailPage"));
@@ -175,6 +176,11 @@ export default function App() {
 							<Route path="auditoria" element={
 								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
 									<AuditoriaPage />
+								</RoleGuard>
+							} />
+							<Route path="tipos-equipo" element={
+								<RoleGuard allowedRoles={[ROLES.ADMIN, ROLES.JEFE]}>
+									<TiposEquipoPage />
 								</RoleGuard>
 							} />
 						</Route>

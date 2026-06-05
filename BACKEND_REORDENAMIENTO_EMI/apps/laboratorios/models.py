@@ -244,6 +244,30 @@ class UsoAcademico(BaseModel):
         return f"{self.asignatura} - {self.laboratorio.nombre}"
 
 
+class TipoEquipo(BaseModel):
+    """Catálogo canónico de tipos de equipo (#12).
+
+    Agrupa las unidades físicas individuales (Equipo) y la demanda teórica de las
+    guías (EquipoRequeridoPorGuia) bajo un nombre canónico — p. ej. todas las
+    unidades 'MICROSCOPIO BINOCULAR ...' bajo el tipo 'Microscopio'. Reemplaza el
+    matching frágil por `icontains`: cuando ambos lados referencian el mismo tipo,
+    el déficit y las sugerencias de reordenamiento se calculan por FK exacta.
+    """
+
+    nombre = models.CharField(max_length=120, unique=True)
+    categoria = models.CharField(max_length=80, blank=True)
+    descripcion = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name = "Tipo de equipo"
+        verbose_name_plural = "Tipos de equipo"
+
+    def __str__(self):
+        return self.nombre
+
+
 class Equipo(BaseModel):
     class EstatusGeneral(models.TextChoices):
         BUENO = "bueno", "Bueno"
@@ -252,6 +276,16 @@ class Equipo(BaseModel):
 
     nombre = models.CharField(max_length=150)
     codigo_activo = models.CharField(max_length=50, unique=True)
+    # Catálogo canónico (#12). Nullable para no romper datos existentes; se asigna
+    # por backfill heurístico y al crear/editar equipos desde la UI.
+    tipo = models.ForeignKey(
+        "laboratorios.TipoEquipo",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="equipos",
+        help_text="Tipo canónico que agrupa esta unidad con otras equivalentes (#12).",
+    )
     unidad_academica = models.ForeignKey(
         "estructura_academica.UnidadAcademica",
         null=True,
@@ -375,6 +409,16 @@ class EquipoRequeridoPorGuia(BaseModel):
         related_name="equipos_requeridos",
     )
     nombre_equipo_teorico = models.CharField(max_length=150)
+    # Catálogo canónico (#12): demanda teórica enlazada al mismo tipo que las
+    # unidades físicas, para calcular déficit por FK en vez de por texto.
+    tipo = models.ForeignKey(
+        "laboratorios.TipoEquipo",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="requerido_por_guias",
+        help_text="Tipo canónico requerido por la guía (#12).",
+    )
     equipo = models.ForeignKey(
         Equipo,
         null=True,

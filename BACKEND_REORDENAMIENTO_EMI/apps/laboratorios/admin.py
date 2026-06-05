@@ -9,9 +9,30 @@
 #   equipo, cantidad_requerida, tiene_deficit
 
 from django.contrib import admin
+from django.db.models import Count
 from django.utils.html import format_html
 
-from apps.laboratorios.models import Equipo, EquipoRequeridoPorGuia, Laboratorio
+from apps.laboratorios.models import (
+    Equipo,
+    EquipoRequeridoPorGuia,
+    Laboratorio,
+    TipoEquipo,
+)
+
+
+@admin.register(TipoEquipo)
+class TipoEquipoAdmin(admin.ModelAdmin):
+    list_display = ("nombre", "categoria", "total_equipos", "activo")
+    list_filter = ("activo", "categoria")
+    search_fields = ("nombre", "categoria")
+    ordering = ("nombre",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_n=Count("equipos"))
+
+    @admin.display(description="Unidades", ordering="_n")
+    def total_equipos(self, obj):
+        return obj._n
 
 
 class EquipoInline(admin.TabularInline):

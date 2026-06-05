@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.db.models import Count
 from django.utils import timezone
 from rest_framework import filters, status
 from rest_framework.decorators import action
@@ -8,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apps.laboratorios.models import Equipo, Laboratorio
+from apps.laboratorios.models import Equipo, Laboratorio, TipoEquipo
 from apps.laboratorios.serializers import (
     EquipoDetalleSerializer,
     EquipoListSerializer,
@@ -16,6 +17,7 @@ from apps.laboratorios.serializers import (
     LaboratorioDetalleSerializer,
     LaboratorioListSerializer,
     LaboratorioTreeSerializer,
+    TipoEquipoSerializer,
 )
 from apps.laboratorios.services import InventoryAnalyticsService
 from apps.laboratorios.storage import ErrorImagen, subir_imagen_equipo
@@ -250,3 +252,26 @@ class EquipoViewSet(ModelViewSet):
         )
 
         return Response({"foto_url": url}, status=status.HTTP_200_OK)
+
+
+class TipoEquipoViewSet(ModelViewSet):
+    """Catálogo canónico de tipos de equipo (#12).
+
+    Lectura para cualquier usuario autenticado; alta/edición/baja restringida a
+    ADMIN/JEFE (curar y fusionar el catálogo es tarea de administración).
+    """
+
+    serializer_class = TipoEquipoSerializer
+    pagination_class = LaboratorioPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["nombre", "categoria"]
+    ordering_fields = ["nombre", "total_equipos"]
+    ordering = ["nombre"]
+
+    def get_queryset(self):
+        return TipoEquipo.objects.annotate(total_equipos=Count("equipos"))
+
+    def get_permissions(self):
+        if self.action in {"list", "retrieve"}:
+            return [IsAuthenticated()]
+        return [EsAdminOJefe()]
