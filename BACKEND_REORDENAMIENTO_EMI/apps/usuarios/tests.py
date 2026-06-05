@@ -258,8 +258,31 @@ class DashboardRegressionTests(TestCase):
             "total_equipos",
             "laboratorios_activos",
             "reordenamientos_pendientes",
+            # Campos de decisión nuevos
+            "equipos_operativos",
+            "equipos_operativos_porcentaje",
+            "equipos_sin_asignar",
+            "total_tipos_equipo",
+            "comparativa_unidades",
+            "ranking_laboratorios_criticos",
+            "tipos_mas_comunes",
+            "reordenamientos_por_estado",
+            "alertas",
         ):
             self.assertIn(campo, resp.data, f"Falta: {campo}")
+
+    def test_dashboard_comparativa_refleja_equipos(self):
+        """La comparativa por unidad agrupa los equipos creados."""
+        ua = _ua("Sede Dash B", "SDBDS")
+        lab = _lab(ua, "Lab Dash", "Campus")
+        _equipo(lab, "EQ-DASH-1")
+        _equipo(lab, "EQ-DASH-2")
+        cache.clear()
+        resp = _client_as(self.admin).get("/api/v1/dashboard/metricas/")
+        comparativa = resp.data["comparativa_unidades"]
+        fila = next((c for c in comparativa if c["sede"] == "SDBDS"), None)
+        self.assertIsNotNone(fila)
+        self.assertEqual(fila["total"], 2)
 
 
 @override_settings(CACHES=CACHE_IN_MEMORY)
