@@ -26,6 +26,7 @@ from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -41,8 +42,14 @@ def _client_ip(request):
 	return request.META.get("REMOTE_ADDR")
 
 
+class LoginThrottle(AnonRateThrottle):
+	"""5 intentos/min por IP — protección contra fuerza bruta (#2)."""
+	scope = "login"
+
+
 class LoginView(APIView):
 	permission_classes = [AllowAny]
+	throttle_classes = [LoginThrottle]
 
 	def post(self, request):
 		carnet_identidad = request.data.get("carnet_identidad")

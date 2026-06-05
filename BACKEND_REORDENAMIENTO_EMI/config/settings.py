@@ -140,6 +140,17 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
     ),
+    # Throttling (#2): protección contra fuerza bruta y abuso de API.
+    # LoginView tiene su propio throttle más estricto (ver views.py).
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/minute",       # Anónimos: 60 req/min (navegación pública)
+        "user": "300/minute",      # Usuarios autenticados: 300 req/min
+        "login": "5/minute",       # Login: 5 intentos/min por IP (fuerza bruta)
+    },
 }
 
 
@@ -208,3 +219,17 @@ LOGGING = {
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ── Security headers para producción (#3) ────────────────────────────────────
+# Solo se activan cuando DEBUG=False (producción/staging).
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31_536_000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
