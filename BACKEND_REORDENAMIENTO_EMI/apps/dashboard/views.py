@@ -21,8 +21,11 @@ class DashboardMetricasView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # ── Guías publicadas ──────────────────────────────────────────────────
-        total_guias = Guia.objects.filter(estado__iexact=Guia.Estado.PUBLICADO).count()
+        # ── Guías ─────────────────────────────────────────────────────────────
+        # El workflow de estados de guías (borrador/pendiente/aprobado/publicado)
+        # fue eliminado en la migración guias.0002. Ya no existe el campo `estado`:
+        # toda guía registrada se considera publicada/visible. Por eso contamos el total.
+        total_guias = Guia.objects.count()
 
         # ── Equipos: totales y en mal estado ─────────────────────────────────
         totales = Equipo.objects.aggregate(

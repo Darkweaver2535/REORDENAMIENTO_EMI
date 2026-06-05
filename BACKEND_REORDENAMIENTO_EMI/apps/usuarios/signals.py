@@ -23,53 +23,16 @@
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from apps.guias.models import Guia
 from apps.laboratorios.models import Equipo
 from apps.laboratorios.services import InventoryAnalyticsService
 from apps.reordenamiento.models import Reordenamiento
 from apps.usuarios.models import AuditLog
 
 
-@receiver(pre_save, sender=Guia)
-def guia_pre_save_track_estado(sender, instance, **kwargs):
-	if not instance.pk:
-		instance._estado_previo_signal = None
-		return
-
-	try:
-		previo = Guia.objects.only("estado").get(pk=instance.pk)
-		instance._estado_previo_signal = previo.estado
-	except Guia.DoesNotExist:
-		instance._estado_previo_signal = None
-
-
-@receiver(post_save, sender=Guia)
-def guia_post_save_audit_estado(sender, instance, created, **kwargs):
-	if created:
-		return
-
-	estado_previo = getattr(instance, "_estado_previo_signal", None)
-	if estado_previo == instance.estado:
-		return
-
-	if instance.estado == Guia.Estado.PUBLICADO:
-		AuditLog.objects.create(
-			tabla_afectada="Guia",
-			registro_id=instance.id,
-			accion=AuditLog.Accion.PUBLISH,
-			usuario=instance.aprobado_por,
-			datos_anteriores={"estado": estado_previo},
-			datos_nuevos={"estado": instance.estado},
-		)
-	elif instance.estado == Guia.Estado.PENDIENTE:
-		AuditLog.objects.create(
-			tabla_afectada="Guia",
-			registro_id=instance.id,
-			accion=AuditLog.Accion.UPDATE,
-			usuario=None,
-			datos_anteriores={"estado": estado_previo},
-			datos_nuevos={"estado": instance.estado},
-		)
+# NOTA: Los signals de auditoría de estado de Guía fueron eliminados.
+# El workflow de estados (borrador/pendiente/aprobado/publicado) se retiró en la
+# migración guias.0002 junto con los campos `estado`, `aprobado_por` y
+# `motivo_rechazo`. La creación de guías se audita en GuiaViewSet.perform_create.
 
 
 @receiver(pre_save, sender=Reordenamiento)
