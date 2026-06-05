@@ -44,7 +44,11 @@ def notify_activos_fijos(reordenamiento, evento="aprobado"):
 		from apps.notificaciones.models import Notificacion
 		from apps.usuarios.models import Usuario
 
-		ensargados = Usuario.objects.filter(rol="encargado_activos")
+		# FIX #5: el rol se guarda en MAYÚSCULAS ('ENCARGADO_ACTIVOS') igual que los
+		# choices del modelo. El filtro anterior usaba "encargado_activos" en
+		# minúsculas y nunca encontraba a nadie → las notificaciones no llegaban.
+		# Usamos la constante del enum para evitar errores de casing.
+		encargados = Usuario.objects.filter(rol=Usuario.Rol.ENCARGADO_ACTIVOS)
 		tipo_movimiento = reordenamiento.get_tipo_movimiento_display()
 		equipo_nombre = reordenamiento.equipo.nombre if reordenamiento.equipo_id else "—"
 		if evento == "aprobado":
@@ -58,7 +62,7 @@ def notify_activos_fijos(reordenamiento, evento="aprobado"):
 				f"Equipo: {equipo_nombre}. Confirma el inventario en destino."
 			)
 
-		for enc in ensargados:
+		for enc in encargados:
 			Notificacion.objects.create(
 				usuario=enc,
 				tipo=Notificacion.Tipo.AUTORIZACION,

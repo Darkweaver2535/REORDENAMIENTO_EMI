@@ -145,11 +145,14 @@ class ReporteReordenamientosView(APIView):
                 y = dibujar_encabezado(p, "Reporte de Reordenamientos (cont.)")
                 y = dibujar_fila_tabla(p, y, headers, x_pos, anchos, es_encabezado=True)
 
+            # FIX #8: en movimientos tipo COMPRA el laboratorio_origen es None;
+            # acceder a .nombre directamente lanzaba AttributeError y rompía el PDF.
+            # Se protege contra nulos en origen, destino y equipo.
             fila = [
                 reord.created_at.strftime("%d/%m/%Y"),
-                reord.equipo.nombre[:18],
-                reord.laboratorio_origen.nombre[:18],
-                reord.laboratorio_destino.nombre[:18],
+                reord.equipo.nombre[:18] if reord.equipo_id else "—",
+                reord.laboratorio_origen.nombre[:18] if reord.laboratorio_origen_id else "—",
+                reord.laboratorio_destino.nombre[:18] if reord.laboratorio_destino_id else "—",
                 reord.cantidad_trasladada,
                 reord.get_estado_display(),
                 reord.resolucion_numero,

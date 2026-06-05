@@ -62,16 +62,22 @@ class ReordenamientoViewSet(ModelViewSet):
         if tipo := params.get("tipo_movimiento"):
             qs = qs.filter(tipo_movimiento=tipo)
 
-        # Restricción por rol: encargado_activos solo ve movimientos de su unidad
+        # Restricción por rol: encargado_activos solo ve movimientos de su unidad.
+        # FIX #6: el modelo Usuario NO tiene relación `laboratorio`; su sede es
+        # `unidad_academica` (FK directo). El código anterior usaba user.laboratorio,
+        # que nunca existe → hasattr() era False y el encargado caía siempre en
+        # qs.none(), sin ver ningún reordenamiento.
         user = self.request.user
         if hasattr(user, "rol") and (user.rol or "").strip().lower() == "encargado_activos":
-            if hasattr(user, "laboratorio") and user.laboratorio:
-                unidad_id = user.laboratorio.unidad_academica_id
+            unidad_id = getattr(user, "unidad_academica_id", None)
+            if unidad_id:
                 qs = qs.filter(
                     Q(laboratorio_origen__unidad_academica_id=unidad_id)
                     | Q(laboratorio_destino__unidad_academica_id=unidad_id)
                 )
             else:
+                # Encargado sin unidad académica asignada: no puede determinar su
+                # ámbito, así que no ve movimientos hasta que se le asigne una sede.
                 qs = qs.none()
 
         return qs

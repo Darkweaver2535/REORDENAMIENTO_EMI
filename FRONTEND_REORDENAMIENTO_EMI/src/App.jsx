@@ -66,13 +66,11 @@ export default function App() {
 		}>
 			<Routes>
 				{/* Público */}
-				<Route path="/login" element={
-					<PublicRoute>
-						<LoginPage />
-					</PublicRoute>
-				} />
-				
-				<Route path="/login" element={<PublicRoute />} >
+				{/* FIX #7: antes había dos rutas "/login" duplicadas. La primera
+				    pasaba <LoginPage/> como children a PublicRoute, pero PublicRoute
+				    renderiza <Outlet/> (no children) → la página de login quedaba en
+				    blanco. Se deja una sola ruta con el patrón correcto de Outlet. */}
+				<Route path="/login" element={<PublicRoute />}>
 					<Route index element={<LoginPage />} />
 				</Route>
 

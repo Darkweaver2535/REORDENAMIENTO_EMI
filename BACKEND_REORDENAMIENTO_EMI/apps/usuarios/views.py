@@ -81,6 +81,11 @@ class LoginView(APIView):
 			{
 				"access_token": str(refresh.access_token),
 				"refresh_token": str(refresh),
+				# FIX #9: el frontend (AuthContext.login) espera `id` y
+				# `carnet_identidad`. Sin ellos, user.id quedaba null hasta
+				# refrescar el perfil.
+				"id": user.id,
+				"carnet_identidad": user.carnet_identidad,
 				"rol": user.rol,
 				"nombre_completo": user.nombre_completo,
 				"unidad_academica_id": user.unidad_academica_id,

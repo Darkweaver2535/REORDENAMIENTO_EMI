@@ -211,11 +211,16 @@ class CrearReordenamientoSerializer(serializers.Serializer):
             raise serializers.ValidationError({"equipo_id": "El equipo no existe."})
 
         # ── Validar cantidad disponible ───────────────────────────────────
-        disp = equipo.cantidad_disponible()
-        if cantidad > disp:
-            raise serializers.ValidationError(
-                {"cantidad_trasladada": f"Solo hay {disp} unidades disponibles del equipo."}
-            )
+        # FIX #10: la COMPRA documenta la recepción/ingreso de un activo que viene
+        # de fuera (puede tener disponibilidad 0 en la BD), por eso no se valida
+        # contra el stock existente. El service ya hace esta misma excepción
+        # (services.py crear_movimiento). Antes el serializer bloqueaba la COMPRA.
+        if tipo != Reordenamiento.TipoMovimiento.COMPRA:
+            disp = equipo.cantidad_disponible()
+            if cantidad > disp:
+                raise serializers.ValidationError(
+                    {"cantidad_trasladada": f"Solo hay {disp} unidades disponibles del equipo."}
+                )
 
         # ── Validar laboratorios ──────────────────────────────────────────
         if lab_origen_id:

@@ -32,6 +32,22 @@ class ReordenamientoService:
         except Exception:
             return
 
+    @staticmethod
+    def _codigo_activo_unico(codigo_base, reordenamiento_id):
+        """Genera un codigo_activo único para el registro de equipo dividido.
+
+        Se usa solo en traslados PARCIALES de REASIGNACION, donde un lote se
+        divide en dos registros (origen + destino). El campo codigo_activo es
+        UNIQUE, así que derivamos uno nuevo del original con sufijo del
+        reordenamiento, garantizando unicidad ante colisiones.
+        """
+        candidato = f"{codigo_base}-R{reordenamiento_id}"
+        sufijo = 1
+        while Equipo.objects.filter(codigo_activo=candidato).exists():
+            candidato = f"{codigo_base}-R{reordenamiento_id}-{sufijo}"
+            sufijo += 1
+        return candidato
+
     @classmethod
     def crear_movimiento(
         cls,
@@ -284,17 +300,55 @@ class ReordenamientoService:
             # Para COMPRA o PRESTAMO, el stock del equipo no se mueve del origen.
             # Para REASIGNACION, se mueve físicamente con descuento de stock.
             if tipo == Reordenamiento.TipoMovimiento.REASIGNACION_DEFINITIVA:
+                # FIX #11: Reparte la cantidad a mover entre las categorías en
+                # orden buena -> regular -> mala (antes se ignoraba `mala`), sin
+                # exceder lo disponible en cada una.
                 restante = cantidad
                 mover_buena = min(equipo.cantidad_buena, restante)
-                equipo.cantidad_buena -= mover_buena
                 restante -= mover_buena
                 mover_regular = min(equipo.cantidad_regular, restante)
-                equipo.cantidad_regular -= mover_regular
-                equipo.cantidad_total = max(0, equipo.cantidad_total - cantidad)
-                equipo.laboratorio_id = reordenamiento.laboratorio_destino_id
-                equipo.save(update_fields=[
-                    "cantidad_total", "cantidad_buena", "cantidad_regular", "laboratorio", "updated_at"
-                ])
+                restante -= mover_regular
+                mover_mala = min(equipo.cantidad_mala, restante)
+                restante -= mover_mala
+                movido_total = mover_buena + mover_regular + mover_mala
+
+                if movido_total >= equipo.cantidad_total:
+                    # Traslado COMPLETO (caso normal: cada equipo es una unidad
+                    # física). El registro entero cambia de sede conservando sus
+                    # cantidades intactas. Antes el código descontaba cantidades
+                    # Y movía el registro a la vez, dejando un estado inconsistente
+                    # (el origen perdía el equipo entero pero con total reducido).
+                    equipo.laboratorio_id = reordenamiento.laboratorio_destino_id
+                    equipo.save(update_fields=["laboratorio", "updated_at"])
+                else:
+                    # Traslado PARCIAL de un lote: se divide en dos registros para
+                    # preservar la invariante total = buena + regular + mala.
+                    # 1) El origen conserva el remanente (no cambia de sede).
+                    equipo.cantidad_buena -= mover_buena
+                    equipo.cantidad_regular -= mover_regular
+                    equipo.cantidad_mala -= mover_mala
+                    equipo.cantidad_total = (
+                        equipo.cantidad_buena + equipo.cantidad_regular + equipo.cantidad_mala
+                    )
+                    equipo.save(update_fields=[
+                        "cantidad_total", "cantidad_buena", "cantidad_regular",
+                        "cantidad_mala", "updated_at",
+                    ])
+                    # 2) El destino recibe un nuevo registro con lo trasladado.
+                    Equipo.objects.create(
+                        nombre=equipo.nombre,
+                        codigo_activo=cls._codigo_activo_unico(
+                            equipo.codigo_activo, reordenamiento.id
+                        ),
+                        laboratorio_id=reordenamiento.laboratorio_destino_id,
+                        cantidad_total=movido_total,
+                        cantidad_buena=mover_buena,
+                        cantidad_regular=mover_regular,
+                        cantidad_mala=mover_mala,
+                        estatus_general=equipo.estatus_general,
+                        especificaciones=equipo.especificaciones,
+                        requiere_mantenimiento=equipo.requiere_mantenimiento,
+                    )
             elif tipo == Reordenamiento.TipoMovimiento.COMPRA:
                 # En compra, el equipo ya debería estar en el destino; solo se confirma.
                 equipo.laboratorio_id = reordenamiento.laboratorio_destino_id
