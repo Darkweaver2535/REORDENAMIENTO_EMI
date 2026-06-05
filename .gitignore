@@ -24,3 +24,15 @@ env/
 # Datos fuente (planillas de inventario) — pesados, no se versionan
 data/
 *.xlsx
+
+# Archivos subidos por usuarios (documentos de respaldo, imágenes) — no se versionan
+media/
+
+# Build del frontend
+dist/
+
+# Caché de herramientas
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage

@@ -18,4 +18,12 @@ class NotificacionSerializer(serializers.ModelSerializer):
             "objeto_url",
             "created_at",
         ]
-        read_only_fields = ["id", "tipo", "tipo_display", "mensaje", "objeto_id", "objeto_url", "created_at"]
+        read_only_fields = [
+            "id",
+            "tipo",
+            "tipo_display",
+            "mensaje",
+            "objeto_id",
+            "objeto_url",
+            "created_at",
+        ]

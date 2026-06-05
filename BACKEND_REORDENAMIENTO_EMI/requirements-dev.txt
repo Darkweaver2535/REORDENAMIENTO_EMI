@@ -1,0 +1,10 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependencias de DESARROLLO
+# Incluye las de producción + herramientas de calidad de código.
+# Instalación:  pip install -r requirements-dev.txt
+# ─────────────────────────────────────────────────────────────────────────────
+
+-r requirements.txt
+
+# Linter + formateador (reemplaza black, flake8, isort en una sola herramienta)
+ruff==0.15.16

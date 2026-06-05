@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancela ejecuciones anteriores del mismo branch/PR si llega un push nuevo.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # Backend: lint (ruff) + formato + tests (Django sobre PostgreSQL)
+  # ───────────────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend (lint + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: BACKEND_REORDENAMIENTO_EMI
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: reordenamiento_emi
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DJANGO_SECRET_KEY: ci-insecure-secret-key-not-for-production
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      DB_NAME: reordenamiento_emi
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      CACHE_URL: redis://localhost:6379/2
+      CELERY_BROKER_URL: redis://localhost:6379/0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: BACKEND_REORDENAMIENTO_EMI/requirements-dev.txt
+
+      - name: Instalar dependencias (prod + dev)
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff — lint
+        run: ruff check .
+
+      - name: Ruff — formato (verificación)
+        run: ruff format --check .
+
+      - name: Validar migraciones pendientes
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Validar schema OpenAPI
+        run: python manage.py spectacular --validate --file /tmp/schema.yml
+
+      - name: Tests
+        run: python manage.py test --verbosity=2
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Frontend: lint (eslint) + build (vite)
+  # ───────────────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FRONTEND_REORDENAMIENTO_EMI
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: FRONTEND_REORDENAMIENTO_EMI/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # ESLint reporta problemas preexistentes (~126) que aún no se han limpiado.
+      # Se ejecuta como no-bloqueante para dar visibilidad sin tumbar cada PR;
+      # quitar `continue-on-error` una vez resueltos esos errores.
+      - name: ESLint (no bloqueante)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build

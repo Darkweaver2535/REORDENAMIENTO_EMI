@@ -1,14 +1,20 @@
 """
 Utilidades para construir PDFs institucionales con ReportLab.
 Se usan en todas las vistas de reportes para mantener un estilo consistente.
+
+ReportLab es la única librería de generación de PDF del proyecto: tanto los
+reportes de las vistas como el documento de reordenamiento (generado async en
+Celery) se construyen aquí para mantener un estilo unificado.
 """
+
+from io import BytesIO
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
+from reportlab.pdfgen import canvas as _canvas
 
 # ── Paleta EMI ──────────────────────────────────────────────────────────────
-COLOR_PRIMARIO = colors.HexColor("#003366")   # Azul institucional
+COLOR_PRIMARIO = colors.HexColor("#003366")  # Azul institucional
 COLOR_SECUNDARIO = colors.HexColor("#0066CC")
 COLOR_FILA_PAR = colors.HexColor("#EEF4FB")
 COLOR_ENCABEZADO = colors.HexColor("#003366")
@@ -82,3 +88,53 @@ def dibujar_pie(canvas, numero_pagina):
     canvas.setFont("Helvetica", 7)
     canvas.drawString(MARGEN, 8, "Documento generado automáticamente — Confidencial")
     canvas.drawRightString(ANCHO - MARGEN, 8, f"Página {numero_pagina}")
+
+
+def construir_pdf_reordenamiento(reordenamiento, autorizador_nombre=None, fecha_generacion=None):
+    """Construye el PDF del acta de un reordenamiento y devuelve los bytes.
+
+    Centraliza en ReportLab la generación que antes hacía WeasyPrint en
+    apps/reordenamiento/tasks.py, eliminando esa dependencia del proyecto.
+    """
+    buffer = BytesIO()
+    pdf = _canvas.Canvas(buffer, pagesize=A4)
+
+    tipo = (
+        reordenamiento.get_tipo_movimiento_display()
+        if hasattr(reordenamiento, "get_tipo_movimiento_display")
+        else reordenamiento.tipo_movimiento
+    )
+    y = dibujar_encabezado(pdf, "Acta de Reordenamiento", f"Movimiento: {tipo}")
+
+    equipo = getattr(reordenamiento, "equipo", None)
+    origen = getattr(reordenamiento, "laboratorio_origen", None)
+    destino = getattr(reordenamiento, "laboratorio_destino", None)
+    documento = reordenamiento.numero_documento or reordenamiento.resolucion_numero or "N/A"
+
+    filas = [
+        ("N.º de reordenamiento", str(reordenamiento.id)),
+        ("Equipo", getattr(equipo, "nombre", "N/A")),
+        ("Laboratorio origen", getattr(origen, "nombre", "N/A")),
+        ("Laboratorio destino", getattr(destino, "nombre", "N/A")),
+        ("Cantidad trasladada", str(reordenamiento.cantidad_trasladada)),
+        ("Documento / resolución", documento),
+        ("Fecha de autorización", str(reordenamiento.fecha_autorizacion or "N/A")),
+        ("Autorizado por", autorizador_nombre or "N/A"),
+    ]
+    if fecha_generacion:
+        filas.append(("Generado el", str(fecha_generacion)))
+
+    pdf.setFont("Helvetica", 10)
+    for etiqueta, valor in filas:
+        pdf.setFillColor(COLOR_PRIMARIO)
+        pdf.setFont("Helvetica-Bold", 10)
+        pdf.drawString(MARGEN, y, f"{etiqueta}:")
+        pdf.setFillColor(colors.black)
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(MARGEN + 160, y, valor)
+        y -= 20
+
+    dibujar_pie(pdf, 1)
+    pdf.showPage()
+    pdf.save()
+    return buffer.getvalue()

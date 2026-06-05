@@ -21,12 +21,12 @@ from apps.usuarios.permissions import can_approve_reordenamiento, notify_activos
 
 
 class ReordenamientoService:
-
     @staticmethod
     def _encolar_pdf(reordenamiento_id):
         """Encola tarea Celery si está disponible; falla silenciosamente si no."""
         try:
             from apps.reordenamiento.tasks import generar_pdf_reordenamiento
+
             if hasattr(generar_pdf_reordenamiento, "delay"):
                 generar_pdf_reordenamiento.delay(reordenamiento_id)
         except Exception:
@@ -83,7 +83,9 @@ class ReordenamientoService:
             raise ValidationError("El laboratorio de origen y destino no pueden ser iguales.")
 
         if tipo_movimiento != TIPO.COMPRA and cantidad > equipo.cantidad_disponible():
-            raise ValidationError("La cantidad solicitada supera la cantidad disponible del equipo.")
+            raise ValidationError(
+                "La cantidad solicitada supera la cantidad disponible del equipo."
+            )
 
         reordenamiento = Reordenamiento.objects.create(
             tipo_movimiento=tipo_movimiento,
@@ -156,10 +158,7 @@ class ReordenamientoService:
             raise ValidationError("No tienes permiso para aprobar reordenamientos.")
 
         reordenamiento = (
-            Reordenamiento.objects
-            .select_related("equipo")
-            .filter(id=reordenamiento_id)
-            .first()
+            Reordenamiento.objects.select_related("equipo").filter(id=reordenamiento_id).first()
         )
         if reordenamiento is None:
             raise ValidationError("El reordenamiento indicado no existe.")
@@ -179,9 +178,15 @@ class ReordenamientoService:
         reordenamiento.aprobado_por = usuario_aprobador
         reordenamiento.autorizado_por = usuario_aprobador  # compatibilidad legacy
         reordenamiento.fecha_autorizacion = timezone.now()
-        reordenamiento.save(update_fields=[
-            "estado", "aprobado_por", "autorizado_por", "fecha_autorizacion", "updated_at"
-        ])
+        reordenamiento.save(
+            update_fields=[
+                "estado",
+                "aprobado_por",
+                "autorizado_por",
+                "fecha_autorizacion",
+                "updated_at",
+            ]
+        )
 
         cls._encolar_pdf(reordenamiento.id)
         notify_activos_fijos(reordenamiento, evento="aprobado")
@@ -232,9 +237,9 @@ class ReordenamientoService:
             reordenamiento.estado = Reordenamiento.Estado.EN_TRANSITO
             reordenamiento.ejecutado_por = usuario_ejecutor
             reordenamiento.fecha_ejecucion = timezone.now()
-            reordenamiento.save(update_fields=[
-                "estado", "ejecutado_por", "fecha_ejecucion", "updated_at"
-            ])
+            reordenamiento.save(
+                update_fields=["estado", "ejecutado_por", "fecha_ejecucion", "updated_at"]
+            )
 
         AuditLog.objects.create(
             tabla_afectada="Reordenamiento",
@@ -330,10 +335,15 @@ class ReordenamientoService:
                     equipo.cantidad_total = (
                         equipo.cantidad_buena + equipo.cantidad_regular + equipo.cantidad_mala
                     )
-                    equipo.save(update_fields=[
-                        "cantidad_total", "cantidad_buena", "cantidad_regular",
-                        "cantidad_mala", "updated_at",
-                    ])
+                    equipo.save(
+                        update_fields=[
+                            "cantidad_total",
+                            "cantidad_buena",
+                            "cantidad_regular",
+                            "cantidad_mala",
+                            "updated_at",
+                        ]
+                    )
                     # 2) El destino recibe un nuevo registro con lo trasladado.
                     Equipo.objects.create(
                         nombre=equipo.nombre,
@@ -358,10 +368,15 @@ class ReordenamientoService:
             reordenamiento.recepcionado_por = usuario_receptor
             reordenamiento.fecha_recepcion = timezone.now()
             reordenamiento.observaciones_recepcion = observaciones or ""
-            reordenamiento.save(update_fields=[
-                "estado", "recepcionado_por", "fecha_recepcion",
-                "observaciones_recepcion", "updated_at"
-            ])
+            reordenamiento.save(
+                update_fields=[
+                    "estado",
+                    "recepcionado_por",
+                    "fecha_recepcion",
+                    "observaciones_recepcion",
+                    "updated_at",
+                ]
+            )
 
             datos_nuevos = {
                 "equipo_id": equipo.id,
@@ -381,7 +396,9 @@ class ReordenamientoService:
 
         InventoryAnalyticsService.invalidar_cache_laboratorio(reordenamiento.laboratorio_destino_id)
         if reordenamiento.laboratorio_origen_id:
-            InventoryAnalyticsService.invalidar_cache_laboratorio(reordenamiento.laboratorio_origen_id)
+            InventoryAnalyticsService.invalidar_cache_laboratorio(
+                reordenamiento.laboratorio_origen_id
+            )
 
         notify_activos_fijos(reordenamiento, evento="recepcionado")
 

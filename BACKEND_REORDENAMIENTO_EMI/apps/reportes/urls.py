@@ -1,9 +1,9 @@
 from django.urls import path
 
 from apps.reportes.views import (
+    ReporteComparativaSedesView,
     ReporteInventarioLaboratorioView,
     ReporteReordenamientosView,
-    ReporteComparativaSedesView,
 )
 
 app_name = "reportes"

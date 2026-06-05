@@ -8,7 +8,7 @@ Lógica de parser (v3, carry-forward, metadatos académicos):
   - Arrastra el último lab general no vacío como padre (lab_actual)
   - Arrastra el último tipo válido (tipo_actual)
   - Arrastra el último nodo afectado (ultimo_nodo_afectado) para vincular usos académicos
-  - CRITERIO ESTRUCTURAL LITERAL: Los usos académicos (Asignaturas) se asignan 
+  - CRITERIO ESTRUCTURAL LITERAL: Los usos académicos (Asignaturas) se asignan
     estrictamente al subespacio definido en la misma fila del Excel, independientemente
     de si el nombre de la asignatura sugiere semánticamente otra dependencia.
   - Extrae y acumula banderas de actividades (PEA, Investigación, Servicios) y Normativa.
@@ -39,47 +39,55 @@ except ImportError:
     openpyxl = None
 
 
-A_CREATE_ROOT      = "CREATE_ROOT"
-A_CREATE_CHILD     = "CREATE_CHILD"
-A_UPDATE_CHILD     = "UPDATE_CHILD"
-A_EXIST_ROOT       = "EXIST_ROOT"
-A_EXIST_CHILD      = "EXIST_CHILD"
-A_ADD_USO_ACAD     = "ADD_USO_ACAD"
-A_SKIP_NORM_ROW    = "SKIP_NORM_ROW"
-A_WARN_MISMATCH    = "WARN_MISMATCH"
-A_AMBIGUOUS        = "AMBIGUOUS"
+A_CREATE_ROOT = "CREATE_ROOT"
+A_CREATE_CHILD = "CREATE_CHILD"
+A_UPDATE_CHILD = "UPDATE_CHILD"
+A_EXIST_ROOT = "EXIST_ROOT"
+A_EXIST_CHILD = "EXIST_CHILD"
+A_ADD_USO_ACAD = "ADD_USO_ACAD"
+A_SKIP_NORM_ROW = "SKIP_NORM_ROW"
+A_WARN_MISMATCH = "WARN_MISMATCH"
+A_AMBIGUOUS = "AMBIGUOUS"
 
 TIPO_CANON = {
-    "SALA":        "SALA",
-    "AREA":        "AREA",
-    "SECCION":     "SECCION",
+    "SALA": "SALA",
+    "AREA": "AREA",
+    "SECCION": "SECCION",
     "LABORATORIO": "LABORATORIO",
 }
 
 SUBCAB_KEYWORDS = {"PEA", "INVESTIGACION", "VENTA DE SERVICIOS"}
 
+
 def normalizar_texto(valor: str) -> str:
-    if not valor: return ""
+    if not valor:
+        return ""
     s = str(valor).replace("\xa0", " ").replace("\n", " ").replace("\r", " ").replace("\t", " ")
     s = re.sub(r"\s+", " ", s).strip()
     s = unicodedata.normalize("NFD", s)
     s = "".join(c for c in s if unicodedata.category(c) != "Mn")
     return s.upper()
 
+
 def limpiar_celda(valor) -> str:
-    if valor is None: return ""
+    if valor is None:
+        return ""
     return re.sub(r"\s+", " ", str(valor).replace("\xa0", " ").replace("\n", " ")).strip()
+
 
 def canon_tipo(raw: str) -> str | None:
     n = normalizar_texto(raw)
-    if n in TIPO_CANON: return TIPO_CANON[n]
+    if n in TIPO_CANON:
+        return TIPO_CANON[n]
     for k, v in TIPO_CANON.items():
-        if n.startswith(k): return v
+        if n.startswith(k):
+            return v
     return None
+
 
 def detectar_schema(ws):
     for i, row in enumerate(ws.iter_rows(max_row=15, values_only=True), start=1):
-        for j, cell in enumerate(row):
+        for cell in row:
             if cell and "NOMBRE DEL LABORATORIO" in normalizar_texto(str(cell)):
                 col_nom = col_tipo = col_sec = col_sup = col_ubi = None
                 col_asig = col_sem = col_car = col_pea = col_inv = col_ven = col_nor = None
@@ -87,48 +95,81 @@ def detectar_schema(ws):
 
                 for k, c in enumerate(row):
                     nu = normalizar_texto(str(c)) if c else ""
-                    if not nu: continue
-                    if "NOMBRE DEL LABORATORIO" in nu and col_nom is None: col_nom = k
-                    elif ("SALA" in nu or "AREA" in nu or "SECCION" in nu) and "SELECCIONE" in nu and col_tipo is None: col_tipo = k
-                    elif "NOMBRE DE LA" in nu and col_sec is None: col_sec = k
-                    elif "SUPERFICIE" in nu and col_sup is None: col_sup = k
-                    elif ("UBICACION" in nu or "UBICACIÓN" in nu) and col_ubi is None: col_ubi = k
-                    elif "ASIGNATURA" in nu and col_asig is None: 
+                    if not nu:
+                        continue
+                    if "NOMBRE DEL LABORATORIO" in nu and col_nom is None:
+                        col_nom = k
+                    elif (
+                        ("SALA" in nu or "AREA" in nu or "SECCION" in nu)
+                        and "SELECCIONE" in nu
+                        and col_tipo is None
+                    ):
+                        col_tipo = k
+                    elif "NOMBRE DE LA" in nu and col_sec is None:
+                        col_sec = k
+                    elif "SUPERFICIE" in nu and col_sup is None:
+                        col_sup = k
+                    elif ("UBICACION" in nu or "UBICACIÓN" in nu) and col_ubi is None:
+                        col_ubi = k
+                    elif "ASIGNATURA" in nu and col_asig is None:
                         col_asig = k
                         col_asig_start = min(col_asig_start, k)
-                    elif "SEMESTRE" in nu and col_sem is None: col_sem = k
-                    elif "CARRERA" in nu and col_car is None: col_car = k
+                    elif "SEMESTRE" in nu and col_sem is None:
+                        col_sem = k
+                    elif "CARRERA" in nu and col_car is None:
+                        col_car = k
                     elif "ACTIVIDAD" in nu and col_pea is None:
                         col_pea = k
                         col_inv = k + 1
                         col_ven = k + 2
-                    elif "NORMA" in nu and col_nor is None: col_nor = k
+                    elif "NORMA" in nu and col_nor is None:
+                        col_nor = k
 
                 if col_asig_start == 999:
                     col_asig_start = (col_ubi or col_sup or col_sec or 5) + 1
 
-                return i, col_nom, col_tipo, col_sec, col_sup, col_ubi, col_asig_start, col_asig, col_sem, col_car, col_pea, col_inv, col_ven, col_nor
+                return (
+                    i,
+                    col_nom,
+                    col_tipo,
+                    col_sec,
+                    col_sup,
+                    col_ubi,
+                    col_asig_start,
+                    col_asig,
+                    col_sem,
+                    col_car,
+                    col_pea,
+                    col_inv,
+                    col_ven,
+                    col_nor,
+                )
     return (None,) * 14
 
+
 def get_cell(row, col) -> str:
-    if col is None or col >= len(row): return ""
+    if col is None or col >= len(row):
+        return ""
     return limpiar_celda(row[col])
 
+
 _COLORS = {
-    A_CREATE_ROOT:      "\033[92m",
-    A_CREATE_CHILD:     "\033[32m",
-    A_UPDATE_CHILD:     "\033[33m",
-    A_EXIST_ROOT:       "\033[90m",
-    A_EXIST_CHILD:      "\033[90m",
-    A_ADD_USO_ACAD:     "\033[36m",
-    A_SKIP_NORM_ROW:    "\033[90m",
-    A_WARN_MISMATCH:    "\033[35m",
-    A_AMBIGUOUS:        "\033[91m",
+    A_CREATE_ROOT: "\033[92m",
+    A_CREATE_CHILD: "\033[32m",
+    A_UPDATE_CHILD: "\033[33m",
+    A_EXIST_ROOT: "\033[90m",
+    A_EXIST_CHILD: "\033[90m",
+    A_ADD_USO_ACAD: "\033[36m",
+    A_SKIP_NORM_ROW: "\033[90m",
+    A_WARN_MISMATCH: "\033[35m",
+    A_AMBIGUOUS: "\033[91m",
 }
 _RESET = "\033[0m"
 
+
 def color_action(action: str) -> str:
     return f"{_COLORS.get(action, '')}{action:<17}{_RESET}"
+
 
 class Command(BaseCommand):
     help = "Importa laboratorios y usos académicos desde un Excel (.xlsx)"
@@ -145,20 +186,32 @@ class Command(BaseCommand):
             return UnidadAcademica.objects.get(pk=int(ref))
         ref_n = normalizar_texto(ref)
         for ua in UnidadAcademica.objects.all():
-            if normalizar_texto(ua.nombre) == ref_n: return ua
-        candidatos = [ua for ua in UnidadAcademica.objects.all() if ref_n in normalizar_texto(ua.nombre)]
-        if len(candidatos) == 1: return candidatos[0]
+            if normalizar_texto(ua.nombre) == ref_n:
+                return ua
+        candidatos = [
+            ua for ua in UnidadAcademica.objects.all() if ref_n in normalizar_texto(ua.nombre)
+        ]
+        if len(candidatos) == 1:
+            return candidatos[0]
         raise CommandError(f"Referencia '{ref}' ambigua/no encontrada.")
 
     def handle(self, *args, **options):
-        if openpyxl is None: raise CommandError("openpyxl no instalado")
+        if openpyxl is None:
+            raise CommandError("openpyxl no instalado")
 
-        from apps.laboratorios.models import Laboratorio, UsoAcademico
         from apps.estructura_academica.models import UnidadAcademica
+        from apps.laboratorios.models import Laboratorio, UsoAcademico
 
-        archivo, ua_ref, campus, dry_run, verbose = options["archivo"], options["unidad_academica"], options["campus"], options["dry_run"], options["verbose"]
+        archivo, ua_ref, campus, dry_run, verbose = (
+            options["archivo"],
+            options["unidad_academica"],
+            options["campus"],
+            options["dry_run"],
+            options["verbose"],
+        )
 
-        if dry_run: self.stdout.write(self.style.WARNING("\n⚠ DRY-RUN activado\n"))
+        if dry_run:
+            self.stdout.write(self.style.WARNING("\n⚠ DRY-RUN activado\n"))
         unidad_academica = self._resolver_unidad(UnidadAcademica, ua_ref)
         self.stdout.write(f"📚 UA: {unidad_academica}\n")
 
@@ -166,8 +219,24 @@ class Command(BaseCommand):
         ws = wb.active
 
         schema = detectar_schema(ws)
-        if schema[0] is None: raise CommandError("No se encontró cabecera")
-        cab, c_nom, c_tipo, c_sec, c_sup, c_ubi, c_asig_start, c_asig, c_sem, c_car, c_pea, c_inv, c_ven, c_nor = schema
+        if schema[0] is None:
+            raise CommandError("No se encontró cabecera")
+        (
+            cab,
+            c_nom,
+            c_tipo,
+            c_sec,
+            c_sup,
+            c_ubi,
+            c_asig_start,
+            c_asig,
+            c_sem,
+            c_car,
+            c_pea,
+            c_inv,
+            c_ven,
+            c_nor,
+        ) = schema
 
         cnts = {k: 0 for k in _COLORS.keys()}
 
@@ -177,7 +246,8 @@ class Command(BaseCommand):
         ultimo_nodo_afectado = None
 
         def log(fila_num, action, msg=""):
-            if verbose: self.stdout.write(f"  F{fila_num:>3} {color_action(action)} {msg}")
+            if verbose:
+                self.stdout.write(f"  F{fila_num:>3} {color_action(action)} {msg}")
             cnts[action] += 1
 
         with transaction.atomic():
@@ -199,18 +269,19 @@ class Command(BaseCommand):
                 nor = get_cell(row, c_nor)
 
                 nom_n = normalizar_texto(nom)
-                sec_n = normalizar_texto(sec)
 
-                non_empty = [j for j, c in enumerate(row) if c is not None and limpiar_celda(str(c))]
-                if not non_empty: continue
+                non_empty = [
+                    j for j, c in enumerate(row) if c is not None and limpiar_celda(str(c))
+                ]
+                if not non_empty:
+                    continue
 
                 # Sub-cabeceras
                 first_vals = [normalizar_texto(str(row[j])) for j in non_empty[:3]]
                 if any(any(kw in fv for kw in SUBCAB_KEYWORDS) for fv in first_vals):
-                    log(fila_num, A_SKIP_NORM_ROW, f"sub-cabecera")
+                    log(fila_num, A_SKIP_NORM_ROW, "sub-cabecera")
                     continue
 
-                useful = [j for j in non_empty if j < c_asig_start]
                 action_main = None
 
                 if nom_n and nom_n not in {"N", "NOMBRE DEL LABORATORIO"}:
@@ -222,7 +293,7 @@ class Command(BaseCommand):
                                 nombre__iexact=lab_nom_disp,
                                 clase_nodo=Laboratorio.ClaseNodo.GENERAL,
                                 unidad_academica=unidad_academica,
-                                defaults={"nombre": lab_nom_disp, "campus": campus}
+                                defaults={"nombre": lab_nom_disp, "campus": campus},
                             )
                             lab_actual = lab_obj
                             ultimo_nodo_afectado = lab_obj
@@ -230,11 +301,13 @@ class Command(BaseCommand):
                         else:
                             action_main = A_CREATE_ROOT
                             ultimo_nodo_afectado = "MOCK_ROOT"
-                        
-                        if action_main: log(fila_num, action_main, f"lab={lab_nom_disp!r}")
+
+                        if action_main:
+                            log(fila_num, action_main, f"lab={lab_nom_disp!r}")
 
                 tipo_canon = canon_tipo(tipo) if tipo else None
-                if tipo_canon: tipo_actual = tipo_canon
+                if tipo_canon:
+                    tipo_actual = tipo_canon
 
                 # Proceso de subespacio
                 if sec.strip():
@@ -245,8 +318,10 @@ class Command(BaseCommand):
                     tipo_final = tipo_canon or tipo_actual or "LABORATORIO"
                     sup_val = None
                     if sup:
-                        try: sup_val = Decimal(sup.replace(",", ".").replace(" ", ""))
-                        except InvalidOperation: pass
+                        try:
+                            sup_val = Decimal(sup.replace(",", ".").replace(" ", ""))
+                        except InvalidOperation:
+                            pass
 
                     if not dry_run:
                         hijo, created = Laboratorio.objects.get_or_create(
@@ -260,10 +335,10 @@ class Command(BaseCommand):
                                 "clase_nodo": Laboratorio.ClaseNodo.SUBESPACIO,
                                 "superficie_m2": sup_val,
                                 "ubicacion": ubi or "",
-                            }
+                            },
                         )
                         ultimo_nodo_afectado = hijo
-                        
+
                         changed = False
                         if sup_val is not None and hijo.superficie_m2 != sup_val:
                             hijo.superficie_m2 = sup_val
@@ -279,7 +354,7 @@ class Command(BaseCommand):
                     else:
                         ultimo_nodo_afectado = "MOCK_CHILD"
                         action_main = A_CREATE_CHILD
-                    
+
                     log(fila_num, action_main, f"[{tipo_final}] {sec.strip()!r}")
 
                 # Proceso de Usos Académicos y Banderas
@@ -287,14 +362,22 @@ class Command(BaseCommand):
                 if has_acad and ultimo_nodo_afectado:
                     if not action_main:
                         log(fila_num, A_ADD_USO_ACAD, f"Asignatura: {asig!r}")
-                    
-                    if asig and ultimo_nodo_afectado and getattr(ultimo_nodo_afectado, 'nombre', None):
+
+                    if (
+                        asig
+                        and ultimo_nodo_afectado
+                        and getattr(ultimo_nodo_afectado, "nombre", None)
+                    ):
                         n_nodo = normalizar_texto(ultimo_nodo_afectado.nombre)
                         n_asig = normalizar_texto(asig)
                         # Comprobar heurísticamente si el nodo parece ajeno al nombre de la asignatura
                         if len(n_nodo) > 4 and n_nodo not in n_asig and "LABORATORIO" not in n_nodo:
                             # Puede existir desajuste semántico
-                            log(fila_num, A_WARN_MISMATCH, f"'{asig}' -> asignado al nodo literal '{ultimo_nodo_afectado.nombre}'")
+                            log(
+                                fila_num,
+                                A_WARN_MISMATCH,
+                                f"'{asig}' -> asignado al nodo literal '{ultimo_nodo_afectado.nombre}'",
+                            )
 
                     if not dry_run:
                         changed = False
@@ -312,19 +395,29 @@ class Command(BaseCommand):
                             actual_norma = ultimo_nodo_afectado.normativa_infraestructura or ""
                             if nor not in actual_norma:
                                 sep = " | " if actual_norma else ""
-                                ultimo_nodo_afectado.normativa_infraestructura = actual_norma + sep + nor
+                                ultimo_nodo_afectado.normativa_infraestructura = (
+                                    actual_norma + sep + nor
+                                )
                                 changed = True
                         if changed:
-                            ultimo_nodo_afectado.save(update_fields=["usa_pea", "usa_investigacion", "usa_venta_servicios", "normativa_infraestructura"])
-                        
+                            ultimo_nodo_afectado.save(
+                                update_fields=[
+                                    "usa_pea",
+                                    "usa_investigacion",
+                                    "usa_venta_servicios",
+                                    "normativa_infraestructura",
+                                ]
+                            )
+
                         if asig:
                             UsoAcademico.objects.get_or_create(
                                 laboratorio=ultimo_nodo_afectado,
                                 asignatura=asig,
-                                defaults={"semestre": sem, "carrera": car}
+                                defaults={"semestre": sem, "carrera": car},
                             )
 
-            if dry_run: transaction.set_rollback(True)
+            if dry_run:
+                transaction.set_rollback(True)
 
         self.stdout.write("\n" + "─" * 62)
         self.stdout.write(self.style.SUCCESS(f"📊 RESUMEN{' (DRY-RUN)' if dry_run else ''}:"))

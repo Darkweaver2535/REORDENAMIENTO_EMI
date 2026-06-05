@@ -3,18 +3,17 @@ from rest_framework import serializers
 from apps.laboratorios.models import Equipo, Laboratorio
 from apps.reordenamiento.models import Reordenamiento
 
-
-EXTENSIONES_PDF  = {"pdf"}
+EXTENSIONES_PDF = {"pdf"}
 EXTENSIONES_DOCS = {"pdf", "jpg", "jpeg", "png"}
 
 # Mapeo conservador de content_type MIME → extensiones aceptadas.
 # No requiere python-magic; usa el Content-Type declarado por el cliente.
 # Es una defensa adicional, no un reemplazo del análisis de bytes.
 _CONTENT_TYPE_PERMITIDOS = {
-    "pdf":  {"application/pdf"},
-    "jpg":  {"image/jpeg"},
+    "pdf": {"application/pdf"},
+    "jpg": {"image/jpeg"},
     "jpeg": {"image/jpeg"},
-    "png":  {"image/png"},
+    "png": {"image/png"},
 }
 
 
@@ -185,7 +184,9 @@ class CrearReordenamientoSerializer(serializers.Serializer):
     laboratorio_destino_id = serializers.IntegerField()
     cantidad_trasladada = serializers.IntegerField(min_value=1)
     motivo = serializers.CharField(required=False, allow_blank=True, default="")
-    numero_documento = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    numero_documento = serializers.CharField(
+        max_length=100, required=False, allow_blank=True, default=""
+    )
     tipo_documento = serializers.ChoiceField(
         choices=Reordenamiento.TipoDocumento.choices,
         required=False,
@@ -207,8 +208,8 @@ class CrearReordenamientoSerializer(serializers.Serializer):
         # ── Validar existencia de equipo ──────────────────────────────────
         try:
             equipo = Equipo.objects.select_related("laboratorio").get(id=equipo_id)
-        except Equipo.DoesNotExist:
-            raise serializers.ValidationError({"equipo_id": "El equipo no existe."})
+        except Equipo.DoesNotExist as err:
+            raise serializers.ValidationError({"equipo_id": "El equipo no existe."}) from err
 
         # ── Validar cantidad disponible ───────────────────────────────────
         # FIX #10: la COMPRA documenta la recepción/ingreso de un activo que viene
@@ -240,7 +241,9 @@ class CrearReordenamientoSerializer(serializers.Serializer):
 
         if lab_origen_id and lab_origen_id == lab_destino_id:
             raise serializers.ValidationError(
-                {"laboratorio_destino_id": "El laboratorio de destino debe ser diferente del origen."}
+                {
+                    "laboratorio_destino_id": "El laboratorio de destino debe ser diferente del origen."
+                }
             )
 
         # ── Validaciones por tipo de movimiento ───────────────────────────
@@ -253,11 +256,15 @@ class CrearReordenamientoSerializer(serializers.Serializer):
                 )
             if not num_doc.strip():
                 raise serializers.ValidationError(
-                    {"numero_documento": "El número de documento es obligatorio para Reasignación definitiva."}
+                    {
+                        "numero_documento": "El número de documento es obligatorio para Reasignación definitiva."
+                    }
                 )
             if not archivo:
                 raise serializers.ValidationError(
-                    {"documento_respaldo": "El documento en PDF es obligatorio para Reasignación definitiva."}
+                    {
+                        "documento_respaldo": "El documento en PDF es obligatorio para Reasignación definitiva."
+                    }
                 )
             _validar_extension(archivo, EXTENSIONES_PDF)
 
@@ -268,7 +275,9 @@ class CrearReordenamientoSerializer(serializers.Serializer):
                 )
             if not attrs.get("fecha_retorno_prevista"):
                 raise serializers.ValidationError(
-                    {"fecha_retorno_prevista": "La fecha de retorno prevista es obligatoria para Préstamos."}
+                    {
+                        "fecha_retorno_prevista": "La fecha de retorno prevista es obligatoria para Préstamos."
+                    }
                 )
             if archivo:
                 _validar_extension(archivo, EXTENSIONES_DOCS)
@@ -285,14 +294,17 @@ class CrearReordenamientoSerializer(serializers.Serializer):
 
 class AprobarReordenamientoSerializer(serializers.Serializer):
     """Serializer para aprobar un reordenamiento (equivalente a la acción legacy 'autorizar')."""
+
     comentario = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class AutorizarReordenamientoSerializer(AprobarReordenamientoSerializer):
     """Alias legacy para compatibilidad de clientes existentes."""
+
     comentario_autorizacion = serializers.CharField(required=False, allow_blank=True, default="")
 
 
 class RecepcinarReordenamientoSerializer(serializers.Serializer):
     """Serializer para confirmar recepción de un reordenamiento."""
+
     observaciones_recepcion = serializers.CharField(required=False, allow_blank=True, default="")

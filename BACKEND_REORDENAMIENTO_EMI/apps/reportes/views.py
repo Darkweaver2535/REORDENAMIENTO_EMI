@@ -3,23 +3,23 @@ from io import BytesIO
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 from rest_framework.views import APIView
 
 from apps.laboratorios.models import Equipo, Laboratorio
 from apps.laboratorios.services import InventoryAnalyticsService
 from apps.reordenamiento.models import Reordenamiento
 from apps.reportes.pdf_utils import (
-    ANCHO, ALTO, MARGEN,
+    MARGEN,
     dibujar_encabezado,
     dibujar_fila_tabla,
     dibujar_pie,
 )
 from apps.usuarios.permissions import EsAdminOJefe
 
-
 # ── REPORTE 1: Inventario de laboratorio ────────────────────────────────────
+
 
 class ReporteInventarioLaboratorioView(APIView):
     """
@@ -33,10 +33,7 @@ class ReporteInventarioLaboratorioView(APIView):
         laboratorio = get_object_or_404(
             Laboratorio.objects.select_related("unidad_academica"), pk=pk
         )
-        equipos = (
-            Equipo.objects.filter(laboratorio=laboratorio)
-            .order_by("codigo_activo")
-        )
+        equipos = Equipo.objects.filter(laboratorio=laboratorio).order_by("codigo_activo")
 
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=A4)
@@ -50,9 +47,17 @@ class ReporteInventarioLaboratorioView(APIView):
         y = dibujar_encabezado(p, f"Inventario de Equipos — {laboratorio.nombre}", subtitulo)
 
         # ── Cabecera de tabla ────────────────────────────────────────────────
-        headers  = ["Código Activo", "Nombre del Equipo",       "Total", "Buenos", "Reg.", "Malos", "Estado"]
-        x_pos    = [MARGEN,          MARGEN + 90,               330,     370,      410,    450,     490]
-        anchos   = [88,              135,                        35,      35,       35,     35,      70]
+        headers = [
+            "Código Activo",
+            "Nombre del Equipo",
+            "Total",
+            "Buenos",
+            "Reg.",
+            "Malos",
+            "Estado",
+        ]
+        x_pos = [MARGEN, MARGEN + 90, 330, 370, 410, 450, 490]
+        anchos = [88, 135, 35, 35, 35, 35, 70]
 
         y = dibujar_fila_tabla(p, y, headers, x_pos, anchos, es_encabezado=True)
 
@@ -84,11 +89,13 @@ class ReporteInventarioLaboratorioView(APIView):
             f"inventario_{laboratorio.nombre.replace(' ', '_')}_"
             f"{timezone.now().strftime('%Y%m%d')}.pdf"
         )
-        return FileResponse(buffer, as_attachment=True, filename=filename,
-                            content_type="application/pdf")
+        return FileResponse(
+            buffer, as_attachment=True, filename=filename, content_type="application/pdf"
+        )
 
 
 # ── REPORTE 2: Reordenamientos por rango de fechas ──────────────────────────
+
 
 class ReporteReordenamientosView(APIView):
     """
@@ -130,9 +137,9 @@ class ReporteReordenamientosView(APIView):
         y = dibujar_encabezado(p, "Reporte de Reordenamientos", subtitulo)
 
         # ── Cabecera de tabla ────────────────────────────────────────────────
-        headers = ["Fecha",      "Equipo",       "Origen",       "Destino",      "Cant.", "Estado",    "Resolución"]
-        x_pos   = [MARGEN,       MARGEN + 55,    MARGEN + 155,   MARGEN + 255,   355,     395,         450]
-        anchos  = [52,           95,             95,             95,             35,      50,          100]
+        headers = ["Fecha", "Equipo", "Origen", "Destino", "Cant.", "Estado", "Resolución"]
+        x_pos = [MARGEN, MARGEN + 55, MARGEN + 155, MARGEN + 255, 355, 395, 450]
+        anchos = [52, 95, 95, 95, 35, 50, 100]
 
         y = dibujar_fila_tabla(p, y, headers, x_pos, anchos, es_encabezado=True)
 
@@ -164,11 +171,13 @@ class ReporteReordenamientosView(APIView):
         buffer.seek(0)
 
         filename = f"reordenamientos_{timezone.now().strftime('%Y%m%d_%H%M')}.pdf"
-        return FileResponse(buffer, as_attachment=True, filename=filename,
-                            content_type="application/pdf")
+        return FileResponse(
+            buffer, as_attachment=True, filename=filename, content_type="application/pdf"
+        )
 
 
 # ── REPORTE 3: Comparativa de disponibilidad de equipos entre unidades académicas ──
+
 
 class ReporteComparativaSedesView(APIView):
     """
@@ -182,8 +191,8 @@ class ReporteComparativaSedesView(APIView):
     def get(self, request):
         nombre_equipo = request.query_params.get("nombre_equipo", "").strip()
 
-        from rest_framework.response import Response
         from rest_framework import status as drf_status
+        from rest_framework.response import Response
 
         if not nombre_equipo:
             return Response(
@@ -198,15 +207,22 @@ class ReporteComparativaSedesView(APIView):
         numero_pagina = 1
 
         subtitulo = (
-            f"Equipo buscado: \"{nombre_equipo}\"  |  "
+            f'Equipo buscado: "{nombre_equipo}"  |  '
             f"Generado: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
         )
         y = dibujar_encabezado(p, "Comparativa de Disponibilidad por Unidad Académica", subtitulo)
 
         # ── Cabecera de tabla ────────────────────────────────────────────────
-        headers = ["Unidad Acad.", "Laboratorio",  "Disponible", "Requerido", "Déficit", "Ratio/Est."]
-        x_pos   = [MARGEN,        MARGEN + 120,   295,          355,         415,       470]
-        anchos  = [115,           130,            55,           55,          55,        80]
+        headers = [
+            "Unidad Acad.",
+            "Laboratorio",
+            "Disponible",
+            "Requerido",
+            "Déficit",
+            "Ratio/Est.",
+        ]
+        x_pos = [MARGEN, MARGEN + 120, 295, 355, 415, 470]
+        anchos = [115, 130, 55, 55, 55, 80]
 
         y = dibujar_fila_tabla(p, y, headers, x_pos, anchos, es_encabezado=True)
 
@@ -236,6 +252,6 @@ class ReporteComparativaSedesView(APIView):
 
         nombre_archivo = nombre_equipo.replace(" ", "_").lower()
         filename = f"comparativa_unidades_{nombre_archivo}_{timezone.now().strftime('%Y%m%d')}.pdf"
-        return FileResponse(buffer, as_attachment=True, filename=filename,
-                            content_type="application/pdf")
-
+        return FileResponse(
+            buffer, as_attachment=True, filename=filename, content_type="application/pdf"
+        )

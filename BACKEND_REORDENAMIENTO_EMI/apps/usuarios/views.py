@@ -23,11 +23,12 @@
 
 from django.contrib.auth import authenticate
 from rest_framework import status
-from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
+from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import AuditLog, Usuario
@@ -36,103 +37,98 @@ from apps.usuarios.serializers import PerfilSerializer, UsuarioListaSerializer
 
 
 def _client_ip(request):
-	x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-	if x_forwarded_for:
-		return x_forwarded_for.split(",")[0].strip()
-	return request.META.get("REMOTE_ADDR")
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
 
 
 class LoginThrottle(AnonRateThrottle):
-	"""5 intentos/min por IP — protección contra fuerza bruta (#2)."""
-	scope = "login"
+    """5 intentos/min por IP — protección contra fuerza bruta (#2)."""
+
+    scope = "login"
 
 
 class LoginView(APIView):
-	permission_classes = [AllowAny]
-	throttle_classes = [LoginThrottle]
+    permission_classes = [AllowAny]
+    throttle_classes = [LoginThrottle]
 
-	def post(self, request):
-		carnet_identidad = request.data.get("carnet_identidad")
-		password = request.data.get("password")
+    def post(self, request):
+        carnet_identidad = request.data.get("carnet_identidad")
+        password = request.data.get("password")
 
-		if not carnet_identidad or not password:
-			return Response(
-				{"detail": "Debe enviar carnet_identidad y password."},
-				status=status.HTTP_400_BAD_REQUEST,
-			)
+        if not carnet_identidad or not password:
+            return Response(
+                {"detail": "Debe enviar carnet_identidad y password."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-		user = authenticate(
-			request=request,
-			username=carnet_identidad,
-			password=password,
-		)
+        user = authenticate(
+            request=request,
+            username=carnet_identidad,
+            password=password,
+        )
 
-		if user is None:
-			return Response(
-				{"detail": "Credenciales invalidas o usuario no autorizado."},
-				status=status.HTTP_401_UNAUTHORIZED,
-			)
+        if user is None:
+            return Response(
+                {"detail": "Credenciales invalidas o usuario no autorizado."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
-		refresh = RefreshToken.for_user(user)
+        refresh = RefreshToken.for_user(user)
 
-		AuditLog.objects.create(
-			tabla_afectada="Usuario",
-			registro_id=user.id,
-			accion=AuditLog.Accion.LOGIN,
-			usuario=user,
-			datos_nuevos={"evento": "login"},
-			ip_address=_client_ip(request),
-		)
+        AuditLog.objects.create(
+            tabla_afectada="Usuario",
+            registro_id=user.id,
+            accion=AuditLog.Accion.LOGIN,
+            usuario=user,
+            datos_nuevos={"evento": "login"},
+            ip_address=_client_ip(request),
+        )
 
-		return Response(
-			{
-				"access_token": str(refresh.access_token),
-				"refresh_token": str(refresh),
-				# FIX #9: el frontend (AuthContext.login) espera `id` y
-				# `carnet_identidad`. Sin ellos, user.id quedaba null hasta
-				# refrescar el perfil.
-				"id": user.id,
-				"carnet_identidad": user.carnet_identidad,
-				"rol": user.rol,
-				"nombre_completo": user.nombre_completo,
-				"unidad_academica_id": user.unidad_academica_id,
-				"unidad_academica_nombre": (
-					user.unidad_academica.nombre if user.unidad_academica else None
-				),
-			},
-			status=status.HTTP_200_OK,
-		)
+        return Response(
+            {
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh),
+                # FIX #9: el frontend (AuthContext.login) espera `id` y
+                # `carnet_identidad`. Sin ellos, user.id quedaba null hasta
+                # refrescar el perfil.
+                "id": user.id,
+                "carnet_identidad": user.carnet_identidad,
+                "rol": user.rol,
+                "nombre_completo": user.nombre_completo,
+                "unidad_academica_id": user.unidad_academica_id,
+                "unidad_academica_nombre": (
+                    user.unidad_academica.nombre if user.unidad_academica else None
+                ),
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class PerfilView(RetrieveUpdateAPIView):
-	serializer_class = PerfilSerializer
-	permission_classes = [IsAuthenticated]
+    serializer_class = PerfilSerializer
+    permission_classes = [IsAuthenticated]
 
-	def get_object(self):
-		return self.request.user
+    def get_object(self):
+        return self.request.user
 
-
-from rest_framework.viewsets import ModelViewSet
 
 class UsuarioAdminViewSet(ModelViewSet):
-	serializer_class = UsuarioListaSerializer
-	# FIX #16: usar EsAdminOJefe (estándar del sistema) en vez de un chequeo manual
-	# que solo permitía ADMIN. El permiso garantiza ADMIN o JEFE, así que el
-	# get_queryset ya no necesita re-filtrar por rol.
-	permission_classes = [EsAdminOJefe]
-	http_method_names = ["get", "patch", "head", "options"]
+    serializer_class = UsuarioListaSerializer
+    # FIX #16: usar EsAdminOJefe (estándar del sistema) en vez de un chequeo manual
+    # que solo permitía ADMIN. El permiso garantiza ADMIN o JEFE, así que el
+    # get_queryset ya no necesita re-filtrar por rol.
+    permission_classes = [EsAdminOJefe]
+    http_method_names = ["get", "patch", "head", "options"]
 
-	def get_queryset(self):
-		return Usuario.objects.all().order_by("nombre_completo")
+    def get_queryset(self):
+        return Usuario.objects.all().order_by("nombre_completo")
 
-	def partial_update(self, request, *args, **kwargs):
-		campos_permitidos = {"rol", "unidad_academica_id", "is_active"}
-		data_filtrada = {
-			k: v for k, v in request.data.items() if k in campos_permitidos
-		}
-		serializer = self.get_serializer(
-			self.get_object(), data=data_filtrada, partial=True
-		)
-		serializer.is_valid(raise_exception=True)
-		serializer.save()
-		return Response(serializer.data)
+    def partial_update(self, request, *args, **kwargs):
+        campos_permitidos = {"rol", "unidad_academica_id", "is_active"}
+        data_filtrada = {k: v for k, v in request.data.items() if k in campos_permitidos}
+        serializer = self.get_serializer(self.get_object(), data=data_filtrada, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

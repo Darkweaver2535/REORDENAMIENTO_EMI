@@ -43,33 +43,64 @@ class ReordenamientoAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("documento_preview", "resolucion_numero")
     fieldsets = (
-        ("Tipo y estado", {
-            "fields": ("tipo_movimiento", "estado"),
-        }),
-        ("Origen y destino", {
-            "fields": ("equipo", "laboratorio_origen", "laboratorio_destino", "cantidad_trasladada", "motivo"),
-        }),
-        ("Documentación", {
-            "fields": (
-                "numero_documento", "resolucion_numero", "tipo_documento",
-                "documento_respaldo", "documento_preview", "pdf_reporte_url",
-            ),
-        }),
-        ("Fecha de retorno (solo préstamos)", {
-            "fields": ("fecha_retorno_prevista",),
-            "classes": ("collapse",),
-        }),
-        ("Aprobación", {
-            "fields": ("aprobado_por", "autorizado_por", "fecha_autorizacion"),
-            "classes": ("collapse",),
-        }),
-        ("Ejecución", {
-            "fields": ("ejecutado_por", "fecha_ejecucion"),
-            "classes": ("collapse",),
-        }),
-        ("Recepción", {
-            "fields": ("recepcionado_por", "fecha_recepcion", "observaciones_recepcion"),
-        }),
+        (
+            "Tipo y estado",
+            {
+                "fields": ("tipo_movimiento", "estado"),
+            },
+        ),
+        (
+            "Origen y destino",
+            {
+                "fields": (
+                    "equipo",
+                    "laboratorio_origen",
+                    "laboratorio_destino",
+                    "cantidad_trasladada",
+                    "motivo",
+                ),
+            },
+        ),
+        (
+            "Documentación",
+            {
+                "fields": (
+                    "numero_documento",
+                    "resolucion_numero",
+                    "tipo_documento",
+                    "documento_respaldo",
+                    "documento_preview",
+                    "pdf_reporte_url",
+                ),
+            },
+        ),
+        (
+            "Fecha de retorno (solo préstamos)",
+            {
+                "fields": ("fecha_retorno_prevista",),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Aprobación",
+            {
+                "fields": ("aprobado_por", "autorizado_por", "fecha_autorizacion"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Ejecución",
+            {
+                "fields": ("ejecutado_por", "fecha_ejecucion"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            "Recepción",
+            {
+                "fields": ("recepcionado_por", "fecha_recepcion", "observaciones_recepcion"),
+            },
+        ),
     )
 
     def get_form(self, request, obj=None, **kwargs):
@@ -78,6 +109,7 @@ class ReordenamientoAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         from django.db.models import Q
+
         from apps.laboratorios.models import Laboratorio
 
         if db_field.name in ["laboratorio_origen", "laboratorio_destino"]:
@@ -88,7 +120,9 @@ class ReordenamientoAdmin(admin.ModelAdmin):
                     q |= Q(id=obj.laboratorio_origen_id)
                 elif db_field.name == "laboratorio_destino" and obj.laboratorio_destino_id:
                     q |= Q(id=obj.laboratorio_destino_id)
-            kwargs["queryset"] = Laboratorio.objects.filter(q).select_related("unidad_academica").distinct()
+            kwargs["queryset"] = (
+                Laboratorio.objects.filter(q).select_related("unidad_academica").distinct()
+            )
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
@@ -99,7 +133,9 @@ class ReordenamientoAdmin(admin.ModelAdmin):
                 obj.documento_respaldo.url,
             )
         from django.utils.safestring import mark_safe
+
         return mark_safe('<span style="color:#9ca3af;">—</span>')
+
     tiene_documento_col.short_description = "Documento"
 
     def documento_preview(self, obj):
@@ -112,10 +148,13 @@ class ReordenamientoAdmin(admin.ModelAdmin):
             return format_html(
                 '<a href="{url}" target="_blank">'
                 '<img src="{url}" style="max-height:120px;border-radius:6px;margin-bottom:6px;"><br>{nombre}</a>',
-                url=url, nombre=nombre,
+                url=url,
+                nombre=nombre,
             )
         return format_html(
             '<a href="{}" target="_blank" style="color:#2563eb;font-weight:700;">{}</a>',
-            url, nombre,
+            url,
+            nombre,
         )
+
     documento_preview.short_description = "Vista previa del documento"

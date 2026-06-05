@@ -1,9 +1,9 @@
 from django.utils import timezone
-from rest_framework import viewsets, filters, status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 
 from apps.evaluaciones.models import Evaluacion
 from apps.evaluaciones.serializers import EvaluacionSerializer
@@ -13,9 +13,7 @@ from apps.usuarios.permissions import EsEncargadoActivos
 class EvaluacionViewSet(viewsets.ModelViewSet):
     """ViewSet para gestión de evaluaciones in-situ de equipos."""
 
-    queryset = Evaluacion.objects.select_related(
-        "equipo", "evaluador", "laboratorio"
-    ).all()
+    queryset = Evaluacion.objects.select_related("equipo", "evaluador", "laboratorio").all()
     serializer_class = EvaluacionSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["equipo", "laboratorio", "evaluador"]

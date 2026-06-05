@@ -19,5 +19,5 @@ router = DefaultRouter()
 router.register(r"", ReordenamientoViewSet, basename="reordenamiento")
 
 urlpatterns = [
-	path("", include(router.urls)),
+    path("", include(router.urls)),
 ]

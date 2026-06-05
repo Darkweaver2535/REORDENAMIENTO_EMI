@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class GuiasConfig(AppConfig):
-    name = 'apps.guias'
+    name = "apps.guias"

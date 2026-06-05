@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -38,19 +38,13 @@ class DashboardMetricasView(APIView):
         total_malos = totales["malos"] or 0
         total_buenos = totales["buenos"] or 0
         total_regulares = totales["regulares"] or 0
-        pct_malos = (
-            round((total_malos / total_equipos) * 100, 1)
-            if total_equipos > 0
-            else 0
-        )
+        pct_malos = round((total_malos / total_equipos) * 100, 1) if total_equipos > 0 else 0
 
         # ── Laboratorios activos ──────────────────────────────────────────────
         labs_activos = Laboratorio.objects.filter(is_active=True).count()
 
         # ── Reordenamientos pendientes ────────────────────────────────────────
-        pendientes = Reordenamiento.objects.filter(
-            estado=Reordenamiento.Estado.PENDIENTE
-        ).count()
+        pendientes = Reordenamiento.objects.filter(estado=Reordenamiento.Estado.PENDIENTE).count()
 
         # ── Equipos por Unidad Académica (para gráfico de barras) ─────────────────────
         equipos_por_sede = (
@@ -85,8 +79,19 @@ class DashboardMetricasView(APIView):
 
         # Formatear a nombres cortos de mes en español
         MESES_ES = [
-            "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-            "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+            "",
+            "Ene",
+            "Feb",
+            "Mar",
+            "Abr",
+            "May",
+            "Jun",
+            "Jul",
+            "Ago",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dic",
         ]
         reordenamientos_mensual = [
             {

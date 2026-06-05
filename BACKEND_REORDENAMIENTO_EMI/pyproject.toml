@@ -1,0 +1,54 @@
+[project]
+name = "reordenamiento-emi"
+version = "1.0.0"
+description = "Sistema de gestión y reordenamiento de laboratorios — EMI"
+requires-python = ">=3.13"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ruff: linter + formateador (reemplaza black, flake8 e isort)
+#   Formatear:  ruff format .
+#   Lint:       ruff check .
+#   Autofix:    ruff check --fix .
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [
+    "migrations",
+    "venv",
+    ".venv",
+    "staticfiles",
+    "media",
+]
+
+[tool.ruff.format]
+# PEP 8: indentación con espacios (normaliza los archivos que usaban tabs).
+indent-style = "space"
+quote-style = "double"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (imports sin usar, variables sin definir, etc.)
+    "I",   # isort (orden de imports)
+    "UP",  # pyupgrade (sintaxis moderna)
+    "B",   # flake8-bugbear (bugs comunes)
+    "DJ",  # flake8-django (buenas prácticas Django)
+]
+ignore = [
+    "E501",    # longitud de línea (la maneja el formateador)
+    "B008",    # llamadas en defaults (común y seguro en DRF/Django)
+    "DJ001",   # null=True en campos de texto: decisión de modelo preexistente
+               # (corregirlo requiere migraciones y cambia la semántica de queries)
+    "DJ012",   # orden de métodos/clases internas: puramente cosmético
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Los tests pueden tener imports/fixtures sin usar y líneas largas.
+"**/tests.py" = ["F841"]
+"**/tests/*.py" = ["F841"]
+# settings.py expone nombres "sin usar" intencionalmente.
+"config/settings.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]

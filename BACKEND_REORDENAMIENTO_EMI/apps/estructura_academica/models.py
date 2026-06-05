@@ -41,165 +41,163 @@
 #
 # Incluir __str__ descriptivos y Meta con ordering y verbose_name en español
 
-from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class BaseModel(models.Model):
-	created_at = models.DateTimeField(auto_now_add=True)
-	updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-	class Meta:
-		abstract = True
+    class Meta:
+        abstract = True
 
 
 class UnidadAcademica(BaseModel):
-	nombre = models.CharField(max_length=100)
-	ciudad = models.CharField(max_length=50)
-	codigo = models.CharField(max_length=10, unique=True)
-	abreviacion = models.CharField(max_length=10, blank=True, null=True)
-	is_active = models.BooleanField(default=True)
+    nombre = models.CharField(max_length=100)
+    ciudad = models.CharField(max_length=50)
+    codigo = models.CharField(max_length=10, unique=True)
+    abreviacion = models.CharField(max_length=10, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
 
-	class Meta:
-		ordering = ["nombre"]
-		verbose_name = "Unidad Académica"
-		verbose_name_plural = "Unidades Académicas"
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name = "Unidad Académica"
+        verbose_name_plural = "Unidades Académicas"
 
-	def __str__(self):
-		return f"{self.codigo} - {self.nombre}"
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
 
 
 class Departamento(BaseModel):
-	nombre = models.CharField(max_length=100)
-	codigo = models.CharField(max_length=15)
-	# FK legacy — se mantiene nullable para compatibilidad; la relación real es M2M.
-	unidad_academica = models.ForeignKey(
-		UnidadAcademica,
-		on_delete=models.PROTECT,
-		related_name="departamentos",
-		null=True,
-		blank=True,
-	)
-	unidades_academicas = models.ManyToManyField(
-		UnidadAcademica,
-		through="DepartamentoUnidadAcademica",
-		related_name="departamentos_m2m",
-		blank=True,
-	)
+    nombre = models.CharField(max_length=100)
+    codigo = models.CharField(max_length=15)
+    # FK legacy — se mantiene nullable para compatibilidad; la relación real es M2M.
+    unidad_academica = models.ForeignKey(
+        UnidadAcademica,
+        on_delete=models.PROTECT,
+        related_name="departamentos",
+        null=True,
+        blank=True,
+    )
+    unidades_academicas = models.ManyToManyField(
+        UnidadAcademica,
+        through="DepartamentoUnidadAcademica",
+        related_name="departamentos_m2m",
+        blank=True,
+    )
 
-	class Meta:
-		ordering = ["nombre"]
-		verbose_name = "Departamento"
-		verbose_name_plural = "Departamentos"
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name = "Departamento"
+        verbose_name_plural = "Departamentos"
 
-	def __str__(self):
-		return f"{self.codigo} - {self.nombre}"
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
 
 
 class DepartamentoUnidadAcademica(BaseModel):
-	departamento = models.ForeignKey(
-		Departamento,
-		on_delete=models.CASCADE,
-		related_name="depto_sedes",
-	)
-	unidad_academica = models.ForeignKey(
-		UnidadAcademica,
-		on_delete=models.CASCADE,
-		related_name="sede_deptos",
-	)
-	is_active = models.BooleanField(default=True)
+    departamento = models.ForeignKey(
+        Departamento,
+        on_delete=models.CASCADE,
+        related_name="depto_sedes",
+    )
+    unidad_academica = models.ForeignKey(
+        UnidadAcademica,
+        on_delete=models.CASCADE,
+        related_name="sede_deptos",
+    )
+    is_active = models.BooleanField(default=True)
 
-	class Meta:
-		ordering = ["departamento", "unidad_academica"]
-		verbose_name = "Departamento por Unidad Académica"
-		verbose_name_plural = "Departamentos por Unidades Académicas"
-		unique_together = (("departamento", "unidad_academica"),)
+    class Meta:
+        ordering = ["departamento", "unidad_academica"]
+        verbose_name = "Departamento por Unidad Académica"
+        verbose_name_plural = "Departamentos por Unidades Académicas"
+        unique_together = (("departamento", "unidad_academica"),)
 
-	def __str__(self):
-		return f"{self.departamento.nombre} — {self.unidad_academica.codigo}"
+    def __str__(self):
+        return f"{self.departamento.nombre} — {self.unidad_academica.codigo}"
 
 
 class Carrera(BaseModel):
-	nombre = models.CharField(max_length=150)
-	codigo_institucional = models.CharField(max_length=20, unique=True)
-	departamento = models.ForeignKey(
-		Departamento,
-		on_delete=models.PROTECT,
-		related_name="carreras",
-	)
-	unidades_academicas = models.ManyToManyField(
-		UnidadAcademica,
-		through="CarreraUnidadAcademica",
-		related_name="carreras_m2m",
-		blank=True,
-	)
+    nombre = models.CharField(max_length=150)
+    codigo_institucional = models.CharField(max_length=20, unique=True)
+    departamento = models.ForeignKey(
+        Departamento,
+        on_delete=models.PROTECT,
+        related_name="carreras",
+    )
+    unidades_academicas = models.ManyToManyField(
+        UnidadAcademica,
+        through="CarreraUnidadAcademica",
+        related_name="carreras_m2m",
+        blank=True,
+    )
 
-	class Meta:
-		ordering = ["nombre"]
-		verbose_name = "Carrera"
-		verbose_name_plural = "Carreras"
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name = "Carrera"
+        verbose_name_plural = "Carreras"
 
-	def __str__(self):
-		return f"{self.codigo_institucional} - {self.nombre}"
+    def __str__(self):
+        return f"{self.codigo_institucional} - {self.nombre}"
 
 
 class CarreraUnidadAcademica(BaseModel):
-	carrera = models.ForeignKey(
-		Carrera,
-		on_delete=models.CASCADE,
-		related_name="carrera_sedes",
-	)
-	unidad_academica = models.ForeignKey(
-		UnidadAcademica,
-		on_delete=models.CASCADE,
-		related_name="sede_carreras",
-	)
-	is_active = models.BooleanField(default=True)
+    carrera = models.ForeignKey(
+        Carrera,
+        on_delete=models.CASCADE,
+        related_name="carrera_sedes",
+    )
+    unidad_academica = models.ForeignKey(
+        UnidadAcademica,
+        on_delete=models.CASCADE,
+        related_name="sede_carreras",
+    )
+    is_active = models.BooleanField(default=True)
 
-	class Meta:
-		ordering = ["carrera", "unidad_academica"]
-		verbose_name = "Carrera por Unidad Académica"
-		verbose_name_plural = "Carreras por Unidades Académicas"
-		unique_together = (("carrera", "unidad_academica"),)
+    class Meta:
+        ordering = ["carrera", "unidad_academica"]
+        verbose_name = "Carrera por Unidad Académica"
+        verbose_name_plural = "Carreras por Unidades Académicas"
+        unique_together = (("carrera", "unidad_academica"),)
 
-	def __str__(self):
-		return f"{self.carrera.nombre} — {self.unidad_academica.codigo}"
+    def __str__(self):
+        return f"{self.carrera.nombre} — {self.unidad_academica.codigo}"
 
 
 class Semestre(BaseModel):
-	numero = models.SmallIntegerField(
-		validators=[MinValueValidator(1), MaxValueValidator(10)]
-	)
-	nombre = models.CharField(max_length=20)
+    numero = models.SmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
+    nombre = models.CharField(max_length=20)
 
-	class Meta:
-		ordering = ["numero"]
-		verbose_name = "Semestre"
-		verbose_name_plural = "Semestres"
+    class Meta:
+        ordering = ["numero"]
+        verbose_name = "Semestre"
+        verbose_name_plural = "Semestres"
 
-	def __str__(self):
-		return f"{self.numero} - {self.nombre}"
+    def __str__(self):
+        return f"{self.numero} - {self.nombre}"
 
 
 class Asignatura(BaseModel):
-	nombre = models.CharField(max_length=150)
-	codigo_curricular = models.CharField(max_length=20, unique=True)
-	carrera = models.ForeignKey(
-		Carrera,
-		on_delete=models.PROTECT,
-		related_name="asignaturas",
-	)
-	semestre = models.ForeignKey(
-		Semestre,
-		on_delete=models.PROTECT,
-		related_name="asignaturas",
-	)
-	is_active = models.BooleanField(default=True)
+    nombre = models.CharField(max_length=150)
+    codigo_curricular = models.CharField(max_length=20, unique=True)
+    carrera = models.ForeignKey(
+        Carrera,
+        on_delete=models.PROTECT,
+        related_name="asignaturas",
+    )
+    semestre = models.ForeignKey(
+        Semestre,
+        on_delete=models.PROTECT,
+        related_name="asignaturas",
+    )
+    is_active = models.BooleanField(default=True)
 
-	class Meta:
-		ordering = ["nombre"]
-		verbose_name = "Asignatura"
-		verbose_name_plural = "Asignaturas"
+    class Meta:
+        ordering = ["nombre"]
+        verbose_name = "Asignatura"
+        verbose_name_plural = "Asignaturas"
 
-	def __str__(self):
-		return f"{self.codigo_curricular} - {self.nombre}"
+    def __str__(self):
+        return f"{self.codigo_curricular} - {self.nombre}"

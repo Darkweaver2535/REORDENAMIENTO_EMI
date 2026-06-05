@@ -15,11 +15,11 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.estructura_academica.views import (
-	AsignaturaViewSet,
-	CarreraViewSet,
-	DepartamentoViewSet,
-	SemestreViewSet,
-	UnidadAcademicaViewSet,
+    AsignaturaViewSet,
+    CarreraViewSet,
+    DepartamentoViewSet,
+    SemestreViewSet,
+    UnidadAcademicaViewSet,
 )
 
 app_name = "estructura_academica"
@@ -32,5 +32,5 @@ router.register("semestres", SemestreViewSet, basename="semestre")
 router.register("asignaturas", AsignaturaViewSet, basename="asignatura")
 
 urlpatterns = [
-	path("", include(router.urls)),
+    path("", include(router.urls)),
 ]

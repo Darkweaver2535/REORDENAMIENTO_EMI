@@ -1,9 +1,8 @@
-from datetime import timedelta
 import getpass
+from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,6 +26,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "rest_framework_simplejwt",
+    "drf_spectacular",
     "apps.usuarios",
     "apps.estructura_academica",
     "apps.guias",
@@ -131,15 +131,11 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "PAGE_SIZE_QUERY_PARAM": "page_size",
-    "DEFAULT_FILTER_BACKENDS": (
-        "django_filters.rest_framework.DjangoFilterBackend",
-    ),
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     # Throttling (#2): protección contra fuerza bruta y abuso de API.
     # LoginView tiene su propio throttle más estricto (ver views.py).
     "DEFAULT_THROTTLE_CLASSES": [
@@ -147,9 +143,27 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "60/minute",       # Anónimos: 60 req/min (navegación pública)
-        "user": "300/minute",      # Usuarios autenticados: 300 req/min
-        "login": "5/minute",       # Login: 5 intentos/min por IP (fuerza bruta)
+        "anon": "60/minute",  # Anónimos: 60 req/min (navegación pública)
+        "user": "300/minute",  # Usuarios autenticados: 300 req/min
+        "login": "5/minute",  # Login: 5 intentos/min por IP (fuerza bruta)
+    },
+    # Documentación de API (#6): drf-spectacular genera el schema OpenAPI 3.
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+
+# drf-spectacular: OpenAPI 3 / Swagger / ReDoc (#6)
+SPECTACULAR_SETTINGS = {
+    "TITLE": "API — Sistema de Reordenamiento de Laboratorios EMI",
+    "DESCRIPTION": (
+        "API REST para la gestión de laboratorios, inventario de equipos, "
+        "reordenamientos (reasignación, compra, préstamo) y reportes."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,  # No exponer el endpoint /schema/ en el UI
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,  # Mantiene el token Bearer entre recargas
     },
 }
 

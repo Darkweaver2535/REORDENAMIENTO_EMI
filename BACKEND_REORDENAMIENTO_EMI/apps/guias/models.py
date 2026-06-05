@@ -35,26 +35,26 @@ from apps.estructura_academica.models import BaseModel
 
 
 class Guia(BaseModel):
-	titulo = models.CharField(max_length=200)
-	codigo_interno = models.CharField(max_length=30, unique=True)
-	numero_practica = models.SmallIntegerField()
-	asignatura = models.ForeignKey(
-		"estructura_academica.Asignatura",
-		on_delete=models.PROTECT,
-		related_name="guias",
-	)
-	portada_url = models.URLField(max_length=500, blank=True)
-	pdf_url = models.URLField(max_length=500)
-	resolucion_numero = models.CharField(max_length=50, null=True, blank=True)
+    titulo = models.CharField(max_length=200)
+    codigo_interno = models.CharField(max_length=30, unique=True)
+    numero_practica = models.SmallIntegerField()
+    asignatura = models.ForeignKey(
+        "estructura_academica.Asignatura",
+        on_delete=models.PROTECT,
+        related_name="guias",
+    )
+    portada_url = models.URLField(max_length=500, blank=True)
+    pdf_url = models.URLField(max_length=500)
+    resolucion_numero = models.CharField(max_length=50, null=True, blank=True)
 
-	class Meta:
-		ordering = ["asignatura", "numero_practica"]
-		verbose_name = "Guia"
-		verbose_name_plural = "Guias"
-		unique_together = (("asignatura", "numero_practica"),)
+    class Meta:
+        ordering = ["asignatura", "numero_practica"]
+        verbose_name = "Guia"
+        verbose_name_plural = "Guias"
+        unique_together = (("asignatura", "numero_practica"),)
 
-	def save(self, *args, **kwargs):
-		super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
-	def __str__(self):
-		return f"Práctica {self.numero_practica} - {self.asignatura.nombre}"
+    def __str__(self):
+        return f"Práctica {self.numero_practica} - {self.asignatura.nombre}"

@@ -4,8 +4,8 @@ from django.db import models
 class ConfiguracionSistema(models.Model):
     saga_auth_url = models.URLField(blank=True)
     modulo_reactivos_activo = models.BooleanField(default=False)
-    nombre_sistema = models.CharField(max_length=100, default='SGL - EMI')
-    version = models.CharField(max_length=20, default='1.0.0')
+    nombre_sistema = models.CharField(max_length=100, default="SGL - EMI")
+    version = models.CharField(max_length=20, default="1.0.0")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

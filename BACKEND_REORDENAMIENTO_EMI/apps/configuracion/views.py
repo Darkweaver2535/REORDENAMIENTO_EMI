@@ -13,6 +13,7 @@ class ConfiguracionView(APIView):
     GET /api/v1/configuracion/ - Retorna la configuración global.
     PATCH /api/v1/configuracion/ - Actualiza la configuración global (solo Admin).
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -26,11 +27,9 @@ class ConfiguracionView(APIView):
                 {"error": "No autorizado"},
                 status=status.HTTP_403_FORBIDDEN,
             )
-            
+
         config = ConfiguracionSistema.get_config()
-        serializer = ConfiguracionSerializer(
-            config, data=request.data, partial=True
-        )
+        serializer = ConfiguracionSerializer(config, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

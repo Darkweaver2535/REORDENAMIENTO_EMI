@@ -1,5 +1,5 @@
-from django.db import models
 from django.core.exceptions import ValidationError
+from django.db import models
 
 from apps.estructura_academica.models import BaseModel
 
@@ -35,22 +35,14 @@ class Evaluacion(BaseModel):
     )
 
     # ── Distribución por condición ──────────────────
-    cantidad_bueno = models.PositiveIntegerField(
-        default=0, verbose_name="Unidades en buen estado"
-    )
+    cantidad_bueno = models.PositiveIntegerField(default=0, verbose_name="Unidades en buen estado")
     cantidad_regular = models.PositiveIntegerField(
         default=0, verbose_name="Unidades en estado regular"
     )
-    cantidad_malo = models.PositiveIntegerField(
-        default=0, verbose_name="Unidades en mal estado"
-    )
+    cantidad_malo = models.PositiveIntegerField(default=0, verbose_name="Unidades en mal estado")
 
-    observaciones = models.TextField(
-        blank=True, default="", verbose_name="Observaciones generales"
-    )
-    fecha = models.DateTimeField(
-        auto_now_add=True, verbose_name="Fecha de evaluación"
-    )
+    observaciones = models.TextField(blank=True, default="", verbose_name="Observaciones generales")
+    fecha = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de evaluación")
 
     class Meta:
         verbose_name = "Evaluación"

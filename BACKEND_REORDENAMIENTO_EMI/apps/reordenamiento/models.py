@@ -33,30 +33,30 @@ class Reordenamiento(BaseModel):
     # ── Tipo de movimiento ──────────────────────────────────────────────────
     class TipoMovimiento(models.TextChoices):
         REASIGNACION_DEFINITIVA = "REASIGNACION_DEFINITIVA", "Reasignación definitiva"
-        PRESTAMO                = "PRESTAMO",                "Préstamo"
-        COMPRA                  = "COMPRA",                  "Compra"
+        PRESTAMO = "PRESTAMO", "Préstamo"
+        COMPRA = "COMPRA", "Compra"
 
     # ── Tipo de documento ───────────────────────────────────────────────────
     class TipoDocumento(models.TextChoices):
-        RESOLUCION   = "RESOLUCION",   "Resolución"
+        RESOLUCION = "RESOLUCION", "Resolución"
         AUTORIZACION = "AUTORIZACION", "Autorización"
-        FACTURA      = "FACTURA",      "Factura"
+        FACTURA = "FACTURA", "Factura"
         ACTA_ENTREGA = "ACTA_ENTREGA", "Acta de entrega"
-        OTRO         = "OTRO",         "Otro"
+        OTRO = "OTRO", "Otro"
 
     # ── Estado del flujo ────────────────────────────────────────────────────
     class Estado(models.TextChoices):
-        BORRADOR             = "borrador",             "Borrador"
+        BORRADOR = "borrador", "Borrador"
         PENDIENTE_APROBACION = "pendiente_aprobacion", "Pendiente de aprobación"
-        APROBADO             = "aprobado",             "Aprobado"
-        RECHAZADO            = "rechazado",            "Rechazado"
-        EN_TRANSITO          = "en_transito",          "En tránsito"
-        RECEPCIONADO         = "recepcionado",         "Recepcionado"
-        CANCELADO            = "cancelado",            "Cancelado"
+        APROBADO = "aprobado", "Aprobado"
+        RECHAZADO = "rechazado", "Rechazado"
+        EN_TRANSITO = "en_transito", "En tránsito"
+        RECEPCIONADO = "recepcionado", "Recepcionado"
+        CANCELADO = "cancelado", "Cancelado"
         # Legacy — conservado para compatibilidad con registros históricos
-        PENDIENTE   = "pendiente",   "Pendiente (legacy)"
-        AUTORIZADO  = "autorizado",  "Autorizado (legacy)"
-        EJECUTADO   = "ejecutado",   "Ejecutado (legacy)"
+        PENDIENTE = "pendiente", "Pendiente (legacy)"
+        AUTORIZADO = "autorizado", "Autorizado (legacy)"
+        EJECUTADO = "ejecutado", "Ejecutado (legacy)"
 
     # ── Relaciones principales ──────────────────────────────────────────────
     tipo_movimiento = models.CharField(
@@ -189,10 +189,7 @@ class Reordenamiento(BaseModel):
         tipo = self.get_tipo_movimiento_display()
         origen = self.laboratorio_origen.nombre if self.laboratorio_origen else "Compra"
         destino = self.laboratorio_destino.nombre if self.laboratorio_destino_id else "—"
-        return (
-            f"[{tipo}] #{self.pk or 'nuevo'} — {self.equipo.nombre}: "
-            f"{origen} → {destino}"
-        )
+        return f"[{tipo}] #{self.pk or 'nuevo'} — {self.equipo.nombre}: {origen} → {destino}"
 
     def save(self, *args, **kwargs):
         """Sincroniza numero_documento ↔ resolucion_numero para compatibilidad legacy."""
@@ -210,7 +207,9 @@ class Reordenamiento(BaseModel):
         if self.laboratorio_origen_id and self.laboratorio_destino_id:
             if self.laboratorio_origen_id == self.laboratorio_destino_id:
                 raise ValidationError(
-                    {"laboratorio_destino": "El laboratorio de origen y destino no pueden ser iguales."}
+                    {
+                        "laboratorio_destino": "El laboratorio de origen y destino no pueden ser iguales."
+                    }
                 )
 
         if self.equipo_id and self.cantidad_trasladada:
@@ -228,23 +227,27 @@ class Reordenamiento(BaseModel):
                 )
             if not self.numero_documento and not self.resolucion_numero:
                 raise ValidationError(
-                    {"numero_documento": "El número de resolución/documento es obligatorio para Reasignación definitiva."}
+                    {
+                        "numero_documento": "El número de resolución/documento es obligatorio para Reasignación definitiva."
+                    }
                 )
             if self.documento_respaldo:
                 ext = str(self.documento_respaldo.name).lower().rsplit(".", 1)[-1]
                 if ext not in {"pdf"}:
                     raise ValidationError(
-                        {"documento_respaldo": "Para Reasignación definitiva solo se aceptan archivos PDF."}
+                        {
+                            "documento_respaldo": "Para Reasignación definitiva solo se aceptan archivos PDF."
+                        }
                     )
 
         elif tipo == self.TipoMovimiento.PRESTAMO:
             if not self.laboratorio_origen_id:
-                raise ValidationError(
-                    {"laboratorio_origen": "Requerido para Préstamo."}
-                )
+                raise ValidationError({"laboratorio_origen": "Requerido para Préstamo."})
             if not self.fecha_retorno_prevista:
                 raise ValidationError(
-                    {"fecha_retorno_prevista": "La fecha de retorno prevista es obligatoria para Préstamos."}
+                    {
+                        "fecha_retorno_prevista": "La fecha de retorno prevista es obligatoria para Préstamos."
+                    }
                 )
             if self.documento_respaldo:
                 ext = str(self.documento_respaldo.name).lower().rsplit(".", 1)[-1]

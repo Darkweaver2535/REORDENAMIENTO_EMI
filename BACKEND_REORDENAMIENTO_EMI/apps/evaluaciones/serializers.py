@@ -40,9 +40,7 @@ class EvaluacionSerializer(serializers.ModelSerializer):
                 + data.get("cantidad_malo", 0)
             )
             if total == 0:
-                raise serializers.ValidationError(
-                    "Debe clasificar al menos una unidad."
-                )
+                raise serializers.ValidationError("Debe clasificar al menos una unidad.")
             if equipo.cantidad_total > 0 and total != equipo.cantidad_total:
                 raise serializers.ValidationError(
                     f"La suma de unidades ({total}) debe ser igual "

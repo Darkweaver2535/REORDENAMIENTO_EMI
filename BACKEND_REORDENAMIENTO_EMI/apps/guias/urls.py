@@ -14,7 +14,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.guias.views import GuiaViewSet, EquipoRequeridoViewSet
+from apps.guias.views import EquipoRequeridoViewSet, GuiaViewSet
 
 app_name = "guias"
 
@@ -23,5 +23,5 @@ router.register("", GuiaViewSet, basename="guia")
 router.register("equipos-requeridos", EquipoRequeridoViewSet, basename="equipo-requerido")
 
 urlpatterns = [
-	path("", include(router.urls)),
+    path("", include(router.urls)),
 ]

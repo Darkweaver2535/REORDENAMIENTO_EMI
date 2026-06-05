@@ -1,7 +1,7 @@
 from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
@@ -9,15 +9,15 @@ from rest_framework.viewsets import ModelViewSet
 from apps.laboratorios.services import InventoryAnalyticsService
 from apps.reordenamiento.models import Reordenamiento
 from apps.reordenamiento.serializers import (
-    ReordenamientoListSerializer,
-    ReordenamientoDetalleSerializer,
-    CrearReordenamientoSerializer,
     AprobarReordenamientoSerializer,
     AutorizarReordenamientoSerializer,
+    CrearReordenamientoSerializer,
     RecepcinarReordenamientoSerializer,
+    ReordenamientoDetalleSerializer,
+    ReordenamientoListSerializer,
 )
 from apps.reordenamiento.services import ReordenamientoService
-from apps.usuarios.permissions import EsAdminOJefe, EsEncargadoActivos, EsDNCIT
+from apps.usuarios.permissions import EsAdminOJefe, EsDNCIT, EsEncargadoActivos
 
 
 class ReordenamientoViewSet(ModelViewSet):
@@ -123,7 +123,7 @@ class ReordenamientoViewSet(ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        
+
         reordenamiento = ReordenamientoService.crear_movimiento(
             tipo_movimiento=data["tipo_movimiento"],
             equipo_id=data["equipo_id"],
@@ -137,8 +137,10 @@ class ReordenamientoViewSet(ModelViewSet):
             fecha_retorno_prevista=data.get("fecha_retorno_prevista"),
             usuario_solicitante=request.user,
         )
-        
-        detalle_serializer = ReordenamientoDetalleSerializer(reordenamiento, context=self.get_serializer_context())
+
+        detalle_serializer = ReordenamientoDetalleSerializer(
+            reordenamiento, context=self.get_serializer_context()
+        )
         headers = self.get_success_headers(detalle_serializer.data)
         return Response(detalle_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -156,7 +158,10 @@ class ReordenamientoViewSet(ModelViewSet):
         }
         if reord.estado not in estados_aprobables:
             return Response(
-                {"detail": "El reordenamiento no está en estado aprobable.", "estado_actual": reord.estado},
+                {
+                    "detail": "El reordenamiento no está en estado aprobable.",
+                    "estado_actual": reord.estado,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -184,13 +189,19 @@ class ReordenamientoViewSet(ModelViewSet):
         }
         if reord.estado not in estados_aprobables:
             return Response(
-                {"detail": "El reordenamiento debe estar pendiente para autorizar.", "estado_actual": reord.estado},
+                {
+                    "detail": "El reordenamiento debe estar pendiente para autorizar.",
+                    "estado_actual": reord.estado,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         ReordenamientoService.aprobar(reord.id, request.user)
         return Response(
-            {"estado": Reordenamiento.Estado.APROBADO, "mensaje": "Reordenamiento autorizado (aprobado)."},
+            {
+                "estado": Reordenamiento.Estado.APROBADO,
+                "mensaje": "Reordenamiento autorizado (aprobado).",
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -203,13 +214,19 @@ class ReordenamientoViewSet(ModelViewSet):
         estados_validos = {Reordenamiento.Estado.APROBADO, Reordenamiento.Estado.AUTORIZADO}
         if reord.estado not in estados_validos:
             return Response(
-                {"detail": "El reordenamiento debe estar Aprobado para ejecutar.", "estado_actual": reord.estado},
+                {
+                    "detail": "El reordenamiento debe estar Aprobado para ejecutar.",
+                    "estado_actual": reord.estado,
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         ReordenamientoService.marcar_en_transito(reord.id, request.user)
         return Response(
-            {"estado": Reordenamiento.Estado.EN_TRANSITO, "mensaje": "Reordenamiento marcado como En tránsito."},
+            {
+                "estado": Reordenamiento.Estado.EN_TRANSITO,
+                "mensaje": "Reordenamiento marcado como En tránsito.",
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -233,7 +250,9 @@ class ReordenamientoViewSet(ModelViewSet):
         }
         if reord.estado not in estados_recepcionables:
             return Response(
-                {"detail": f"No se puede recepcionar desde el estado: {reord.get_estado_display()}."},
+                {
+                    "detail": f"No se puede recepcionar desde el estado: {reord.get_estado_display()}."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -241,7 +260,10 @@ class ReordenamientoViewSet(ModelViewSet):
         ReordenamientoService.recepcionar(reord.id, request.user, observaciones)
 
         return Response(
-            {"estado": Reordenamiento.Estado.RECEPCIONADO, "mensaje": "Recepción confirmada. Inventario actualizado."},
+            {
+                "estado": Reordenamiento.Estado.RECEPCIONADO,
+                "mensaje": "Recepción confirmada. Inventario actualizado.",
+            },
             status=status.HTTP_200_OK,
         )
 
@@ -251,7 +273,7 @@ class ReordenamientoViewSet(ModelViewSet):
         """Compara disponibilidad de equipos por nombre en todas las unidades académicas o retorna resumen nacional."""
         nombre_equipo = request.query_params.get("nombre_equipo")
         service = InventoryAnalyticsService()
-        
+
         if not nombre_equipo:
             # Si no hay término de búsqueda, retorna el panorama general nacional.
             data = service.obtener_resumen_nacional()

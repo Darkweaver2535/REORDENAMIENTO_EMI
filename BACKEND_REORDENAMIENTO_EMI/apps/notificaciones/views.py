@@ -27,7 +27,5 @@ class NotificacionViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="marcar-todas-leidas")
     def marcar_todas_leidas(self, request):
-        Notificacion.objects.filter(
-            usuario=request.user, leida=False
-        ).update(leida=True)
+        Notificacion.objects.filter(usuario=request.user, leida=False).update(leida=True)
         return Response({"status": "ok"})
