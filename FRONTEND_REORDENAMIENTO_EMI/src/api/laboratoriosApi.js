@@ -25,3 +25,7 @@ export const updateEvaluacionInsitu = (id, payload) =>
 /** Obtiene el árbol completo de laboratorios (solo nodos raíz con hijos anidados). */
 export const fetchLaboratoriosTree = () =>
   httpClient.get(API_ENDPOINTS.laboratorios.tree);
+
+/** Analítica de un laboratorio: déficits, ratio, excedentes y uso de equipos (#9). */
+export const fetchLaboratorioAnalytics = (id) =>
+  httpClient.get(API_ENDPOINTS.laboratorios.analytics(id));

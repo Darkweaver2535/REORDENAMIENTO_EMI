@@ -9,3 +9,7 @@ export const fetchUsuarioById = (id) =>
 
 export const updateUsuario = (id, payload) =>
   httpClient.patch(API_ROUTES.USUARIOS.DETALLE(id), payload);
+
+/** Bitácora de auditoría (#10). Filtros: accion, tabla_afectada, usuario, search, page. */
+export const fetchAuditoria = (params) =>
+  httpClient.get(API_ROUTES.USUARIOS.AUDITORIA, { params });

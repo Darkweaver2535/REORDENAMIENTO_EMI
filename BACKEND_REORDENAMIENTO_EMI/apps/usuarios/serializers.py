@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.usuarios.models import Usuario
+from apps.usuarios.models import AuditLog, Usuario
 
 
 class LoginSerializer(serializers.Serializer):
@@ -83,6 +83,36 @@ class UsuarioDetalleSerializer(serializers.ModelSerializer):
             "is_active",
             "last_login",
         )
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    """Registro de auditoría para consulta (#10). Solo lectura."""
+
+    accion_display = serializers.CharField(source="get_accion_display", read_only=True)
+    usuario_nombre = serializers.CharField(
+        source="usuario.nombre_completo", read_only=True, default=None
+    )
+    usuario_carnet = serializers.CharField(
+        source="usuario.carnet_identidad", read_only=True, default=None
+    )
+
+    class Meta:
+        model = AuditLog
+        fields = (
+            "id",
+            "tabla_afectada",
+            "registro_id",
+            "accion",
+            "accion_display",
+            "usuario",
+            "usuario_nombre",
+            "usuario_carnet",
+            "datos_anteriores",
+            "datos_nuevos",
+            "ip_address",
+            "timestamp",
+        )
+        read_only_fields = fields
 
 
 # Alias para compatibilidad con vistas existentes

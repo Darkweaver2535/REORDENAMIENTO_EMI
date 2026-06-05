@@ -22,18 +22,23 @@
 #    - Filtrar automáticamente por la unidad_academica del usuario que hace la consulta
 
 from django.contrib.auth import authenticate
-from rest_framework import status
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, status
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.usuarios.models import AuditLog, Usuario
 from apps.usuarios.permissions import EsAdminOJefe
-from apps.usuarios.serializers import PerfilSerializer, UsuarioListaSerializer
+from apps.usuarios.serializers import (
+    AuditLogSerializer,
+    PerfilSerializer,
+    UsuarioListaSerializer,
+)
 
 
 def _client_ip(request):
@@ -132,3 +137,23 @@ class UsuarioAdminViewSet(ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class AuditLogViewSet(ReadOnlyModelViewSet):
+    """Consulta de la bitácora de auditoría (#10).
+
+    Solo lectura y restringido a ADMIN/JEFE: la auditoría es trazabilidad
+    institucional sensible (logins, aprobaciones, movimientos de inventario).
+    Soporta filtros por tabla, acción y usuario, además de búsqueda y orden.
+    """
+
+    serializer_class = AuditLogSerializer
+    permission_classes = [EsAdminOJefe]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["tabla_afectada", "accion", "usuario", "registro_id"]
+    search_fields = ["tabla_afectada", "usuario__nombre_completo", "usuario__carnet_identidad"]
+    ordering_fields = ["timestamp", "accion", "tabla_afectada"]
+    ordering = ["-timestamp"]
+
+    def get_queryset(self):
+        return AuditLog.objects.select_related("usuario").all()

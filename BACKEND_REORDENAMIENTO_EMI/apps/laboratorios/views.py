@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import filters, status
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
@@ -17,6 +18,7 @@ from apps.laboratorios.serializers import (
     LaboratorioTreeSerializer,
 )
 from apps.laboratorios.services import InventoryAnalyticsService
+from apps.laboratorios.storage import ErrorImagen, subir_imagen_equipo
 from apps.usuarios.models import AuditLog
 from apps.usuarios.permissions import (
     EsAdminOJefe,
@@ -148,7 +150,14 @@ class EquipoViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in {"list", "retrieve"}:
             permission_classes = [IsAuthenticated]
-        elif self.action in {"create", "update", "partial_update", "destroy", "evaluacion_insitu"}:
+        elif self.action in {
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "evaluacion_insitu",
+            "subir_foto",
+        }:
             permission_classes = [EsEncargadoActivos]
         else:
             permission_classes = [IsAuthenticated]
@@ -201,3 +210,43 @@ class EquipoViewSet(ModelViewSet):
         )
 
         return Response(EquipoDetalleSerializer(equipo).data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="subir-foto",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def subir_foto(self, request, pk=None):
+        """Sube la foto del equipo a S3 (o media local) y actualiza foto_url (#11).
+
+        Completa la intención que quedó a medias: en vez de pegar una URL a mano,
+        el cliente envía el archivo (campo 'foto') y el backend lo almacena y
+        guarda la URL resultante.
+        """
+        equipo = self.get_object()
+        archivo = request.FILES.get("foto")
+        if not archivo:
+            return Response(
+                {"foto": "Debe enviar el archivo de imagen en el campo 'foto'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            base_url = request.build_absolute_uri("/")[:-1]
+            url = subir_imagen_equipo(archivo, equipo.id, base_url=base_url)
+        except ErrorImagen as exc:
+            return Response({"foto": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        equipo.foto_url = url
+        equipo.save(update_fields=["foto_url"])
+
+        AuditLog.objects.create(
+            tabla_afectada="Equipo",
+            registro_id=equipo.id,
+            accion=AuditLog.Accion.UPDATE,
+            usuario=request.user,
+            datos_nuevos={"evento": "foto_actualizada", "foto_url": url},
+        )
+
+        return Response({"foto_url": url}, status=status.HTTP_200_OK)

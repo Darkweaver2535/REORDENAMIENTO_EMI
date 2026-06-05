@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 from apps.estructura_academica.models import UnidadAcademica
 from apps.laboratorios.models import Equipo, Laboratorio
 from apps.reordenamiento.models import Reordenamiento
-from apps.usuarios.models import Usuario
+from apps.usuarios.models import AuditLog, Usuario
 
 CACHE_IN_MEMORY = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
@@ -260,3 +260,56 @@ class DashboardRegressionTests(TestCase):
             "reordenamientos_pendientes",
         ):
             self.assertIn(campo, resp.data, f"Falta: {campo}")
+
+
+@override_settings(CACHES=CACHE_IN_MEMORY)
+class AuditoriaEndpointTests(TestCase):
+    """#10: la bitácora de auditoría ahora se puede consultar (ADMIN/JEFE)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        ua = _ua("UA Audit", "UADIT")
+        cls.admin = _usuario("ADM_AUD", Usuario.Rol.ADMIN, ua)
+        cls.jefe = _usuario("JEF_AUD", Usuario.Rol.JEFE, ua)
+        cls.estudiante = _usuario("EST_AUD", Usuario.Rol.ESTUDIANTE, ua)
+        AuditLog.objects.create(
+            tabla_afectada="Usuario",
+            registro_id=cls.admin.id,
+            accion=AuditLog.Accion.LOGIN,
+            usuario=cls.admin,
+            ip_address="10.0.0.1",
+        )
+        AuditLog.objects.create(
+            tabla_afectada="Reordenamiento",
+            registro_id=1,
+            accion=AuditLog.Accion.APPROVE,
+            usuario=cls.admin,
+        )
+
+    def setUp(self):
+        cache.clear()
+
+    def test_admin_puede_listar_auditoria(self):
+        resp = _client_as(self.admin).get("/api/v1/usuarios/auditoria/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(resp.data["count"], 2)
+
+    def test_jefe_puede_listar_auditoria(self):
+        resp = _client_as(self.jefe).get("/api/v1/usuarios/auditoria/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_estudiante_no_puede_acceder(self):
+        resp = _client_as(self.estudiante).get("/api/v1/usuarios/auditoria/")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_filtro_por_accion(self):
+        resp = _client_as(self.admin).get("/api/v1/usuarios/auditoria/?accion=APPROVE")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(all(r["accion"] == "APPROVE" for r in resp.data["results"]))
+
+    def test_serializa_nombre_y_accion_display(self):
+        resp = _client_as(self.admin).get("/api/v1/usuarios/auditoria/?accion=LOGIN")
+        registro = resp.data["results"][0]
+        self.assertIn("usuario_nombre", registro)
+        self.assertIn("accion_display", registro)
+        self.assertEqual(registro["accion_display"], "Inicio de sesion")

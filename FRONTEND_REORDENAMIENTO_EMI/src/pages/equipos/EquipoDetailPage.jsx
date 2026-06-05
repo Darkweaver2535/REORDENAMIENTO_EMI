@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Building2, Calendar, Hash, Wrench, ArrowLeftRight,
 	ClipboardCheck, Plus, Pencil, Trash2, AlertTriangle, Clock,
-	Settings, Sparkles, Hammer, Scale,
+	Settings, Sparkles, Hammer, Scale, ImagePlus,
 } from "lucide-react";
 import axiosClient from "../../api/axiosClient";
 import { ROLES, API_ROUTES } from "../../constants/api";
@@ -66,6 +66,8 @@ export default function EquipoDetailPage() {
 	const [activeTab, setActiveTab] = useState("specs");
 	const [modalOpen, setModalOpen] = useState(false);
 	const [registroEditar, setRegistroEditar] = useState(null);
+	const [subiendoFoto, setSubiendoFoto] = useState(false);
+	const [errorFoto, setErrorFoto] = useState(null);
 
 	if (!hasRole(ROLES.ADMIN, ROLES.JEFE, ROLES.ENCARGADO_ACTIVOS)) return <Navigate to="/dashboard" replace />;
 
@@ -99,6 +101,27 @@ export default function EquipoDetailPage() {
 			queryClient.invalidateQueries(["mantenimientos", id]);
 		} catch (e) {
 			console.error("Error eliminando:", e);
+		}
+	};
+
+	const handleSubirFoto = async (e) => {
+		const archivo = e.target.files?.[0];
+		e.target.value = ""; // permite re-seleccionar el mismo archivo
+		if (!archivo) return;
+		setErrorFoto(null);
+		setSubiendoFoto(true);
+		try {
+			const form = new FormData();
+			form.append("foto", archivo);
+			await axiosClient.post(API_ROUTES.LABORATORIOS.SUBIR_FOTO(id), form, {
+				headers: { "Content-Type": "multipart/form-data" },
+			});
+			queryClient.invalidateQueries(["equipo-detail", id]);
+		} catch (err) {
+			const msg = err?.response?.data?.foto || "No se pudo subir la imagen.";
+			setErrorFoto(typeof msg === "string" ? msg : "No se pudo subir la imagen.");
+		} finally {
+			setSubiendoFoto(false);
 		}
 	};
 
@@ -148,6 +171,27 @@ export default function EquipoDetailPage() {
 				}}>
 					<div style={{ width: 260, flexShrink: 0 }}>
 						<FotoEquipo url={equipo.foto_url} nombre={equipo.nombre} size="lg" />
+						<label
+							style={{
+								display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+								marginTop: 10, padding: "8px 12px", fontSize: 13, fontWeight: 600,
+								color: "#003366", border: "1px dashed #93b4d8", borderRadius: 8,
+								cursor: subiendoFoto ? "wait" : "pointer", backgroundColor: "#f8fafc",
+							}}
+						>
+							<ImagePlus size={16} />
+							{subiendoFoto ? "Subiendo…" : equipo.foto_url ? "Cambiar foto" : "Subir foto"}
+							<input
+								type="file"
+								accept="image/png,image/jpeg,image/webp,image/gif"
+								onChange={handleSubirFoto}
+								disabled={subiendoFoto}
+								style={{ display: "none" }}
+							/>
+						</label>
+						{errorFoto && (
+							<p style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>{errorFoto}</p>
+						)}
 					</div>
 					<div style={{ flex: 1, minWidth: 260, display: "flex", flexDirection: "column", gap: 4 }}>
 						<div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>

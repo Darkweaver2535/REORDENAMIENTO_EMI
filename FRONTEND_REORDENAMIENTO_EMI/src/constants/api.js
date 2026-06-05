@@ -36,6 +36,8 @@ export const API_ROUTES = {
     EQUIPO_DETALLE: (id) => `${BASE_URL}/api/v1/laboratorios/equipos/${id}/`,
     EVALUACION_INSITU: (id) =>
       `${BASE_URL}/api/v1/laboratorios/equipos/${id}/evaluacion-insitu/`,
+    SUBIR_FOTO: (id) =>
+      `${BASE_URL}/api/v1/laboratorios/equipos/${id}/subir-foto/`,
   },
 
   REORDENAMIENTO: {
@@ -55,6 +57,7 @@ export const API_ROUTES = {
   USUARIOS: {
     BASE: `${BASE_URL}/api/v1/usuarios/`,
     DETALLE: (id) => `${BASE_URL}/api/v1/usuarios/${id}/`,
+    AUDITORIA: `${BASE_URL}/api/v1/usuarios/auditoria/`,
   },
 
   CONFIGURACION: {
