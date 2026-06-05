@@ -150,7 +150,15 @@ class InventoryAnalyticsService:
 
 	@classmethod
 	def comparar_sedes_para_equipo(cls, nombre_equipo_teorico):
-		nombre_equipo_teorico = (nombre_equipo_teorico or "").strip()
+		# FIX #17: búsqueda por término. Se usa icontains (substring) DELIBERADAMENTE
+		# porque la nomenclatura es asimétrica: el nombre teórico de la guía es corto
+		# ("BALANZA DIGITAL") y el nombre físico del equipo es una descripción larga
+		# ("BALANZA DIGITAL CAP.30 KG..."). Un match exacto daría 0 coincidencias.
+		# Se normaliza el término (espacios colapsados) para mayor robustez.
+		# Limitación conocida: un término genérico puede agrupar variantes distintas
+		# (p. ej. "MICROSCOPIO" → óptico y electrónico). Mientras no exista un
+		# catálogo canónico de equipos, esta búsqueda es por coincidencia de texto.
+		nombre_equipo_teorico = " ".join((nombre_equipo_teorico or "").split())
 		if not nombre_equipo_teorico:
 			return []
 
@@ -250,69 +258,119 @@ class InventoryAnalyticsService:
 
 	@classmethod
 	def obtener_resumen_nacional(cls):
-		from django.db.models import Sum, F, ExpressionWrapper, IntegerField, Max, Count
-		from apps.laboratorios.models import Equipo, EquipoRequeridoPorGuia
-		
+		from django.db.models import F, ExpressionWrapper, IntegerField, Max
+		from apps.laboratorios.models import Equipo, EquipoRequeridoPorGuia, Laboratorio
+
+		def _norm(s):
+			# Normaliza nombre para agrupar: sin espacios extremos, espacios
+			# internos colapsados y en mayúsculas.
+			return " ".join((s or "").split()).upper()
+
 		total_equipos = Equipo.objects.count()
 		malos_regulares = Equipo.objects.filter(estatus_general__in=['malo', 'regular']).count()
 		pct_malo_regular = round((malos_regulares / total_equipos * 100), 2) if total_equipos > 0 else 0
 
+		# Mapa de laboratorios (1 query): id -> (nombre, sede)
+		labs_info = {
+			lab.id: (lab.nombre, lab.unidad_academica.nombre if lab.unidad_academica_id else None)
+			for lab in Laboratorio.objects.select_related('unidad_academica')
+		}
+
+		# ── Demanda por (nombre_teórico, lab) y déficit por sede ──────────────
 		sedes_deficit = {}
-		reqs = EquipoRequeridoPorGuia.objects.select_related('equipo', 'guia__asignatura').prefetch_related('guia__asignatura__laboratorios__unidad_academica')
+		demanda_por_nombre_lab = {}  # (nombre_norm, lab_id) -> requerido
+		reqs = EquipoRequeridoPorGuia.objects.select_related(
+			'equipo', 'guia__asignatura'
+		).prefetch_related('guia__asignatura__laboratorios__unidad_academica')
 		for req in reqs:
-			if not req.guia.asignatura: continue
+			if not req.guia.asignatura:
+				continue
+			nombre_norm = _norm(req.nombre_equipo_teorico)
+			disp_eq = req.equipo.cantidad_disponible() if req.equipo else 0
 			for lab in req.guia.asignatura.laboratorios.all():
+				key = (nombre_norm, lab.id)
+				demanda_por_nombre_lab[key] = (
+					demanda_por_nombre_lab.get(key, 0) + req.cantidad_requerida
+				)
 				if lab.unidad_academica:
-					sede_name = lab.unidad_academica.nombre
-					disp = req.equipo.cantidad_disponible() if req.equipo else 0
-					deficit = max(0, req.cantidad_requerida - disp)
+					deficit = max(0, req.cantidad_requerida - disp_eq)
 					if deficit > 0:
+						sede_name = lab.unidad_academica.nombre
 						sedes_deficit[sede_name] = sedes_deficit.get(sede_name, 0) + deficit
 
-		top_sedes_deficit = sorted([{"sede": k, "deficit": v} for k, v in sedes_deficit.items()], key=lambda x: x["deficit"], reverse=True)[:5]
+		top_sedes_deficit = sorted(
+			[{"sede": k, "deficit": v} for k, v in sedes_deficit.items()],
+			key=lambda x: x["deficit"], reverse=True,
+		)[:5]
 
+		# ── Disponibilidad por (nombre, lab), excedentes y distribución ──────
 		equipos = Equipo.objects.annotate(
 			max_req=Max('guias_que_requieren__cantidad_requerida'),
-			disp=ExpressionWrapper(F('cantidad_buena') + F('cantidad_regular'), output_field=IntegerField())
+			disp=ExpressionWrapper(
+				F('cantidad_buena') + F('cantidad_regular'), output_field=IntegerField()
+			),
 		).select_related('laboratorio__unidad_academica')
 
 		total_reasignable = 0
-		oportunidades_map = {}
+		nombres_con_excedente = set()
+		disponible_por_nombre_lab = {}  # (nombre_norm, lab_id) -> disponible
 		dist_sedes = {}
-		
+
 		for eq in equipos:
 			disp = eq.disp or 0
 			max_req = eq.max_req or 0
+			nombre_norm = _norm(eq.nombre)
+			if eq.laboratorio_id:
+				key = (nombre_norm, eq.laboratorio_id)
+				disponible_por_nombre_lab[key] = disponible_por_nombre_lab.get(key, 0) + disp
 			excedente = max(0, disp - max_req)
 			if excedente > 0 and (disp > max_req * 2 or max_req == 0):
 				total_reasignable += excedente
-				nombre = eq.nombre.strip().upper()
-				if nombre not in oportunidades_map:
-					oportunidades_map[nombre] = True
-			
-			sede = eq.laboratorio.unidad_academica.nombre if eq.laboratorio and eq.laboratorio.unidad_academica else "Sin Asignar"
+				nombres_con_excedente.add(nombre_norm)
+			sede = (
+				eq.laboratorio.unidad_academica.nombre
+				if eq.laboratorio and eq.laboratorio.unidad_academica else "Sin Asignar"
+			)
 			dist_sedes[sede] = dist_sedes.get(sede, 0) + disp
 
+		# ── Oportunidades: cruce en memoria (FIX #13: elimina el N+1) ────────
+		# Antes se llamaba comparar_sedes_para_equipo(nombre) por cada nombre con
+		# excedente (~660 llamadas → ~2000 queries). Ahora se indexa una sola vez
+		# por nombre y se cruzan en memoria las sedes con excedente vs. déficit del
+		# MISMO equipo. El cruce es por nombre normalizado (mismo activo entre
+		# sedes), que es semánticamente lo correcto para sugerir reasignaciones.
+		por_nombre = {}  # nombre_norm -> {lab_id: [disp, req]}
+		for (nombre, lab_id), disp in disponible_por_nombre_lab.items():
+			por_nombre.setdefault(nombre, {}).setdefault(lab_id, [0, 0])[0] = disp
+		for (nombre, lab_id), req in demanda_por_nombre_lab.items():
+			por_nombre.setdefault(nombre, {}).setdefault(lab_id, [0, 0])[1] = req
+
 		oportunidades_reales = []
-		for nombre in oportunidades_map.keys():
-			comp = cls.comparar_sedes_para_equipo(nombre)
-			sedes_con_excedente = [s for s in comp if s["cantidad_disponible"] > (s["cantidad_requerida"] * 2) or (s["cantidad_requerida"] == 0 and s["cantidad_disponible"] > 0)]
-			sedes_con_deficit = [s for s in comp if s["deficit"] > 0]
-			
-			if sedes_con_excedente and sedes_con_deficit:
-				for exc in sedes_con_excedente:
-					for defc in sedes_con_deficit:
-						excedente_real = exc["cantidad_disponible"] - exc["cantidad_requerida"]
-						mov = min(excedente_real, defc["deficit"])
-						if mov > 0:
-							oportunidades_reales.append({
-								"equipo": nombre,
-								"origen": exc["sede"],
-								"lab_origen": exc["laboratorio"],
-								"destino": defc["sede"],
-								"lab_destino": defc["laboratorio"],
-								"cantidad_sugerida": mov
-							})
+		for nombre in nombres_con_excedente:
+			filas = por_nombre.get(nombre, {})
+			con_excedente = [
+				(lab_id, d, r) for lab_id, (d, r) in filas.items()
+				if d > r * 2 or (r == 0 and d > 0)
+			]
+			con_deficit = [
+				(lab_id, d, r) for lab_id, (d, r) in filas.items() if r - d > 0
+			]
+			for (lo, d_o, r_o) in con_excedente:
+				for (ld, d_d, r_d) in con_deficit:
+					if lo == ld:
+						continue
+					mov = min(d_o - r_o, r_d - d_d)
+					if mov > 0:
+						lab_o = labs_info.get(lo, (None, None))
+						lab_d = labs_info.get(ld, (None, None))
+						oportunidades_reales.append({
+							"equipo": nombre,
+							"origen": lab_o[1],
+							"lab_origen": lab_o[0],
+							"destino": lab_d[1],
+							"lab_destino": lab_d[0],
+							"cantidad_sugerida": mov,
+						})
 
 		oportunidades_reales.sort(key=lambda x: x["cantidad_sugerida"], reverse=True)
 		distribucion = [{"sede": k, "cantidad": v} for k, v in dist_sedes.items() if v > 0]
@@ -325,8 +383,38 @@ class InventoryAnalyticsService:
 			},
 			"top_sedes_deficit": top_sedes_deficit,
 			"distribucion_sedes": distribucion,
-			"oportunidades": oportunidades_reales[:5]
+			"oportunidades": oportunidades_reales[:5],
 		}
+
+	@classmethod
+	def uso_equipos_de_laboratorio(cls, laboratorio_id):
+		"""Versión por lote de calcular_uso_equipo para todos los equipos del lab.
+
+		FIX #13: antes se llamaba calcular_uso_equipo(equipo_id) en un bucle, y
+		cada llamada disparaba varias queries (N+1). Aquí se resuelve con una sola
+		query agregada (Count anotado por equipo) + una para el total de prácticas.
+		"""
+		total_practicas_lab = cls._total_practicas_laboratorio(laboratorio_id)
+		equipos = (
+			Equipo.objects.filter(laboratorio_id=laboratorio_id)
+			.annotate(practicas_uso=Count("guias_que_requieren__guia", distinct=True))
+		)
+
+		resultado = []
+		for equipo in equipos:
+			cantidad_disponible = equipo.cantidad_buena + equipo.cantidad_regular
+			pct_uso = 0.0
+			if total_practicas_lab > 0:
+				pct_uso = round((equipo.practicas_uso / total_practicas_lab) * 100, 2)
+			resultado.append({
+				"equipo_id": equipo.id,
+				"nombre": equipo.nombre,
+				"cantidad_disponible": cantidad_disponible,
+				"total_practicas_que_usa": equipo.practicas_uso,
+				"pct_uso": pct_uso,
+				"es_ocioso": pct_uso == 0,
+			})
+		return resultado
 
 	@classmethod
 	def calcular(cls, laboratorio_id):
@@ -335,17 +423,16 @@ class InventoryAnalyticsService:
 		if cached is not None:
 			return cached
 
-		laboratorio = Laboratorio.objects.select_related("unidad_academica").prefetch_related("equipos").get(
+		laboratorio = Laboratorio.objects.select_related("unidad_academica").get(
 			id=laboratorio_id
 		)
 
-		uso_equipos = [cls.calcular_uso_equipo(equipo.id) for equipo in laboratorio.equipos.all()]
 		data = {
 			"laboratorio_id": laboratorio.id,
 			"deficits": cls.calcular_deficit_laboratorio(laboratorio_id),
 			"ratio": cls.calcular_ratio_por_estudiantes(laboratorio_id),
 			"excedentes": cls.detectar_excedentes(laboratorio_id),
-			"uso_equipos": uso_equipos,
+			"uso_equipos": cls.uso_equipos_de_laboratorio(laboratorio_id),
 		}
 
 		cache.set(cache_key, data, timeout=cls.CACHE_TTL)

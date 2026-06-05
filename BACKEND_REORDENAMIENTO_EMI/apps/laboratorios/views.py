@@ -102,26 +102,14 @@ class LaboratorioViewSet(ModelViewSet):
 
 	@action(detail=True, methods=["get"], url_path="analytics")
 	def analytics(self, request, pk=None):
-		"""Obtiene analítica del laboratorio con caché Redis."""
+		"""Obtiene analítica del laboratorio.
+
+		FIX #19: antes esta action duplicaba la lógica (y el cacheo) de
+		InventoryAnalyticsService.calcular(). Ahora delega en el service, que ya
+		gestiona el caché Redis y, además, calcula el uso de equipos por lote (#13).
+		"""
 		laboratorio = self.get_object()
-
-		cache_key = f"analytics:{laboratorio.id}"
-		data = cache.get(cache_key)
-
-		if not data:
-			service = InventoryAnalyticsService()
-			data = {
-				"deficit": service.calcular_deficit_laboratorio(laboratorio.id),
-				"uso_equipos": [
-					service.calcular_uso_equipo(e.id) for e in laboratorio.equipos.all()
-				],
-				"ratio_estudiantes": service.calcular_ratio_por_estudiantes(
-					laboratorio.id
-				),
-				"excedentes": service.detectar_excedentes(laboratorio.id),
-			}
-			cache.set(cache_key, data, 3600)  # TTL 1 hora
-
+		data = InventoryAnalyticsService.calcular(laboratorio.id)
 		return Response(data, status=status.HTTP_200_OK)
 
 
