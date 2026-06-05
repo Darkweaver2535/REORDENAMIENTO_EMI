@@ -10,7 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Seguridad
 SECRET_KEY = config("DJANGO_SECRET_KEY")
-DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
+# SEGURIDAD: el default es False. Para desarrollo local agrega DJANGO_DEBUG=True en el .env.
+DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
 

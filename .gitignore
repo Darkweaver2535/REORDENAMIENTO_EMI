@@ -15,3 +15,8 @@ env/
 
 # Django
 *.sqlite3
+
+# Variables de entorno — NUNCA versionar, contienen secretos
+.env
+.env.*
+!.env.example   # solo el ejemplo sin valores reales puede versionarse

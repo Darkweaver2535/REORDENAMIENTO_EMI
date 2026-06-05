@@ -83,7 +83,20 @@ class SAGAAuthBackend(BaseBackend):
 			user.set_unusable_password()
 			user.save(update_fields=["password"])
 			logger.info("Usuario creado desde SAGA: CI=%s", carnet)
+			# FIX #3: los usuarios recién creados siempre están activos, pero
+			# pasamos por user_can_authenticate() por consistencia y para
+			# cubrir cualquier override futuro.
+			if not self.user_can_authenticate(user):
+				logger.warning("Usuario creado desde SAGA pero is_active=False: CI=%s", carnet)
+				return None
 			return user
+
+		# FIX #3: verificar is_active ANTES de sincronizar y devolver.
+		# Sin este check, un usuario desactivado manualmente podía seguir
+		# entrando si SAGA lo aceptaba.
+		if not self.user_can_authenticate(user):
+			logger.warning("Autenticacion SAGA rechazada: usuario inactivo CI=%s", carnet)
+			return None
 
 		update_fields = []
 		if user.nombre_completo != nombre:

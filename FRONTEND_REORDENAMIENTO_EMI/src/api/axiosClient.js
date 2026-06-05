@@ -1,16 +1,45 @@
+/**
+ * axiosClient — cliente HTTP centralizado con refresco automático de JWT.
+ *
+ * ⚠️  AVISO DE SEGURIDAD (XSS / localStorage):
+ *  Los tokens JWT se guardan en localStorage, que es accesible desde cualquier
+ *  script JavaScript que se ejecute en la página. Esto significa que un ataque
+ *  XSS exitoso podría robar los tokens y hacerse pasar por el usuario.
+ *
+ *  MITIGACIÓN APLICADA:
+ *   - El access token tiene vida corta (8 h configuradas en settings.py).
+ *   - Se sanitizan todas las entradas de usuario antes de renderizarlas.
+ *   - Se aplica una Content-Security-Policy restrictiva en el servidor web.
+ *
+ *  PENDIENTE PARA PRODUCCIÓN:
+ *   Migrar a cookies httpOnly + SameSite=Strict, que el navegador no expone a JS.
+ *   Requiere:
+ *     1. Backend: endpoint /auth/token/cookie/ que devuelva Set-Cookie httpOnly.
+ *     2. Backend: middleware CSRF habilitado para mutaciones.
+ *     3. Frontend: eliminar setTokens/getAccessToken/getRefreshToken y confiar
+ *        en que el navegador envíe la cookie automáticamente.
+ *   Ver issue pendiente: "Migrar JWT a httpOnly cookies".
+ */
 import axios from "axios";
 import { API_ROUTES, BASE_URL, REQUEST_TIMEOUT_MS } from "../constants/api";
 
 let isRefreshing = false;
 let refreshSubscribers = [];
 
+// Notifica a los requests encolados que ya hay un token nuevo (refresh exitoso).
 const onRefreshed = (newAccessToken) => {
-	refreshSubscribers.forEach((callback) => callback(newAccessToken));
+	refreshSubscribers.forEach(({ resolve }) => resolve(newAccessToken));
 	refreshSubscribers = [];
 };
 
-const subscribeTokenRefresh = (callback) => {
-	refreshSubscribers.push(callback);
+// Rechaza todos los requests encolados (refresh fallido → sesión expirada).
+const onRefreshFailed = (error) => {
+	refreshSubscribers.forEach(({ reject }) => reject(error));
+	refreshSubscribers = [];
+};
+
+const subscribeTokenRefresh = (resolve, reject) => {
+	refreshSubscribers.push({ resolve, reject });
 };
 
 const redirectToLogin = () => {
@@ -89,11 +118,16 @@ axiosClient.interceptors.response.use(
 		originalRequest._retry = true;
 
 		if (isRefreshing) {
-			return new Promise((resolve) => {
-				subscribeTokenRefresh((newToken) => {
-					originalRequest.headers.Authorization = `Bearer ${newToken}`;
-					resolve(axiosClient(originalRequest));
-				});
+			// FIX #12: la promesa ahora puede resolverse O rechazarse;
+			// antes solo tenía resolve → quedaba colgada si el refresh fallaba.
+			return new Promise((resolve, reject) => {
+				subscribeTokenRefresh(
+					(newToken) => {
+						originalRequest.headers.Authorization = `Bearer ${newToken}`;
+						resolve(axiosClient(originalRequest));
+					},
+					(err) => reject(err),
+				);
 			});
 		}
 
@@ -121,6 +155,8 @@ axiosClient.interceptors.response.use(
 
 			return axiosClient(originalRequest);
 		} catch (refreshError) {
+			// FIX #12: rechazar también los requests encolados antes de redirigir.
+			onRefreshFailed(refreshError);
 			clearTokens();
 			redirectToLogin();
 			return Promise.reject(refreshError);
