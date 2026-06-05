@@ -154,11 +154,14 @@ SIMPLE_JWT = {
 
 
 # CORS
-#CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+# FIX #21: se lee de la variable de entorno CORS_ALLOWED_ORIGINS (CSV) en lugar
+# de estar hardcodeado. El default cubre el puerto de Vite (5173) para desarrollo
+# local; en producción se define en el .env / variables del servidor.
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:5173,http://127.0.0.1:5173",
+    cast=Csv(),
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
