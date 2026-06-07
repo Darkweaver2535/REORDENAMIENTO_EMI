@@ -22,6 +22,7 @@ import requests
 from django.conf import settings
 from django.db.models import Count, Q
 
+from apps.estructura_academica.models import UnidadAcademica
 from apps.laboratorios.models import Equipo, TipoEquipo
 
 # ── Configuración (sobrescribible por variables de entorno) ──────────────────
@@ -113,18 +114,42 @@ def detectar_tipos(pregunta, limite=3):
 # ── Construcción del contexto determinista ───────────────────────────────────
 def _resumen_global():
     total = Equipo.objects.count()
-    por_sede = [
-        {
-            "sede": _sede_label(r["unidad_academica__abreviacion"], r["unidad_academica__nombre"]),
-            "total": r["total"],
-            "buenos": r["buenos"],
-            "regulares": r["regulares"],
-            "malos": r["malos"],
-        }
-        for r in Equipo.objects.values("unidad_academica__abreviacion", "unidad_academica__nombre")
-        .annotate(total=Count("id"), **_COND)
-        .order_by("-total")
-    ]
+
+    # Conteos por unidad (solo las que tienen equipos).
+    counts = {
+        r["unidad_academica_id"]: r
+        for r in Equipo.objects.values("unidad_academica_id").annotate(total=Count("id"), **_COND)
+    }
+
+    # Se incluyen TODAS las unidades académicas, con total=0 si no tienen equipos,
+    # para poder responder "¿qué unidad tiene 0 equipos?".
+    por_sede = []
+    for ua in UnidadAcademica.objects.all():
+        c = counts.get(ua.id)
+        por_sede.append(
+            {
+                "sede": ua.abreviacion or ua.codigo,
+                "nombre": ua.nombre,
+                "total": c["total"] if c else 0,
+                "buenos": c["buenos"] if c else 0,
+                "regulares": c["regulares"] if c else 0,
+                "malos": c["malos"] if c else 0,
+            }
+        )
+    if None in counts:  # equipos sin unidad asignada
+        c = counts[None]
+        por_sede.append(
+            {
+                "sede": "Sin unidad",
+                "nombre": "Sin unidad",
+                "total": c["total"],
+                "buenos": c["buenos"],
+                "regulares": c["regulares"],
+                "malos": c["malos"],
+            }
+        )
+    por_sede.sort(key=lambda x: x["total"], reverse=True)
+
     top_tipos = [
         {"tipo": r["tipo__nombre"], "total": r["total"]}
         for r in Equipo.objects.filter(tipo__isnull=False)
@@ -132,7 +157,13 @@ def _resumen_global():
         .annotate(total=Count("id"))
         .order_by("-total")[:12]
     ]
-    return {"total_equipos_nacional": total, "por_sede": por_sede, "tipos_mas_comunes": top_tipos}
+    return {
+        "total_equipos_nacional": total,
+        "total_unidades_academicas": len(por_sede),
+        "unidades_sin_equipos": [s["sede"] for s in por_sede if s["total"] == 0],
+        "por_sede": por_sede,
+        "tipos_mas_comunes": top_tipos,
+    }
 
 
 def _detalle_tipo(tipo):

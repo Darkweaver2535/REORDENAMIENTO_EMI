@@ -104,6 +104,17 @@ class ConsultaGerencialTests(TestCase):
         self.assertNotIn("detalle_por_tipo", ctx)
         self.assertEqual(ctx["resumen_nacional"]["total_equipos_nacional"], 4)
 
+    def test_contexto_incluye_unidades_sin_equipos(self):
+        """Una UA sin equipos aparece con total 0 y en 'unidades_sin_equipos'."""
+        UnidadAcademica.objects.create(
+            nombre="Sin Equipos", ciudad="X", codigo="UASE", abreviacion="UASE", is_active=True
+        )
+        ctx = construir_contexto("¿qué unidad tiene 0 equipos?")
+        resumen = ctx["resumen_nacional"]
+        self.assertIn("UASE", resumen["unidades_sin_equipos"])
+        fila = next(s for s in resumen["por_sede"] if s["sede"] == "UASE")
+        self.assertEqual(fila["total"], 0)
+
     # ── Endpoint (IA mockeada para no depender de Ollama) ─────────────────────
     def test_endpoint_sin_pregunta_400(self):
         resp = _client_as(self.admin).post(
