@@ -103,6 +103,19 @@ class ConsultaGerencialTests(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch("apps.reportes.consultas.consultar_ollama")
+    def test_saludo_no_vuelca_datos(self, mock_ollama):
+        """Un saludo se responde conversacionalmente, sin invocar la IA ni datos."""
+        resp = _client_as(self.admin).post(
+            "/api/v1/reportes/consulta-gerencial/",
+            {"pregunta": "hola, oye una pregunta"},
+            format="json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.data["conversacional"])
+        self.assertEqual(resp.data["datos"], {})
+        mock_ollama.assert_not_called()  # no se llama al modelo para un saludo
+
     @patch(
         "apps.reportes.consultas.consultar_ollama",
         return_value=("Respuesta IA simulada", "gemma-test", True),

@@ -161,6 +161,53 @@ def construir_contexto(pregunta):
     return contexto
 
 
+# ── Detección de intención: ¿es una consulta sobre el inventario? ────────────
+_KEYWORDS_DATOS = (
+    "CUANT",  # cuanto/cuantos/cuantas
+    "INVENT",
+    "EQUIP",
+    "LABORATOR",
+    "SEDE",
+    "UNIDAD",
+    "DISTRIBU",
+    "DEFICIT",
+    "EXCEDENTE",
+    "MANTENIMIENTO",
+    "REORDEN",
+    "CONDICION",
+    "ESTADO",
+    "MALO",
+    "MALA",
+    "BUENO",
+    "REGULAR",
+    "CATALOG",
+    "CANTIDAD",
+    "NACIONAL",
+    "DONDE",
+    "COMPARATIV",
+    "TOTAL",
+    "INVENTARIO",
+)
+
+
+def tiene_intencion_datos(pregunta):
+    """True si la pregunta parece pedir información del inventario."""
+    if detectar_tipos(pregunta):
+        return True
+    norm = _norm(pregunta)
+    return any(k in norm for k in _KEYWORDS_DATOS)
+
+
+MENSAJE_BIENVENIDA = (
+    "¡Hola! Soy el asistente gerencial del inventario de laboratorios de la EMI. "
+    "Puedo responder preguntas sobre los equipos a nivel nacional. Por ejemplo:\n"
+    "• ¿Cuántos microscopios hay y cómo están distribuidos?\n"
+    "• ¿Qué unidad académica tiene más balanzas?\n"
+    "• ¿Cuántos equipos en mal estado hay y dónde se concentran?\n"
+    "Escribe tu consulta y con gusto te ayudo."
+)
+
+
 # ── Respuesta de respaldo (sin LLM) ──────────────────────────────────────────
 def _respuesta_respaldo(contexto):
     detalles = contexto.get("detalle_por_tipo")
@@ -191,6 +238,8 @@ SYSTEM_PROMPT = (
     "- Si el contexto no contiene la información, dilo claramente.\n"
     "- Responde en español, de forma concisa y ejecutiva (máx. ~150 palabras).\n"
     "- Cuando sea útil, menciona cifras concretas y la distribución por unidad académica.\n"
+    "- Si el usuario solo saluda o no hace una pregunta concreta sobre el inventario, "
+    "salúdalo brevemente e invítalo a preguntar; NO listes datos del inventario.\n"
     "- No muestres el JSON ni tu razonamiento interno; da solo la respuesta final."
 )
 
@@ -237,7 +286,21 @@ def consultar_ollama(pregunta, contexto):
 
 
 def responder_consulta(pregunta):
-    """Orquesta: contexto determinista + redacción del modelo."""
+    """Orquesta: contexto determinista + redacción del modelo.
+
+    Si el mensaje no es una consulta sobre el inventario (saludo, charla), se
+    responde de forma conversacional sin volcar datos ni invocar al modelo.
+    """
+    if not tiene_intencion_datos(pregunta):
+        return {
+            "pregunta": pregunta,
+            "respuesta": MENSAJE_BIENVENIDA,
+            "datos": {},
+            "modelo": None,
+            "ia_disponible": False,
+            "conversacional": True,
+        }
+
     contexto = construir_contexto(pregunta)
     respuesta, modelo, ok = consultar_ollama(pregunta, contexto)
     return {
@@ -246,4 +309,5 @@ def responder_consulta(pregunta):
         "datos": contexto,
         "modelo": modelo,
         "ia_disponible": ok,
+        "conversacional": False,
     }

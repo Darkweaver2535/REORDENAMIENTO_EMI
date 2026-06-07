@@ -138,10 +138,12 @@ export default function ConsultaGerencial() {
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Sparkles size={18} style={{ color: "#002B5E" }} />
               <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: 0 }}>Respuesta</h3>
-              <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: resultado.ia_disponible ? "#16a34a" : "#d97706", backgroundColor: resultado.ia_disponible ? "#f0fdf4" : "#fffbeb", border: `1px solid ${resultado.ia_disponible ? "#bbf7d0" : "#fde68a"}`, borderRadius: 999, padding: "3px 10px" }}>
-                {resultado.ia_disponible ? <Cpu size={12} /> : <Database size={12} />}
-                {resultado.ia_disponible ? `IA local (${resultado.modelo})` : "Resumen de datos (IA no disponible)"}
-              </span>
+              {!resultado.conversacional && (
+                <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: resultado.ia_disponible ? "#16a34a" : "#d97706", backgroundColor: resultado.ia_disponible ? "#f0fdf4" : "#fffbeb", border: `1px solid ${resultado.ia_disponible ? "#bbf7d0" : "#fde68a"}`, borderRadius: 999, padding: "3px 10px" }}>
+                  {resultado.ia_disponible ? <Cpu size={12} /> : <Database size={12} />}
+                  {resultado.ia_disponible ? `IA local (${resultado.modelo})` : "Resumen de datos (IA no disponible)"}
+                </span>
+              )}
             </div>
             <div>{renderRespuesta(resultado.respuesta)}</div>
           </div>
