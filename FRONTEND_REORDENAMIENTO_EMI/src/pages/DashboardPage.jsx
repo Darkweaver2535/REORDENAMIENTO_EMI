@@ -150,7 +150,6 @@ export default function DashboardPage() {
     { title: 'Guías de Laboratorio', desc: 'Consulta y descarga prácticas', icon: BookOpen, href: '/guias', iconBg: '#EFF6FF', iconColor: '#002B5E', visible: true },
     { title: 'Laboratorios', desc: 'Gestión de equipos y evaluaciones', icon: FlaskConical, href: '/laboratorios', iconBg: '#ECFDF5', iconColor: '#065f46', visible: hasRole('admin', 'jefe', 'encargado_activos') },
     { title: 'Reordenamiento', desc: 'Movimientos entre unidades académicas', icon: ArrowLeftRight, href: '/reordenamientos', iconBg: '#FFFBEB', iconColor: '#92400e', visible: hasRole('admin', 'jefe') },
-    { title: 'Tipos de equipo', desc: 'Catálogo canónico de equipos', icon: Tags, href: '/admin/tipos-equipo', iconBg: '#F5F3FF', iconColor: '#6d28d9', visible: hasRole('admin', 'jefe') },
     { title: 'Reportes', desc: 'Exportación de datos en PDF', icon: FileText, href: '/reportes', iconBg: '#F0F9FF', iconColor: '#0284c7', visible: hasRole('admin', 'jefe') },
   ].filter(c => c.visible);
 

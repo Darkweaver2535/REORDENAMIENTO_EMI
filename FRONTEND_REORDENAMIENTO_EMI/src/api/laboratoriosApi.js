@@ -1,5 +1,5 @@
 import httpClient from "./httpClient";
-import { API_ENDPOINTS, API_ROUTES } from "../constants/api";
+import { API_ENDPOINTS } from "../constants/api";
 
 export const fetchLaboratorios = (params) =>
   httpClient.get(API_ENDPOINTS.laboratorios.base, { params });
@@ -29,16 +29,3 @@ export const fetchLaboratoriosTree = () =>
 /** Analítica de un laboratorio: déficits, ratio, excedentes y uso de equipos (#9). */
 export const fetchLaboratorioAnalytics = (id) =>
   httpClient.get(API_ENDPOINTS.laboratorios.analytics(id));
-
-/* ── Catálogo canónico de tipos de equipo (#12) ──────────────────────────── */
-export const fetchTiposEquipo = (params) =>
-  httpClient.get(API_ROUTES.LABORATORIOS.TIPOS, { params });
-
-export const createTipoEquipo = (payload) =>
-  httpClient.post(API_ROUTES.LABORATORIOS.TIPOS, payload);
-
-export const updateTipoEquipo = (id, payload) =>
-  httpClient.patch(API_ROUTES.LABORATORIOS.TIPO_DETALLE(id), payload);
-
-export const deleteTipoEquipo = (id) =>
-  httpClient.delete(API_ROUTES.LABORATORIOS.TIPO_DETALLE(id));

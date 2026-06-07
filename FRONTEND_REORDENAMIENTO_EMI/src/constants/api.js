@@ -38,8 +38,6 @@ export const API_ROUTES = {
       `${BASE_URL}/api/v1/laboratorios/equipos/${id}/evaluacion-insitu/`,
     SUBIR_FOTO: (id) =>
       `${BASE_URL}/api/v1/laboratorios/equipos/${id}/subir-foto/`,
-    TIPOS: `${BASE_URL}/api/v1/laboratorios/tipos-equipo/`,
-    TIPO_DETALLE: (id) => `${BASE_URL}/api/v1/laboratorios/tipos-equipo/${id}/`,
   },
 
   REORDENAMIENTO: {
