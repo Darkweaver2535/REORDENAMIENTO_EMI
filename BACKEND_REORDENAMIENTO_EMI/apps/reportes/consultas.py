@@ -15,6 +15,7 @@ un resumen de respaldo, de modo que la función sigue siendo útil sin el modelo
 """
 
 import json
+import re
 import unicodedata
 
 import requests
@@ -67,22 +68,42 @@ _STOPWORDS_TIPO = {
 }
 
 
+def _stem(palabra):
+    """Raíz simple para comparar ignorando plurales (microscopios→microscopio).
+
+    Quita signos de puntuación y la terminación de plural (-es / -s). Evita los
+    falsos positivos por substring (p. ej. el tipo basura 'EQUIP' ya NO coincide
+    con 'equipos', porque sus raíces difieren: EQUIP vs EQUIPO).
+    """
+    palabra = re.sub(r"[^A-Z0-9]", "", palabra)
+    if len(palabra) > 4 and palabra.endswith("ES"):
+        return palabra[:-2]
+    if len(palabra) > 3 and palabra.endswith("S"):
+        return palabra[:-1]
+    return palabra
+
+
 # ── Detección de tipos de equipo mencionados en la pregunta ──────────────────
 def detectar_tipos(pregunta, limite=3):
-    """Devuelve los TipoEquipo del catálogo cuyo nombre aparece en la pregunta."""
-    norm = _norm(pregunta)
-    tokens = set(norm.split())
+    """Devuelve los TipoEquipo del catálogo mencionados explícitamente.
+
+    Compara por tokens completos (con normalización de plural), no por substring:
+    todas las palabras del nombre del tipo deben aparecer en la pregunta. Así
+    'microscopios' detecta MICROSCOPIO, pero 'equipos' (palabra genérica) no
+    arrastra tipos espurios.
+    """
+    token_stems = {_stem(t) for t in _norm(pregunta).split()}
+    token_stems.discard("")
     encontrados = []
     for tipo in TipoEquipo.objects.all().only("id", "nombre"):
-        nombre_norm = _norm(tipo.nombre)
-        palabras = nombre_norm.split()
-        primera = palabras[0]
-        # Un tipo de una sola palabra que es conversacional (NIVEL, GENERAL…) se
-        # ignora para no matchear frases como "a nivel nacional".
-        if len(palabras) == 1 and primera in _STOPWORDS_TIPO:
+        palabras = _norm(tipo.nombre).split()
+        if not palabras:
             continue
-        # Match por nombre completo contenido, o por primera palabra como token.
-        if nombre_norm in norm or (primera in tokens and primera not in _STOPWORDS_TIPO):
+        # Tipo genérico de una sola palabra (EQUIPO, NIVEL, GENERAL…): se ignora.
+        if len(palabras) == 1 and palabras[0] in _STOPWORDS_TIPO:
+            continue
+        stems = [_stem(p) for p in palabras]
+        if all(s and s in token_stems for s in stems):
             encontrados.append(tipo)
         if len(encontrados) >= limite:
             break

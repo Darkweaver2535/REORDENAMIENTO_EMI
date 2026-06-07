@@ -74,6 +74,20 @@ class ConsultaGerencialTests(TestCase):
         self.assertIn("MICROSCOPIO", [t.nombre for t in tipos])
         self.assertNotIn("NIVEL", [t.nombre for t in tipos])
 
+    def test_palabra_generica_equipos_no_arrastra_tipo_espurio(self):
+        """'¿unidad con más equipos?' es global: no debe detectar ningún tipo.
+
+        Regresión: un tipo basura como 'EQUIP' coincidía por substring dentro de
+        'equipos'. El matching por raíz (stem) lo evita.
+        """
+        TipoEquipo.objects.create(nombre="EQUIP")  # entrada basura del catálogo
+        tipos = detectar_tipos("¿cuál es la unidad con más equipos?")
+        self.assertEqual(tipos, [])
+
+    def test_detecta_plural(self):
+        tipos = detectar_tipos("¿cómo se distribuyen los microscopios?")
+        self.assertEqual([t.nombre for t in tipos], ["MICROSCOPIO"])
+
     # ── Contexto determinista (cifras reales) ─────────────────────────────────
     def test_contexto_agrega_por_tipo_y_sede(self):
         ctx = construir_contexto("¿Cómo se distribuyen los microscopios?")
