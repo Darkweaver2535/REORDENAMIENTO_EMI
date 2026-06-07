@@ -45,6 +45,11 @@ AUTH_USER_MODEL = "usuarios.Usuario"
 
 SAGA_AUTH_URL = config("SAGA_AUTH_URL", default="")
 
+# IA local para consultas gerenciales (Ollama + gemma)
+OLLAMA_URL = config("OLLAMA_URL", default="http://localhost:11434")
+OLLAMA_MODEL = config("OLLAMA_MODEL", default="gemma4:latest")
+OLLAMA_TIMEOUT = config("OLLAMA_TIMEOUT", default=120, cast=int)
+
 AUTHENTICATION_BACKENDS = (
     "apps.usuarios.backends.SAGAAuthBackend",
     "django.contrib.auth.backends.ModelBackend",

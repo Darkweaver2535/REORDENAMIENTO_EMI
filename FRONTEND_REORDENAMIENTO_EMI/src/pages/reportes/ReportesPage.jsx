@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
 	FileDown, FlaskConical, CalendarRange, BarChart2, Download,
-	Building2, LoaderCircle, Sparkles,
+	Building2, LoaderCircle, Sparkles, MessageSquareText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -23,6 +23,7 @@ import { Navigate } from "react-router-dom";
 import GraficoSeccion, { COLORES_ESTADO } from "../../components/reportes/GraficoSeccion";
 import { useExportSectionPDF } from "../../hooks/useExportSectionPDF";
 import ReporteUnidadAcademica from "./ReporteUnidadAcademica";
+import ConsultaGerencial from "./ConsultaGerencial";
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 const normalize = (d) => { if (!d) return []; const p = d?.data ?? d; if (Array.isArray(p)) return p; return p?.results ?? p?.data ?? []; };
@@ -46,10 +47,11 @@ const fechasSchema = z.object({
 
 /* ── Tabs config ─────────────────────────────────────────────── */
 const TABS = [
+	{ id: "consultas", label: "Consultas Gerenciales", icon: MessageSquareText, isNew: true },
 	{ id: "inventario", label: "Inventario", icon: FlaskConical },
 	{ id: "movimientos", label: "Movimientos", icon: CalendarRange },
 	{ id: "comparativa", label: "Comparativa Unidades Académicas", icon: BarChart2 },
-	{ id: "unidad_academica", label: "Por Unidad Académica", icon: Building2, isNew: true },
+	{ id: "unidad_academica", label: "Por Unidad Académica", icon: Building2 },
 ];
 
 /* ── UI sub-components ───────────────────────────────────────── */
@@ -99,7 +101,7 @@ export default function ReportesPage() {
 	const { hasRole } = useAuth();
 	if (!hasRole(ROLES.ADMIN, ROLES.JEFE)) return <Navigate to="/dashboard" replace />;
 
-	const [activeTab, setActiveTab] = useState("inventario");
+	const [activeTab, setActiveTab] = useState("consultas");
 
 	/* ── Queries ──────────────────────────────────────────── */
 	const { data: labsData, isLoading: loadingLabs } = useQuery({ queryKey: ["laboratorios"], queryFn: fetchLaboratorios, staleTime: 5 * 60 * 1000 });
@@ -197,6 +199,9 @@ export default function ReportesPage() {
 					);
 				})}
 			</div>
+
+			{/* ══ TAB: Consultas Gerenciales (IA) ═══════════════ */}
+			{activeTab === "consultas" && <ConsultaGerencial />}
 
 			{/* ══ TAB: Inventario ═══════════════════════════════ */}
 			{activeTab === "inventario" && (

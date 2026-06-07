@@ -1,0 +1,249 @@
+"""
+Consultas gerenciales con IA local (Ollama + gemma).
+
+Responde preguntas en lenguaje natural sobre el inventario a nivel nacional
+("¿Cuántos microscopios hay y cómo están distribuidos?") combinando:
+
+  1. Un constructor de CONTEXTO determinista que agrega los datos reales con el
+     ORM (totales por sede, condición, laboratorio y tipo de equipo del catálogo
+     canónico #12). Las cifras nunca las inventa el modelo.
+  2. El modelo de lenguaje (gemma vía Ollama) que redacta una respuesta
+     gerencial usando EXCLUSIVAMENTE ese contexto.
+
+Si Ollama no está disponible, se devuelve igualmente el contexto estructurado y
+un resumen de respaldo, de modo que la función sigue siendo útil sin el modelo.
+"""
+
+import json
+import unicodedata
+
+import requests
+from django.conf import settings
+from django.db.models import Count, Q
+
+from apps.laboratorios.models import Equipo, TipoEquipo
+
+# ── Configuración (sobrescribible por variables de entorno) ──────────────────
+OLLAMA_URL = getattr(settings, "OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL = getattr(settings, "OLLAMA_MODEL", "gemma4:latest")
+OLLAMA_TIMEOUT = getattr(settings, "OLLAMA_TIMEOUT", 120)
+
+_COND = {
+    "buenos": Count("id", filter=Q(estatus_general="bueno")),
+    "regulares": Count("id", filter=Q(estatus_general="regular")),
+    "malos": Count("id", filter=Q(estatus_general="malo")),
+}
+
+
+def _norm(texto):
+    texto = " ".join((texto or "").split()).upper()
+    texto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in texto if not unicodedata.combining(c))
+
+
+def _sede_label(abrev, nombre):
+    return abrev or nombre or "Sin unidad"
+
+
+# Palabras que también son nombres de tipo pero aparecen de forma conversacional
+# (p. ej. "a NIVEL nacional", "estado GENERAL"); no deben disparar un match por
+# sí solas para evitar falsos positivos.
+_STOPWORDS_TIPO = {
+    "NIVEL",
+    "GENERAL",
+    "GRADO",
+    "MEDIDA",
+    "EQUIPO",
+    "EQUIPOS",
+    "TIPO",
+    "TIPOS",
+    "ESTADO",
+    "TOTAL",
+    "CONJUNTO",
+    "JUEGO",
+    "UNIDAD",
+    "UNIDADES",
+    "MODELO",
+}
+
+
+# ── Detección de tipos de equipo mencionados en la pregunta ──────────────────
+def detectar_tipos(pregunta, limite=3):
+    """Devuelve los TipoEquipo del catálogo cuyo nombre aparece en la pregunta."""
+    norm = _norm(pregunta)
+    tokens = set(norm.split())
+    encontrados = []
+    for tipo in TipoEquipo.objects.all().only("id", "nombre"):
+        nombre_norm = _norm(tipo.nombre)
+        palabras = nombre_norm.split()
+        primera = palabras[0]
+        # Un tipo de una sola palabra que es conversacional (NIVEL, GENERAL…) se
+        # ignora para no matchear frases como "a nivel nacional".
+        if len(palabras) == 1 and primera in _STOPWORDS_TIPO:
+            continue
+        # Match por nombre completo contenido, o por primera palabra como token.
+        if nombre_norm in norm or (primera in tokens and primera not in _STOPWORDS_TIPO):
+            encontrados.append(tipo)
+        if len(encontrados) >= limite:
+            break
+    return encontrados
+
+
+# ── Construcción del contexto determinista ───────────────────────────────────
+def _resumen_global():
+    total = Equipo.objects.count()
+    por_sede = [
+        {
+            "sede": _sede_label(r["unidad_academica__abreviacion"], r["unidad_academica__nombre"]),
+            "total": r["total"],
+            "buenos": r["buenos"],
+            "regulares": r["regulares"],
+            "malos": r["malos"],
+        }
+        for r in Equipo.objects.values("unidad_academica__abreviacion", "unidad_academica__nombre")
+        .annotate(total=Count("id"), **_COND)
+        .order_by("-total")
+    ]
+    top_tipos = [
+        {"tipo": r["tipo__nombre"], "total": r["total"]}
+        for r in Equipo.objects.filter(tipo__isnull=False)
+        .values("tipo__nombre")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:12]
+    ]
+    return {"total_equipos_nacional": total, "por_sede": por_sede, "tipos_mas_comunes": top_tipos}
+
+
+def _detalle_tipo(tipo):
+    base = Equipo.objects.filter(tipo=tipo)
+    cond = base.aggregate(total=Count("id"), **_COND)
+    por_sede = [
+        {
+            "sede": _sede_label(r["unidad_academica__abreviacion"], r["unidad_academica__nombre"]),
+            "total": r["total"],
+            "buenos": r["buenos"],
+            "regulares": r["regulares"],
+            "malos": r["malos"],
+        }
+        for r in base.values("unidad_academica__abreviacion", "unidad_academica__nombre")
+        .annotate(total=Count("id"), **_COND)
+        .order_by("-total")
+    ]
+    por_laboratorio = [
+        {
+            "laboratorio": r["laboratorio__nombre"] or "Sin asignar",
+            "sede": r["laboratorio__unidad_academica__abreviacion"] or "—",
+            "total": r["total"],
+        }
+        for r in base.values("laboratorio__nombre", "laboratorio__unidad_academica__abreviacion")
+        .annotate(total=Count("id"))
+        .order_by("-total")[:10]
+    ]
+    return {
+        "tipo": tipo.nombre,
+        "total_nacional": cond["total"],
+        "condicion": {
+            "buenos": cond["buenos"],
+            "regulares": cond["regulares"],
+            "malos": cond["malos"],
+        },
+        "distribucion_por_sede": por_sede,
+        "distribucion_por_laboratorio": por_laboratorio,
+    }
+
+
+def construir_contexto(pregunta):
+    """Arma el contexto de datos reales relevante a la pregunta."""
+    contexto = {"resumen_nacional": _resumen_global()}
+    tipos = detectar_tipos(pregunta)
+    if tipos:
+        contexto["detalle_por_tipo"] = [_detalle_tipo(t) for t in tipos]
+    return contexto
+
+
+# ── Respuesta de respaldo (sin LLM) ──────────────────────────────────────────
+def _respuesta_respaldo(contexto):
+    detalles = contexto.get("detalle_por_tipo")
+    if detalles:
+        d = detalles[0]
+        sedes = ", ".join(f"{s['sede']}: {s['total']}" for s in d["distribucion_por_sede"])
+        c = d["condicion"]
+        return (
+            f"A nivel nacional hay {d['total_nacional']} unidad(es) de tipo "
+            f"{d['tipo']}. Distribución por unidad académica: {sedes or 'sin datos'}. "
+            f"Condición: {c['buenos']} buenos, {c['regulares']} regulares, {c['malos']} malos."
+        )
+    g = contexto["resumen_nacional"]
+    sedes = ", ".join(f"{s['sede']}: {s['total']}" for s in g["por_sede"])
+    return (
+        f"El inventario nacional tiene {g['total_equipos_nacional']} equipos. "
+        f"Distribución por unidad académica: {sedes or 'sin datos'}."
+    )
+
+
+# ── Llamada al modelo (Ollama) ───────────────────────────────────────────────
+SYSTEM_PROMPT = (
+    "Eres un asistente gerencial del sistema de laboratorios de la Escuela Militar "
+    "de Ingeniería (EMI) de Bolivia. Respondes preguntas para la toma de decisiones "
+    "a nivel nacional sobre el inventario de equipos.\n"
+    "REGLAS:\n"
+    "- Usa EXCLUSIVAMENTE los datos del JSON de contexto. No inventes cifras.\n"
+    "- Si el contexto no contiene la información, dilo claramente.\n"
+    "- Responde en español, de forma concisa y ejecutiva (máx. ~150 palabras).\n"
+    "- Cuando sea útil, menciona cifras concretas y la distribución por unidad académica.\n"
+    "- No muestres el JSON ni tu razonamiento interno; da solo la respuesta final."
+)
+
+
+def consultar_ollama(pregunta, contexto):
+    """Llama a gemma vía Ollama. Devuelve (respuesta, modelo, ok)."""
+    foco = ""
+    detalles = contexto.get("detalle_por_tipo")
+    if detalles:
+        nombres = ", ".join(d["tipo"] for d in detalles)
+        foco = (
+            f"\n\nLa pregunta trata sobre el/los tipo(s): {nombres}. Centra la "
+            f"respuesta en 'detalle_por_tipo' (totales, distribución por unidad y "
+            f"por laboratorio de ese tipo). Usa 'resumen_nacional' solo si aporta."
+        )
+    payload = {
+        "model": OLLAMA_MODEL,
+        "stream": False,
+        "think": False,
+        "options": {"temperature": 0.2},
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": (
+                    f"Pregunta del gerente:\n{pregunta}{foco}\n\n"
+                    f"Datos de contexto (JSON):\n{json.dumps(contexto, ensure_ascii=False)}"
+                ),
+            },
+        ],
+    }
+    try:
+        resp = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=OLLAMA_TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+        texto = (data.get("message") or {}).get("content", "").strip()
+        if not texto:
+            return _respuesta_respaldo(contexto), OLLAMA_MODEL, False
+        return texto, OLLAMA_MODEL, True
+    except Exception:
+        # Cualquier fallo del modelo (red, timeout, respuesta inválida) cae al
+        # resumen determinista: la consulta nunca debe devolver un 500.
+        return _respuesta_respaldo(contexto), None, False
+
+
+def responder_consulta(pregunta):
+    """Orquesta: contexto determinista + redacción del modelo."""
+    contexto = construir_contexto(pregunta)
+    respuesta, modelo, ok = consultar_ollama(pregunta, contexto)
+    return {
+        "pregunta": pregunta,
+        "respuesta": respuesta,
+        "datos": contexto,
+        "modelo": modelo,
+        "ia_disponible": ok,
+    }

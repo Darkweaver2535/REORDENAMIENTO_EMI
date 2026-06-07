@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.reportes.views import (
+    ConsultaGerencialView,
     ReporteComparativaSedesView,
     ReporteInventarioLaboratorioView,
     ReporteReordenamientosView,
@@ -26,5 +27,11 @@ urlpatterns = [
         "comparativa-sedes/",
         ReporteComparativaSedesView.as_view(),
         name="reporte-comparativa",
+    ),
+    # POST /api/v1/reportes/consulta-gerencial/  {"pregunta": "..."}
+    path(
+        "consulta-gerencial/",
+        ConsultaGerencialView.as_view(),
+        name="consulta-gerencial",
     ),
 ]

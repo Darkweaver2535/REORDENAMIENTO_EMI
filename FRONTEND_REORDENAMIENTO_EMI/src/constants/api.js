@@ -53,6 +53,10 @@ export const API_ROUTES = {
   DASHBOARD: {
     METRICAS: `${BASE_URL}/api/v1/dashboard/metricas/`,
   },
+
+  REPORTES: {
+    CONSULTA_GERENCIAL: `${BASE_URL}/api/v1/reportes/consulta-gerencial/`,
+  },
   
   USUARIOS: {
     BASE: `${BASE_URL}/api/v1/usuarios/`,

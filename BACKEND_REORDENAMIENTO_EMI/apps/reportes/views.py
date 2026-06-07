@@ -255,3 +255,37 @@ class ReporteComparativaSedesView(APIView):
         return FileResponse(
             buffer, as_attachment=True, filename=filename, content_type="application/pdf"
         )
+
+
+# ── CONSULTA GERENCIAL (IA local: Ollama + gemma) ───────────────────────────
+
+
+class ConsultaGerencialView(APIView):
+    """POST /api/v1/reportes/consulta-gerencial/
+
+    Buscador gerencial en lenguaje natural para decisiones a nivel nacional.
+    Recibe {"pregunta": "..."} y devuelve una respuesta redactada por el modelo
+    local sobre datos reales del inventario, más el contexto estructurado.
+    """
+
+    permission_classes = [EsAdminOJefe]
+
+    def post(self, request):
+        from rest_framework import status
+        from rest_framework.response import Response
+
+        from apps.reportes.consultas import responder_consulta
+
+        pregunta = (request.data.get("pregunta") or "").strip()
+        if not pregunta:
+            return Response(
+                {"pregunta": "Escribe una pregunta para la consulta gerencial."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(pregunta) > 500:
+            return Response(
+                {"pregunta": "La pregunta es demasiado larga (máx. 500 caracteres)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(responder_consulta(pregunta), status=status.HTTP_200_OK)
