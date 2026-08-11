@@ -1,0 +1,605 @@
+' =====================================================================
+'  SISTEMA DE GESTION DE LABORATORIOS (SGL) - EMI
+'  FLUJO DE PROCESOS COMPLETO, PASO A PASO, POR ACTOR Y POR MODULO
+'  Autor: Alvaro S. Encinas F.
+'  Formato pensado para presentacion a Administrativos y Area de Sistemas
+'  (letras grandes / lectura sencilla / colores por rol)
+' =====================================================================
+'  Este archivo contiene VARIOS diagramas (bloques @startuml ... @enduml).
+'  Cada bloque genera una imagen (SVG/PNG) independiente.
+' =====================================================================
+
+
+' #####################################################################
+' # DIAGRAMA 0 : MAPA DE ACTORES Y ALCANCE DE PERMISOS (LEYENDA)
+' #####################################################################
+@startuml 00_Actores_y_Permisos
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 20
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 14
+skinparam shadowing false
+skinparam rectangle {
+  FontSize 20
+  BorderThickness 2
+}
+
+title <b>Sistema de Gestion de Laboratorios (SGL) - EMI</b>\nMapa de Actores (Usuarios) y su Alcance de Permisos
+
+rectangle "<b>SUPER ADMIN</b>\n(Superusuario Django / TI)\n== \nControl TOTAL del sistema.\nCrea la 1ra cuenta, respaldos,\nconfiguracion tecnica, panel\n/admin de Django, migraciones." as SA #C62828
+
+rectangle "<b>ADMINISTRADOR</b>\n(Administrativo Institucional - ADMIN)\n==\nVision NACIONAL (todas las sedes).\nGestiona usuarios, configuracion,\naprueba guias y traslados, ve\nauditoria y reportes gerenciales." as ADM #1565C0
+
+rectangle "<b>JEFE DE CARRERA</b>\n(JEFE)\n==\nVision NACIONAL academica.\nCrea/aprueba guias y traslados,\nve reportes, comparativa de sedes\ny auditoria. No gestiona usuarios." as JEFE #2E7D32
+
+rectangle "<b>ENCARGADO DE ACTIVOS</b>\n(ENCARGADO_ACTIVOS - Activos Fijos)\n==\nVision SOLO de SU sede.\nInventario, evaluaciones in-situ,\nmantenimientos y recepcion de\ntraslados. NO aprueba traslados." as ENC #EF6C00
+
+rectangle "<b>DOCENTE</b>\n(DOCENTE)\n==\nConsulta guias publicadas y\nprograma de practicas de sus\nasignaturas." as DOC #6A1B9A
+
+rectangle "<b>ESTUDIANTE</b>\n(ESTUDIANTE)\n==\nConsulta y descarga unicamente\nlas guias en estado PUBLICADO." as EST #00838F
+
+SA --> ADM : crea y asigna roles
+ADM --> JEFE
+ADM --> ENC
+ADM --> DOC
+ADM --> EST
+
+legend right
+<b>Regla de visibilidad del inventario</b>
+ADMIN / JEFE ........ ven TODAS las sedes (vision nacional)
+ENCARGADO_ACTIVOS ... ve SOLO su Unidad Academica (sede)
+DOCENTE / ESTUDIANTE  ... no acceden al inventario
+endlegend
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 1 : AUTENTICACION E INGRESO (comun a todos los usuarios)
+' #####################################################################
+@startuml 01_Autenticacion_Ingreso
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 1 - Autenticacion e Ingreso al Sistema</b>\nAplica a CUALQUIER usuario (Super Admin, Admin, Jefe, Encargado, Docente, Estudiante)
+
+|#E3F2FD|USUARIO (cualquiera)|
+start
+:Abre el navegador y entra a la\nplataforma SGL (pagina de Login);
+:Escribe su **Carnet de Identidad (CI)**\ny su **contrasena**;
+:Presiona el boton "Ingresar";
+
+|#FFF3E0|SISTEMA (Backend Django + API)|
+:Recibe CI + contrasena;
+:Verifica las credenciales\ncontra la base de datos;
+
+if (Credenciales correctas?) then (<b>SI</b>)
+  :Genera **Token JWT** (acceso + refresco);
+  :Registra el evento **LOGIN** en Auditoria\n(usuario, fecha/hora, IP);
+  :Detecta el **ROL** del usuario;
+
+  |#E3F2FD|USUARIO (cualquiera)|
+  :El sistema lo lleva al **Dashboard**;
+  :El menu lateral muestra SOLO los\nmodulos permitidos para su rol;
+  note right #CEDCD8
+    <b>Menu segun rol:</b>
+    - Admin: TODO (usuarios, config, auditoria)
+    - Jefe: guias, labs, equipos, traslados, reportes
+    - Encargado: labs, equipos, evaluaciones, manten.
+    - Docente/Estudiante: solo Guias
+  end note
+  stop
+
+else (<b>NO</b>)
+  |#FFF3E0|SISTEMA (Backend Django + API)|
+  :Devuelve error "Credenciales invalidas";
+  |#E3F2FD|USUARIO (cualquiera)|
+  :Ve el mensaje de error y\npuede intentar nuevamente;
+  stop
+endif
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 2 : MODULO GUIAS DE LABORATORIO (ciclo completo)
+' #####################################################################
+@startuml 02_Modulo_Guias
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 2 - Guias de Laboratorio</b>\nCiclo de vida: BORRADOR -> PENDIENTE -> APROBADO -> PUBLICADO
+
+|#E8F5E9|ADMIN / JEFE (Redactor)|
+start
+:Entra al modulo **Guias** y presiona\n"Nueva Guia";
+:Llena los datos: titulo, codigo interno,\nnumero de practica, asignatura;
+:Sube el archivo **PDF** de la practica\n(y portada opcional);
+:Guarda -> la guia nace en estado\n**BORRADOR**;
+
+|#FFF3E0|SISTEMA|
+:Valida que no exista otra practica con el\nmismo numero en esa asignatura;
+:Almacena el PDF de forma segura y\nregistra el evento en Auditoria (CREATE);
+
+|#E8F5E9|ADMIN / JEFE (Redactor)|
+:Revisa la guia y la envia a revision\n-> estado **PENDIENTE**;
+
+|#E3F2FD|ADMIN / JEFE (Aprobador)|
+:Abre la guia PENDIENTE y la revisa;
+if (La guia es correcta?) then (<b>SI, aprobar</b>)
+  :Marca como **APROBADO** y registra\nquien aprobo y cuando;
+  if (Tiene numero de **Resolucion**\ninstitucional cargado?) then (<b>SI</b>)
+    :**PUBLICA** la guia -> estado **PUBLICADO**;
+    |#FFF3E0|SISTEMA|
+    :Registra evento PUBLISH en Auditoria;
+    :La guia se vuelve **visible para Estudiantes**;
+  else (<b>NO</b>)
+    |#FFF3E0|SISTEMA|
+    :Bloquea la publicacion: exige primero\nel numero de Resolucion;
+    stop
+  endif
+else (<b>NO, devolver</b>)
+  :Regresa la guia a BORRADOR con\nobservaciones para corregir;
+  stop
+endif
+
+|#EDE7F6|DOCENTE|
+:Consulta las guias publicadas de\nsus asignaturas;
+
+|#E0F7FA|ESTUDIANTE|
+:Ve y **descarga** unicamente las guias\nen estado PUBLICADO;
+stop
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 3 : LABORATORIOS, EQUIPOS Y EVALUACION IN-SITU
+' #####################################################################
+@startuml 03_Laboratorios_Equipos_Evaluacion
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 3 - Laboratorios, Equipos y Evaluacion In-Situ</b>\nInventario por sede y registro auditable del estado fisico de los equipos
+
+|#E3F2FD|ADMIN / JEFE|
+start
+:Crea o edita **Laboratorios**\n(sede, edificio, sala);
+:Registra los **Equipos** de cada laboratorio\n(codigo de activo, cantidad, capacidad);
+
+|#FFF3E0|SISTEMA|
+:Aplica la regla de visibilidad:\nADMIN/JEFE ven TODAS las sedes;
+:El Encargado vera SOLO su sede;
+
+|#FFF3E0FF|ENCARGADO DE ACTIVOS (su sede)|
+:Entra a un equipo y abre\n"Evaluacion In-Situ";
+:Reparte la cantidad total del equipo entre:\n**Bueno**, **Regular** y **Malo**;
+
+|#FFF3E0|SISTEMA|
+if (La suma Bueno+Regular+Malo\nes igual al total del equipo?) then (<b>SI</b>)
+  :Guarda la evaluacion y calcula el\n**% de deterioro**;
+  :Registra el evento en Auditoria;
+  if (El equipo quedo en estado\ncritico (mucho "Malo")?) then (<b>SI</b>)
+    :Genera **Notificacion** de\nequipo critico a los responsables;
+  else (No)
+  endif
+  :Actualiza barras de progreso e\nindicadores del Dashboard;
+  stop
+else (<b>NO</b>)
+  :Rechaza el guardado: la suma\ndebe cuadrar con el total;
+  |#FFF3E0FF|ENCARGADO DE ACTIVOS (su sede)|
+  :Corrige las cantidades y\nvuelve a intentar;
+  stop
+endif
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 4 : REORDENAMIENTO / TRASLADOS ENTRE SEDES (logistica)
+' #####################################################################
+@startuml 04_Reordenamiento_Traslados
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 4 - Reordenamiento / Traslados de Equipos entre Sedes</b>\nBORRADOR -> PENDIENTE -> APROBADO -> EN TRANSITO -> RECEPCIONADO   (o RECHAZADO / CANCELADO)
+
+|#E8F5E9|ADMIN / JEFE (Solicitante)|
+start
+:Entra a **Reordenamientos** y presiona\n"Nuevo movimiento";
+:Elige el **tipo**: Reasignacion definitiva,\nPrestamo o Compra;
+:Selecciona el equipo, sede ORIGEN y sede\nDESTINO, y adjunta el documento de respaldo\n(Resolucion / Autorizacion / Factura / Acta);
+:Envia la solicitud -> estado **PENDIENTE\nDE APROBACION**;
+
+|#FFF3E0|SISTEMA|
+:Registra el movimiento y notifica a los\naprobadores (ADMIN/JEFE);
+
+|#E3F2FD|ADMIN / JEFE (Aprobador)|
+:Revisa la solicitud y el documento;
+if (Autoriza el traslado?) then (<b>SI, aprobar</b>)
+  :Marca **APROBADO**;
+  |#FFF3E0|SISTEMA|
+  :Envia **notificacion pasiva** al\n**Encargado de Activos** (Activos Fijos):\n"prepare/actualice el inventario";
+  note right #CEDCD8
+    Activos Fijos NO aprueba;\nsolo es avisado para\nactualizar el inventario.
+  end note
+
+  |#E3F2FD|ADMIN / JEFE (Aprobador)|
+  :Marca el envio -> estado **EN TRANSITO**;
+
+  |#FFF3E0FF|ENCARGADO DE ACTIVOS (sede destino)|
+  :Recibe fisicamente el equipo y presiona\n"Recepcionar" -> estado **RECEPCIONADO**;
+
+  |#FFF3E0|SISTEMA|
+  :Actualiza AUTOMATICAMENTE el inventario:\nel equipo cambia de laboratorio/sede;
+  :Registra la trazabilidad (MOVE) en Auditoria\ny notifica el cierre del traslado;
+  stop
+
+else (<b>NO, rechazar</b>)
+  :Marca **RECHAZADO** con el motivo;
+  |#FFF3E0|SISTEMA|
+  :Notifica al solicitante. El inventario\nNO se modifica;
+  stop
+endif
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 5 : MANTENIMIENTOS Y REACTIVOS / INSUMOS
+' #####################################################################
+@startuml 05_Mantenimientos_Reactivos
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 5 - Mantenimientos y Reactivos / Insumos</b>\nBitacora de mantenimiento de equipos y control de stock de insumos por laboratorio
+
+|#FFF3E0FF|ENCARGADO DE ACTIVOS / ADMIN|
+start
+split
+  ' ---- Rama Mantenimientos ----
+  :<b>== BITACORA DE MANTENIMIENTOS ==</b>;
+  :Selecciona el equipo y "Nuevo mantenimiento";
+  :Elige el **tipo**: Preventivo, Correctivo,\nLimpieza, Reparacion, Calibracion o Verificacion;
+  :Define el **estado**: Realizado, Pendiente,\nEn proceso o Cancelado + fecha y detalle;
+  |#FFF3E0|SISTEMA|
+  :Guarda el registro en la bitacora del\nequipo y lo agrega a su historial;
+split again
+  ' ---- Rama Reactivos ----
+  |#FFF3E0FF|ENCARGADO DE ACTIVOS / ADMIN|
+  :<b>== REACTIVOS / INSUMOS ==</b>;
+  :Registra el insumo (nombre, codigo, unidad,\nstock actual, stock minimo, vencimiento);
+  :Marca si es **reactivo quimico** o requiere\n**control especial**;
+  |#FFF3E0|SISTEMA|
+  if (Stock actual < stock minimo\nO esta por vencer?) then (<b>SI</b>)
+    :Muestra **ALERTA** de reposicion /\nvencimiento en el panel;
+  else (No)
+    :Mantiene el insumo como disponible;
+  endif
+end split
+:Los datos alimentan indicadores del\nDashboard y los Reportes;
+stop
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 6 : REPORTES Y CONSULTA GERENCIAL CON IA LOCAL
+' #####################################################################
+@startuml 06_Reportes_Consulta_Gerencial
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 6 - Reportes y Consulta Gerencial (IA local)</b>\nReportes por Unidad Academica, comparativa de sedes y preguntas en lenguaje natural (Ollama + gemma)
+
+|#E3F2FD|ADMIN / JEFE (Gerencial)|
+start
+:Entra al modulo **Reportes**;
+split
+  :<b>== REPORTES ESTRUCTURADOS ==</b>;
+  :Elige: Inventario por Laboratorio,\nReporte por Unidad Academica o\nComparativa entre Sedes;
+  |#FFF3E0|SISTEMA|
+  :Consolida los datos (equipos, deterioro,\nlaboratorios, guias) y arma el reporte;
+  |#E3F2FD|ADMIN / JEFE (Gerencial)|
+  :Visualiza tablas y graficos en pantalla;
+split again
+  :<b>== CONSULTA GERENCIAL CON IA ==</b>;
+  :Escribe una pregunta en lenguaje natural\n(ej: "cuantos equipos en mal estado hay\nen Cochabamba?");
+  |#FFF3E0|SISTEMA (IA local Ollama + gemma)|
+  if (La pregunta pide datos del sistema?) then (<b>SI</b>)
+    :Detecta el tipo de consulta, extrae los\ndatos reales de la base de datos y arma\nla respuesta con cifras exactas;
+  else (Es saludo / charla)
+    :Responde cordialmente SIN volcar datos\ndel sistema;
+  endif
+  |#E3F2FD|ADMIN / JEFE (Gerencial)|
+  :Lee la respuesta redactada;
+end split
+:Usa la informacion para la toma de\ndecisiones institucional;
+stop
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 7 : ADMINISTRACION (USUARIOS, CONFIG, AUDITORIA) + NOTIF.
+' #####################################################################
+@startuml 07_Administracion_Auditoria
+!theme plain
+skinparam titleFontSize 24
+skinparam titleFontStyle bold
+skinparam swimlaneTitleFontSize 19
+skinparam legendFontSize 15
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontSize 19
+skinparam defaultFontName "Helvetica"
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ActivityFontSize 18
+skinparam ActivityDiamondFontSize 18
+skinparam NoteFontSize 16
+skinparam ArrowFontSize 16
+skinparam ActivityBorderThickness 2
+
+title <b>PROCESO 7 - Administracion, Auditoria y Notificaciones</b>\nGestion de usuarios y configuracion (Super Admin / Admin) + trazabilidad de todo el sistema
+
+|#FFEBEE|SUPER ADMIN (TI)|
+start
+:Crea la **primera** cuenta administradora y\nconfigura el sistema (panel /admin de Django,\nrespaldos, parametros tecnicos);
+
+|#E3F2FD|ADMINISTRADOR (institucional)|
+:Entra a **Administracion -> Usuarios**;
+:Crea/edita usuarios: asigna **rol** y\n**Unidad Academica (sede)**;
+
+|#FFF3E0|SISTEMA|
+:Guarda el usuario y registra el cambio\nen **Auditoria** (CREATE/UPDATE);
+
+|#E3F2FD|ADMINISTRADOR (institucional)|
+:Ajusta la **Configuracion** general\ndel sistema;
+
+partition "Trazabilidad automatica (todo el sistema)" {
+  |#FFF3E0|SISTEMA|
+  :Ante CADA accion sensible (login, crear,\neditar, aprobar, mover, publicar) escribe\nun registro en **AuditLog** con: usuario,\nfecha/hora, IP, datos antes y despues;
+  :Genera **Notificaciones** internas segun\nel evento (reordenamiento pendiente,\ntraslado autorizado, equipo critico, sistema);
+}
+
+|#E8F5E9|ADMIN / JEFE|
+:Entra a **Auditoria** y consulta el historial\ncompleto de acciones (quien hizo que y cuando);
+:Recibe y revisa sus **Notificaciones** desde\nla campana del encabezado;
+stop
+@enduml
+
+
+' #####################################################################
+' # DIAGRAMA 8 : FLUJO COMPLETO UNIFICADO (TODO EN UN SOLO DIAGRAMA)
+' #   Recorrido VERTICAL de punta a punta por todos los modulos.
+' #   Colores/tamanos via <style> (NO usar <size:> en linea: rompe el SVG).
+' #####################################################################
+@startuml 08_FLUJO_COMPLETO_UNIFICADO
+!theme plain
+skinparam backgroundColor #F9F8F5
+skinparam defaultFontName "Helvetica"
+skinparam shadowing false
+skinparam roundcorner 16
+skinparam nodesep 26
+skinparam ranksep 48
+skinparam ArrowColor #37474F
+skinparam ArrowThickness 1.6
+
+<style>
+title {
+  FontSize 26
+  FontStyle bold
+}
+activityDiagram {
+  activity {
+    FontSize 19
+    LineThickness 2
+    BackgroundColor #FFFFFF
+    BorderColor #37474F
+  }
+  diamond {
+    FontSize 19
+  }
+  arrow {
+    FontSize 18
+    FontStyle bold
+  }
+  note {
+    FontSize 17
+    BackgroundColor #FFFDE7
+    BorderColor #C9B458
+  }
+  .header {
+    BackgroundColor #37474F
+    FontColor #FFFFFF
+    FontSize 21
+    FontStyle bold
+    RoundCorner 10
+  }
+  .superadmin { BackgroundColor #FFCDD2 }
+  .adminjefe  { BackgroundColor #BBDEFB }
+  .encargado  { BackgroundColor #FFE0B2 }
+  .consumer   { BackgroundColor #B2EBF2 }
+  .sistema    { BackgroundColor #E0E0E0 }
+  .usuario    { BackgroundColor #CFD8DC }
+}
+legend {
+  FontSize 16
+}
+</style>
+
+title Sistema de Gestion de Laboratorios (SGL) - EMI\nFLUJO DE PROCESOS COMPLETO DE PUNTA A PUNTA  (recorrido por todos los modulos)
+
+legend top
+<b>Color = quien realiza el paso:</b>
+<back:#FFCDD2>      </back> SUPER ADMIN (TI)    <back:#BBDEFB>      </back> ADMIN / JEFE    <back:#FFE0B2>      </back> ENCARGADO DE ACTIVOS
+<back:#B2EBF2>      </back> DOCENTE / ESTUDIANTE    <back:#E0E0E0>      </back> SISTEMA (automatico)    <back:#CFD8DC>      </back> USUARIO (cualquiera)
+endlegend
+
+start
+
+' ===================== 1 · INGRESO =====================
+:SECCION 1  -  INGRESO AL SISTEMA; <<header>>
+:<b>USUARIO (cualquiera)</b>\nAbre la plataforma SGL e ingresa su\n<b>Carnet de Identidad + contrasena</b>; <<usuario>>
+:<b>SISTEMA</b>\nValida las credenciales contra la base de datos; <<sistema>>
+if (<b>Credenciales correctas?</b>) then (<b>NO</b>)
+  :Muestra el error "Credenciales invalidas"; <<sistema>>
+  stop
+else (<b>SI</b>)
+endif
+:<b>SISTEMA</b>\nGenera <b>Token JWT</b>, registra el <b>LOGIN</b> en\nAuditoria y detecta el <b>ROL</b> del usuario; <<sistema>>
+:<b>USUARIO (cualquiera)</b>\nEntra al <b>Dashboard</b>. El menu muestra SOLO\nlos modulos permitidos para su rol; <<usuario>>
+floating note right
+Segun su ROL y su tarea, el usuario usa
+uno o varios de los modulos siguientes.
+El diagrama los recorre de arriba a abajo.
+end note
+
+' ===================== 2 · GUIAS =====================
+:SECCION 2  -  GUIAS DE LABORATORIO; <<header>>
+:<b>ADMIN / JEFE</b>\nCrea la guia (titulo, N practica, asignatura, PDF).\nNace en estado <b>BORRADOR</b>; <<adminjefe>>
+:<b>SISTEMA</b>\nValida que la practica sea unica y guarda el PDF; <<sistema>>
+:<b>ADMIN / JEFE</b>\nEnvia la guia a revision  ->  <b>PENDIENTE</b>; <<adminjefe>>
+if (<b>El aprobador la aprueba?</b>) then (<b>SI</b>)
+  :Marca la guia como <b>APROBADO</b>; <<adminjefe>>
+  if (<b>Tiene Nro. de Resolucion?</b>) then (<b>SI</b>)
+    :<b>PUBLICA</b> la guia  ->  <b>PUBLICADO</b>; <<adminjefe>>
+    :<b>DOCENTE / ESTUDIANTE</b>\nConsulta y descarga las guias <b>PUBLICADAS</b>; <<consumer>>
+  else (<b>NO</b>)
+    :Bloquea la publicacion:\nexige primero el Nro. de Resolucion; <<sistema>>
+  endif
+else (<b>NO</b>)
+  :Devuelve la guia a <b>BORRADOR</b>\ncon observaciones; <<adminjefe>>
+endif
+
+' ===================== 3 · LABS + EVALUACION =====================
+:SECCION 3  -  LABORATORIOS Y EVALUACION IN-SITU; <<header>>
+:<b>ADMIN / JEFE</b>\nCrea Laboratorios y registra los Equipos\n(codigo de activo, cantidad, capacidad); <<adminjefe>>
+:<b>ENCARGADO DE ACTIVOS  (solo su sede)</b>\nEvaluacion In-Situ: reparte el total del equipo\nentre  <b>Bueno / Regular / Malo</b>; <<encargado>>
+if (<b>La suma cuadra con el total?</b>) then (<b>SI</b>)
+  :<b>SISTEMA</b>\nGuarda, calcula el <b>% de deterioro</b> y audita; <<sistema>>
+  if (<b>Quedo en estado critico?</b>) then (<b>SI</b>)
+    :Envia <b>Notificacion</b> de equipo critico; <<sistema>>
+  else (<b>NO</b>)
+  endif
+else (<b>NO</b>)
+  :Corrige las cantidades y vuelve a intentar; <<encargado>>
+endif
+
+' ===================== 4 · TRASLADOS =====================
+:SECCION 4  -  REORDENAMIENTO / TRASLADOS ENTRE SEDES; <<header>>
+:<b>ADMIN / JEFE</b>\nNuevo movimiento (Reasignacion / Prestamo / Compra),\norigen -> destino + documento de respaldo.\nEstado  <b>PENDIENTE</b>; <<adminjefe>>
+if (<b>El aprobador autoriza el traslado?</b>) then (<b>SI</b>)
+  :Marca el traslado como <b>APROBADO</b>; <<adminjefe>>
+  :<b>SISTEMA</b>\nEnvia aviso (pasivo) al Encargado de Activos; <<sistema>>
+  :Marca el envio  ->  <b>EN TRANSITO</b>; <<adminjefe>>
+  :<b>ENCARGADO DE ACTIVOS  (sede destino)</b>\nRecibe el equipo  ->  <b>RECEPCIONADO</b>; <<encargado>>
+  :<b>SISTEMA</b>\nActualiza el inventario AUTOMATICAMENTE\n(el equipo cambia de sede) y audita (MOVE); <<sistema>>
+else (<b>NO</b>)
+  :Marca <b>RECHAZADO</b>.  El inventario NO cambia; <<adminjefe>>
+endif
+
+' ===================== 5 · MANTENIMIENTOS + REACTIVOS =====================
+:SECCION 5  -  MANTENIMIENTOS Y REACTIVOS; <<header>>
+:<b>ENCARGADO DE ACTIVOS / ADMIN</b>\nRegistra mantenimiento (Preventivo, Correctivo,\nCalibracion...) y/o insumos (stock, vencimiento); <<encargado>>
+if (<b>Stock bajo o insumo por vencer?</b>) then (<b>SI</b>)
+  :<b>SISTEMA</b>\nMuestra <b>ALERTA</b> de reposicion / vencimiento; <<sistema>>
+else (<b>NO</b>)
+  :Guarda en la bitacora / historial; <<sistema>>
+endif
+
+' ===================== 6 · REPORTES + IA =====================
+:SECCION 6  -  REPORTES Y CONSULTA GERENCIAL (IA); <<header>>
+:<b>ADMIN / JEFE</b>\nPide un reporte (por Unidad / Comparativa de sedes)\no pregunta en lenguaje natural; <<adminjefe>>
+:<b>SISTEMA  (IA local Ollama + gemma)</b>\nConsolida datos reales y responde con cifras exactas; <<sistema>>
+:<b>ADMIN / JEFE</b>\nUsa la informacion para la toma de decisiones; <<adminjefe>>
+
+' ===================== 7 · ADMINISTRACION =====================
+:SECCION 7  -  ADMINISTRACION; <<header>>
+:<b>SUPER ADMIN (TI)</b>\nConfiguracion tecnica, respaldos y crea la\nPRIMERA cuenta admin (panel /admin de Django); <<superadmin>>
+:<b>ADMIN / JEFE</b>\nGestiona usuarios (rol + sede) y la\nconfiguracion general del sistema; <<adminjefe>>
+
+' ===================== CIERRE COMUN =====================
+:CIERRE  -  COMUN A TODOS LOS MODULOS; <<header>>
+:<b>SISTEMA</b>\nRegistra la accion en <b>Auditoria (AuditLog)</b>:\nusuario, fecha/hora, IP, datos antes/despues; <<sistema>>
+:Genera <b>Notificaciones</b> internas segun el evento; <<sistema>>
+:Actualiza indicadores y graficos del <b>Dashboard</b>; <<sistema>>
+:<b>USUARIO</b>\nVe los resultados actualizados y sus notificaciones\nen la campana del encabezado; <<usuario>>
+stop
+@enduml
