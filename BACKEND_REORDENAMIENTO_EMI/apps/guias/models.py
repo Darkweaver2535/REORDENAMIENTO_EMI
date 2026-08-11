@@ -44,7 +44,22 @@ class Guia(BaseModel):
         related_name="guias",
     )
     portada_url = models.URLField(max_length=500, blank=True)
-    pdf_url = models.URLField(max_length=500)
+    # El PDF se sube al servidor. `pdf_url` se conserva para las guías que
+    # todavía viven en un enlace externo y como respaldo cuando no hay archivo;
+    # `GuiaSerializer.pdf_url` devuelve la URL del archivo si existe.
+    pdf_archivo = models.FileField(
+        upload_to="guias/pdf/",
+        blank=True,
+        null=True,
+        verbose_name="Archivo PDF de la guía",
+        help_text="PDF de la guía de laboratorio alojado en el servidor.",
+    )
+    pdf_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name="URL externa del PDF",
+        help_text="Sólo para guías que aún no tienen el archivo subido.",
+    )
     resolucion_numero = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
@@ -58,3 +73,10 @@ class Guia(BaseModel):
 
     def __str__(self):
         return f"Práctica {self.numero_practica} - {self.asignatura.nombre}"
+
+    def url_pdf(self, request=None):
+        """URL utilizable del PDF: la del archivo subido, o la externa."""
+        if self.pdf_archivo:
+            url = self.pdf_archivo.url
+            return request.build_absolute_uri(url) if request else url
+        return self.pdf_url or ""

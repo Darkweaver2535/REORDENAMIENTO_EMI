@@ -86,8 +86,7 @@ class Laboratorio(BaseModel):
         verbose_name="Ubicación",
         help_text='Descripción textual de la ubicación física (ej: "Bloque B, planta baja").',
     )
-    normativa_infraestructura = models.CharField(
-        max_length=255,
+    normativa_infraestructura = models.TextField(
         blank=True,
         verbose_name="Normativa aplicable",
         help_text="Norma de bioseguridad, calidad o reglamento institucional.",
@@ -110,6 +109,23 @@ class Laboratorio(BaseModel):
         ordering = ["nombre"]
         verbose_name = "Laboratorio"
         verbose_name_plural = "Laboratorios"
+        constraints = [
+            # Anti-duplicados (insensible a mayúsculas). Dos constraints porque
+            # en Postgres los NULL de parent no chocan entre sí: uno cubre los
+            # subespacios (mismo padre) y otro las raíces (parent IS NULL).
+            models.UniqueConstraint(
+                models.functions.Upper("nombre"),
+                "parent",
+                "unidad_academica",
+                name="uq_lab_nombre_parent_ua",
+            ),
+            models.UniqueConstraint(
+                models.functions.Upper("nombre"),
+                "unidad_academica",
+                condition=models.Q(parent__isnull=True),
+                name="uq_lab_raiz_nombre_ua",
+            ),
+        ]
 
     def __str__(self):
         base = f"{self.nombre} ({self.sala})" if self.sala else self.nombre
@@ -140,6 +156,28 @@ class Laboratorio(BaseModel):
 
     def clean(self):
         super().clean()
+
+        # ── Regla 0: no duplicar nombre dentro del mismo padre y unidad ──────
+        if self.nombre and self.unidad_academica_id:
+            homonimos = Laboratorio.objects.filter(
+                nombre__iexact=self.nombre.strip(),
+                parent_id=self.parent_id,
+                unidad_academica_id=self.unidad_academica_id,
+            ).exclude(pk=self.pk)
+            if homonimos.exists():
+                contexto = (
+                    f'dentro de "{self.parent.nombre}"'
+                    if self.parent_id
+                    else "como espacio general"
+                )
+                raise ValidationError(
+                    {
+                        "nombre": (
+                            f'Ya existe un laboratorio llamado "{self.nombre}" {contexto} '
+                            "en esta unidad académica."
+                        )
+                    }
+                )
 
         # ── Regla 1: nodo raíz → clase_nodo debe ser GENERAL
         if self.parent_id is None:
@@ -309,7 +347,10 @@ class Equipo(BaseModel):
         choices=EstatusGeneral.choices,
         default=EstatusGeneral.BUENO,
     )
-    ubicacion_sala = models.CharField(max_length=100, blank=True)
+    # 255 y no 100: las fichas de laboratorio describen la ubicación con una
+    # frase completa ("PRIMER PISO DEL BLOQUE DE CENTRO DE INVESTIGACIONES Y
+    # TECNOLOGIA, LABORATORIO DE CALIDAD AMBIENTAL…") y a 100 se recortaba.
+    ubicacion_sala = models.CharField(max_length=255, blank=True)
     observaciones = models.TextField(blank=True)
     evaluado_en = models.DateTimeField(null=True, blank=True)
     evaluado_por = models.ForeignKey(

@@ -4,6 +4,8 @@ from rest_framework import serializers
 from apps.guias.models import Guia
 from apps.laboratorios.models import EquipoRequeridoPorGuia
 
+MAX_PDF_BYTES = 30 * 1024 * 1024  # 30 MB — las guías escaneadas rondan los 2-3 MB
+
 
 class EquipoRequeridoListSerializer(serializers.ModelSerializer):
     equipo_nombre = serializers.SerializerMethodField()
@@ -37,6 +39,12 @@ class EquipoRequeridoListSerializer(serializers.ModelSerializer):
 
 class GuiaListSerializer(serializers.ModelSerializer):
     asignatura_nombre = serializers.CharField(source="asignatura.nombre", read_only=True)
+    semestre = serializers.IntegerField(source="asignatura.semestre.numero", read_only=True)
+    carrera_nombre = serializers.CharField(source="asignatura.carrera.nombre", read_only=True)
+    # El PDF puede estar subido al servidor o ser un enlace externo; el cliente
+    # sólo necesita una URL utilizable, así que se resuelve aquí.
+    pdf_url = serializers.SerializerMethodField()
+    tiene_archivo = serializers.SerializerMethodField()
 
     class Meta:
         model = Guia
@@ -46,10 +54,19 @@ class GuiaListSerializer(serializers.ModelSerializer):
             "numero_practica",
             "asignatura_id",
             "asignatura_nombre",
+            "semestre",
+            "carrera_nombre",
             "portada_url",
             "pdf_url",
+            "tiene_archivo",
             "created_at",
         )
+
+    def get_pdf_url(self, obj):
+        return obj.url_pdf(self.context.get("request"))
+
+    def get_tiene_archivo(self, obj):
+        return bool(obj.pdf_archivo)
 
 
 class GuiaDetalleSerializer(GuiaListSerializer):
@@ -72,13 +89,33 @@ class GuiaCrearSerializer(serializers.ModelSerializer):
             "numero_practica",
             "asignatura",
             "portada_url",
+            "pdf_archivo",
             "pdf_url",
         )
         extra_kwargs = {
             "portada_url": {"required": False, "allow_blank": True, "allow_null": True},
+            "pdf_archivo": {"required": False, "allow_null": True},
+            "pdf_url": {"required": False, "allow_blank": True},
         }
 
+    def validate_pdf_archivo(self, archivo):
+        if archivo and not archivo.name.lower().endswith(".pdf"):
+            raise serializers.ValidationError("El archivo debe ser un PDF.")
+        if archivo and archivo.size > MAX_PDF_BYTES:
+            raise serializers.ValidationError(
+                f"El PDF supera el tamaño máximo de {MAX_PDF_BYTES // (1024 * 1024)} MB."
+            )
+        return archivo
+
     def validate(self, attrs):
+        # Debe quedar una forma de abrir la guía: archivo subido o enlace externo.
+        archivo = attrs.get("pdf_archivo", getattr(self.instance, "pdf_archivo", None))
+        enlace = attrs.get("pdf_url", getattr(self.instance, "pdf_url", ""))
+        if not archivo and not enlace:
+            raise serializers.ValidationError(
+                {"pdf_archivo": "Sube el PDF de la guía o indica una URL externa."}
+            )
+
         asignatura = attrs.get("asignatura", getattr(self.instance, "asignatura", None))
         numero_practica = attrs.get(
             "numero_practica", getattr(self.instance, "numero_practica", None)

@@ -19,8 +19,12 @@ from apps.guias.views import EquipoRequeridoViewSet, GuiaViewSet
 app_name = "guias"
 
 router = DefaultRouter()
-router.register("", GuiaViewSet, basename="guia")
+# El orden importa: GuiaViewSet vive en el prefijo vacío, así que su ruta de
+# detalle es `^(?P<pk>[^/.]+)/$` y se traga cualquier sub-ruta que venga
+# después. Registrada al final, /guias/equipos-requeridos/ se resolvía como
+# "la guía con id 'equipos-requeridos'" y respondía 404. Va antes.
 router.register("equipos-requeridos", EquipoRequeridoViewSet, basename="equipo-requerido")
+router.register("", GuiaViewSet, basename="guia")
 
 urlpatterns = [
     path("", include(router.urls)),

@@ -1,3 +1,4 @@
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
@@ -15,9 +16,13 @@ from apps.usuarios.permissions import EsAdminOJefe, PuedeGestionarGuias
 
 class GuiaViewSet(ModelViewSet):
     queryset = Guia.objects.none()
+    # multipart para poder subir el PDF de la guía en el mismo alta/edición.
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
-        queryset = Guia.objects.select_related("asignatura")
+        queryset = Guia.objects.select_related(
+            "asignatura", "asignatura__semestre", "asignatura__carrera"
+        )
 
         asignatura_id = self.request.query_params.get("asignatura_id")
         if asignatura_id:
