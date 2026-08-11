@@ -24,6 +24,17 @@ Clasifica cada fila:
   SKIP_NORM_ROW    → fila de sub-cabecera
   WARN_MISMATCH    → asig no coincide semánticamente con su nodo padre
   AMBIGUOUS        → sec presente pero sin padre
+
+Reimportar es seguro: los nodos y los usos que ya existen se reconocen y no se
+duplican. La única excepción son los tres ambientes de electrónica que la
+planilla de La Paz lista dos veces, bajo dos raíces distintas; el importador es
+literal y los vuelve a crear tal como están escritos. Por eso el orden de la
+carga es:
+
+    import_labs  →  fusionar_duplicados
+
+`fusionar_duplicados` los une de nuevo y es idempotente, así que puede correrse
+siempre después de cualquier reimportación.
 """
 
 import re
@@ -32,6 +43,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+
+from apps.laboratorios.management.commands.seed_estructura import clave_uso_academico
 
 try:
     import openpyxl
@@ -48,12 +61,19 @@ A_ADD_USO_ACAD = "ADD_USO_ACAD"
 A_SKIP_NORM_ROW = "SKIP_NORM_ROW"
 A_WARN_MISMATCH = "WARN_MISMATCH"
 A_AMBIGUOUS = "AMBIGUOUS"
+A_FIX_NOMBRE_GEN = "FIX_NOMBRE_GEN"
+
+# Nombres de subespacio sin significado propio (la celda repite el tipo de
+# espacio); se componen con el nombre del laboratorio padre al importar.
+NOMBRES_GENERICOS = {"LABORATORIO", "LABORATORIOS", "SALA", "AREA", "SECCION", "LAB"}
 
 TIPO_CANON = {
     "SALA": "SALA",
     "AREA": "AREA",
     "SECCION": "SECCION",
     "LABORATORIO": "LABORATORIO",
+    # Variantes fuera de catálogo vistas en los Excel de sedes
+    "HUERTA": "AREA",
 }
 
 SUBCAB_KEYWORDS = {"PEA", "INVESTIGACION", "VENTA DE SERVICIOS"}
@@ -82,6 +102,25 @@ def canon_tipo(raw: str) -> str | None:
     for k, v in TIPO_CANON.items():
         if n.startswith(k):
             return v
+    return None
+
+
+def buscar_nodo(Laboratorio, nombre: str, unidad_academica, parent=None):
+    """Busca un nodo existente ignorando tildes, mayúsculas y espacios dobles.
+
+    `nombre__iexact` de Django SÍ distingue tildes, así que el mismo laboratorio
+    escrito "ELECTRONICA" en el Excel de la sede y "ELECTRÓNICA" en el
+    consolidado se duplicaba. Comparamos sobre el nombre normalizado entre los
+    hermanos candidatos (mismo padre y misma unidad).
+    """
+    objetivo = normalizar_texto(nombre)
+    if not objetivo:
+        return None
+    qs = Laboratorio.objects.filter(unidad_academica=unidad_academica)
+    qs = qs.filter(parent__isnull=True) if parent is None else qs.filter(parent=parent)
+    for cand in qs:
+        if normalizar_texto(cand.nombre) == objetivo:
+            return cand
     return None
 
 
@@ -163,6 +202,7 @@ _COLORS = {
     A_SKIP_NORM_ROW: "\033[90m",
     A_WARN_MISMATCH: "\033[35m",
     A_AMBIGUOUS: "\033[91m",
+    A_FIX_NOMBRE_GEN: "\033[93m",
 }
 _RESET = "\033[0m"
 
@@ -178,6 +218,31 @@ class Command(BaseCommand):
         parser.add_argument("archivo", type=str)
         parser.add_argument("--unidad-academica", required=True, metavar="UA")
         parser.add_argument("--campus", default="", metavar="CAMPUS")
+        parser.add_argument(
+            "--hoja",
+            default=None,
+            metavar="HOJA",
+            help="Nombre de la hoja a importar (por defecto, la hoja activa del workbook).",
+        )
+        parser.add_argument(
+            "--alias",
+            default=None,
+            metavar="JSON",
+            help=(
+                "JSON {nombre_en_el_excel: nombre_canónico}. Sirve para que un "
+                "consolidado que llama distinto al mismo espacio no cree un nodo "
+                "duplicado (ej. 'PLANTA DE AGUAS' → 'PLANTA DE AGUAS Y ALIMENTOS')."
+            ),
+        )
+        parser.add_argument(
+            "--solo-nuevos",
+            action="store_true",
+            help=(
+                "Ignora las filas cuyo laboratorio raíz ya existe en la BD. "
+                "Sirve para complementar con un consolidado sin pisar el detalle "
+                "que ya cargó el archivo de la sede."
+            ),
+        )
         parser.add_argument("--dry-run", action="store_true")
         parser.add_argument("--verbose", action="store_true")
 
@@ -209,6 +274,39 @@ class Command(BaseCommand):
             options["dry_run"],
             options["verbose"],
         )
+        solo_nuevos = options["solo_nuevos"]
+        # Alias: nombre tal como viene en el Excel → nombre canónico ya en la BD.
+        #
+        # La clave admite un ámbito, porque `normalizar_texto` ignora tildes y un
+        # alias pensado para un subespacio puede colisionar con el nombre de su
+        # propio padre (el consolidado tiene la raíz "EDAFOLOGIA" con el hijo
+        # "EDAFOLOGÍA": ambos normalizan igual):
+        #     "hijo:X"  → sólo subespacios
+        #     "raiz:X"  → sólo laboratorios raíz
+        #     "X"       → ambos
+        alias_raiz, alias_hijo = {}, {}
+        if options["alias"]:
+            import json as _json
+            with open(options["alias"], encoding="utf-8") as fh:
+                crudo = _json.load(fh)
+            for clave, valor in crudo.items():
+                if clave.startswith("_"):
+                    continue
+                ambito, _, nombre = clave.partition(":")
+                ambito = ambito.lower()
+                if not nombre:
+                    ambito, nombre = "", clave
+                n = normalizar_texto(nombre)
+                if ambito in ("", "raiz"):
+                    alias_raiz[n] = valor
+                if ambito in ("", "hijo"):
+                    alias_hijo[n] = valor
+
+        def canonizar_raiz(nombre):
+            return alias_raiz.get(normalizar_texto(nombre), nombre)
+
+        def canonizar_hijo(nombre):
+            return alias_hijo.get(normalizar_texto(nombre), nombre)
 
         if dry_run:
             self.stdout.write(self.style.WARNING("\n⚠ DRY-RUN activado\n"))
@@ -216,7 +314,16 @@ class Command(BaseCommand):
         self.stdout.write(f"📚 UA: {unidad_academica}\n")
 
         wb = openpyxl.load_workbook(archivo, data_only=True)
-        ws = wb.active
+        hoja = options["hoja"]
+        if hoja:
+            if hoja not in wb.sheetnames:
+                raise CommandError(
+                    f"Hoja '{hoja}' no existe en el archivo. Disponibles: {wb.sheetnames}"
+                )
+            ws = wb[hoja]
+        else:
+            ws = wb.active
+        self.stdout.write(f"📄 Hoja: {ws.title}\n")
 
         schema = detectar_schema(ws)
         if schema[0] is None:
@@ -244,6 +351,9 @@ class Command(BaseCommand):
         lab_nom_disp = None
         tipo_actual = None
         ultimo_nodo_afectado = None
+        # Se recalcula en cada cambio de laboratorio raíz; con --solo-nuevos marca
+        # que las filas siguientes pertenecen a un lab ya cargado y hay que saltarlas.
+        saltar_raiz = False
 
         def log(fila_num, action, msg=""):
             if verbose:
@@ -277,33 +387,47 @@ class Command(BaseCommand):
                     continue
 
                 # Sub-cabeceras
+                # Igualdad exacta: con substring, asignaturas como "METODOLOGÍA DE LA
+                # INVESTIGACIÓN" se descartaban como sub-cabecera.
                 first_vals = [normalizar_texto(str(row[j])) for j in non_empty[:3]]
-                if any(any(kw in fv for kw in SUBCAB_KEYWORDS) for fv in first_vals):
+                if any(fv in SUBCAB_KEYWORDS for fv in first_vals):
                     log(fila_num, A_SKIP_NORM_ROW, "sub-cabecera")
                     continue
 
                 action_main = None
 
                 if nom_n and nom_n not in {"N", "NOMBRE DEL LABORATORIO"}:
-                    nuevo_lab_nom = nom.strip()
+                    nuevo_lab_nom = canonizar_raiz(nom.strip())
                     if nuevo_lab_nom != lab_nom_disp:
                         lab_nom_disp = nuevo_lab_nom
                         if not dry_run:
-                            lab_obj, created = Laboratorio.objects.get_or_create(
-                                nombre__iexact=lab_nom_disp,
-                                clase_nodo=Laboratorio.ClaseNodo.GENERAL,
-                                unidad_academica=unidad_academica,
-                                defaults={"nombre": lab_nom_disp, "campus": campus},
+                            lab_obj = buscar_nodo(
+                                Laboratorio, lab_nom_disp, unidad_academica, parent=None
                             )
+                            created = lab_obj is None
+                            if created:
+                                lab_obj = Laboratorio.objects.create(
+                                    nombre=lab_nom_disp,
+                                    clase_nodo=Laboratorio.ClaseNodo.GENERAL,
+                                    unidad_academica=unidad_academica,
+                                    campus=campus,
+                                )
                             lab_actual = lab_obj
                             ultimo_nodo_afectado = lab_obj
                             action_main = A_CREATE_ROOT if created else A_EXIST_ROOT
+                            # --solo-nuevos: el laboratorio ya lo cargó una fuente de
+                            # mayor prioridad; no tocamos su detalle.
+                            saltar_raiz = solo_nuevos and not created
                         else:
                             action_main = A_CREATE_ROOT
                             ultimo_nodo_afectado = "MOCK_ROOT"
+                            saltar_raiz = False
 
                         if action_main:
                             log(fila_num, action_main, f"lab={lab_nom_disp!r}")
+
+                if saltar_raiz:
+                    continue
 
                 tipo_canon = canon_tipo(tipo) if tipo else None
                 if tipo_canon:
@@ -315,35 +439,56 @@ class Command(BaseCommand):
                         log(fila_num, A_AMBIGUOUS, f"sec={sec.strip()!r} sin padre")
                         continue
 
+                    # Nombre genérico (la celda repite el tipo, ej. "LABORATORIO"):
+                    # se compone con el padre para que el nodo tenga significado.
+                    if normalizar_texto(sec) in NOMBRES_GENERICOS:
+                        sec_original = sec.strip()
+                        sec = f"{sec_original} DE {lab_nom_disp}"
+                        log(fila_num, A_FIX_NOMBRE_GEN, f"{sec_original!r} → {sec!r}")
+
+                    sec = canonizar_hijo(sec.strip())
                     tipo_final = tipo_canon or tipo_actual or "LABORATORIO"
                     sup_val = None
                     if sup:
-                        try:
-                            sup_val = Decimal(sup.replace(",", ".").replace(" ", ""))
-                        except InvalidOperation:
-                            pass
+                        # Tolera unidades y formatos sucios: "57.20 m²", "59,61 m2", "78, 10 m3"
+                        m = re.search(r"\d+(?:\s*[.,]\s*\d+)?", sup)
+                        if m:
+                            try:
+                                sup_val = Decimal(m.group().replace(",", ".").replace(" ", ""))
+                            except InvalidOperation:
+                                pass
 
                     if not dry_run:
-                        hijo, created = Laboratorio.objects.get_or_create(
-                            nombre__iexact=sec.strip(),
-                            parent=lab_actual,
-                            subtipo_espacio=tipo_final,
-                            defaults={
-                                "nombre": sec.strip(),
-                                "unidad_academica": unidad_academica,
-                                "campus": campus,
-                                "clase_nodo": Laboratorio.ClaseNodo.SUBESPACIO,
-                                "superficie_m2": sup_val,
-                                "ubicacion": ubi or "",
-                            },
+                        # La identidad del nodo es (nombre, padre, unidad) — igual
+                        # que la restricción `uq_lab_nombre_parent_ua`. El subtipo
+                        # NO entra en la búsqueda: el mismo subespacio aparece como
+                        # ÁREA en el Excel de la sede y como LABORATORIO en el
+                        # consolidado, y buscarlo por subtipo lo duplicaría.
+                        hijo = buscar_nodo(
+                            Laboratorio, sec.strip(), unidad_academica, parent=lab_actual
                         )
+                        created = hijo is None
+                        if created:
+                            hijo = Laboratorio.objects.create(
+                                nombre=sec.strip(),
+                                parent=lab_actual,
+                                unidad_academica=unidad_academica,
+                                campus=campus,
+                                clase_nodo=Laboratorio.ClaseNodo.SUBESPACIO,
+                                subtipo_espacio=tipo_final,
+                                superficie_m2=sup_val,
+                                ubicacion=ubi or "",
+                            )
                         ultimo_nodo_afectado = hijo
 
+                        # Al complementar con un consolidado sólo se RELLENAN los
+                        # huecos: no se pisa la superficie ni la ubicación que ya
+                        # trajo el Excel de la sede, que es la fuente autoritativa.
                         changed = False
-                        if sup_val is not None and hijo.superficie_m2 != sup_val:
+                        if sup_val is not None and hijo.superficie_m2 is None:
                             hijo.superficie_m2 = sup_val
                             changed = True
-                        if ubi and hijo.ubicacion != ubi:
+                        if ubi and not hijo.ubicacion:
                             hijo.ubicacion = ubi
                             changed = True
                         if changed:
@@ -410,11 +555,26 @@ class Command(BaseCommand):
                             )
 
                         if asig:
-                            UsoAcademico.objects.get_or_create(
-                                laboratorio=ultimo_nodo_afectado,
-                                asignatura=asig,
-                                defaults={"semestre": sem, "carrera": car},
+                            # El uso académico se identifica por el trío
+                            # (asignatura, semestre, carrera), no sólo por la
+                            # asignatura: la misma materia se dicta para varias
+                            # carreras. Buscando sólo por el nombre se perdían
+                            # esas filas y, al reimportar, `get_or_create`
+                            # reventaba con MultipleObjectsReturned al
+                            # encontrar dos usos con la misma asignatura.
+                            clave = clave_uso_academico(asig, sem, car)
+                            existe = any(
+                                clave_uso_academico(u.asignatura, u.semestre, u.carrera) == clave
+                                for u in UsoAcademico.objects.filter(
+                                    laboratorio=ultimo_nodo_afectado)
                             )
+                            if not existe:
+                                UsoAcademico.objects.create(
+                                    laboratorio=ultimo_nodo_afectado,
+                                    asignatura=asig,
+                                    semestre=sem,
+                                    carrera=car,
+                                )
 
             if dry_run:
                 transaction.set_rollback(True)

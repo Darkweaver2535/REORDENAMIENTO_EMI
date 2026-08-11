@@ -1,0 +1,8 @@
+{
+  "_comentario": "Ruteo fila a fila por la columna UBICACIÓN DEL EQUIPO (UASC). La hoja LAB CIVIL trae suelos, asfaltos y hormigón mezclados. Las claves se comparan normalizadas, así que 'HORMIGON' cubre también 'HORMIGÓN'.",
+
+  "LABORATORIO DE SUELOS": "SUELOS",
+  "LABORATORIO DE ASFALTOS": "ASFALTOS",
+  "EXTERIOR DEL LABORATORIO DE ASFALTOS": "ASFALTOS",
+  "LABORATORIO DE HORMIGON": "HORMIGONES"
+}

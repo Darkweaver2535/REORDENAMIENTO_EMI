@@ -1,0 +1,17 @@
+{
+  "_comentario": "Ruteo fila a fila por la columna UBICACIÓN DEL EQUIPO (UALP). Tres archivos traen varias salas mezcladas en una sola hoja; sin esto los equipos caerían todos en un nodo genérico. Los destinos deben ser nodos hoja existentes.",
+
+  "_civil": "LABORATORIOS CIVIL.xlsx — 62 equipos repartidos en 4 salas",
+  "LABORATORIO HORMIGONES": "HORMIGONES y ASFALTOS",
+  "LABORATORIO ASFALTOS": "HORMIGONES y ASFALTOS",
+  "LABORATORIO SUELOS": "SUELOS",
+  "LABORATORIO HIDRÁULICA": "MATERIALES e HIDRÁULICA",
+
+  "_industrial": "LAB. INDUSTRIAL.xlsx — 41 equipos en 2 salas",
+  "LABORATORIO DE CONTROL DE PARAMETROS": "CONTROL DE PARAMETROS",
+  "LABORATORIO DE METODOS Y SEGURIDAD": "MÉTODOS Y SEGURIDAD",
+
+  "_edafologia": "LAB. EDAFOLOGIA.xlsx — 8 equipos en 2 áreas",
+  "ÁREA DE PREPARACIÓN DE MUESTRAS Y CARACTERIZACIÓN DE SUELOS": "PREPARACIÓN DE MUESTRAS Y CARACTERIZACIÓN DE SUELOS",
+  "ÁREA DE PESAJE": "ÁREA DE PESAJE"
+}

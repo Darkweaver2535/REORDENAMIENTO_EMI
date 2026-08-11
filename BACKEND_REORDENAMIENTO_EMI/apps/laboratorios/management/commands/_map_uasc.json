@@ -1,0 +1,11 @@
+{
+  "_comentario": "Overrides hoja->laboratorio para UASC (archivo SANTA CRUZ-INFORMACIÓN EQUIPOS LABORATORIOS.xlsx).",
+
+  "_nota_autm": "La hoja declara 'ELECTRÓNICA' en la cabecera pero es el laboratorio de automatización y control; sin este override caía junto con LAB. ETN.",
+  "SANTA CRUZ-INFORMACIÓN EQUIPOS LABORATORIOS.xlsx::LAB. AUTM. Y CTRL.": "CONTROL Y AUTOMATIZACION INDUSTRIAL",
+  "SANTA CRUZ-INFORMACIÓN EQUIPOS LABORATORIOS.xlsx::LAB. ETN": "ELECTRONICA APLICADA",
+  "SANTA CRUZ-INFORMACIÓN EQUIPOS LABORATORIOS.xlsx::LAB REDES": "SIMULACIÓN Y REDES",
+
+  "_nota_civil": "101 equipos repartidos en suelos, asfaltos y hormigón; el reparto real lo hace --map-filas y este destino es solo el respaldo.",
+  "SANTA CRUZ-INFORMACIÓN EQUIPOS LABORATORIOS.xlsx::LAB CIVIL": "SUELOS"
+}

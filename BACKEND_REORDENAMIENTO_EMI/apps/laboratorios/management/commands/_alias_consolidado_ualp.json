@@ -1,0 +1,16 @@
+{
+  "_comentario": "UALP. El consolidado nacional nombra algunos ambientes distinto que el Excel de la sede (más reciente y detallado). Sin estos alias crearía un nodo duplicado para el MISMO ambiente físico. OJO: son específicos de La Paz — en Cochabamba, Trópico y Riberalta 'HORMIGONES' y 'ASFALTOS' sí son ambientes propios.",
+  "_civil": "La sede reporta hormigones y asfaltos como un único ambiente compartido; el consolidado los lista por separado.",
+  "HORMIGONES": "HORMIGONES y ASFALTOS",
+  "ASFALTOS": "HORMIGONES y ASFALTOS",
+  "_industrial": "Mismos ambientes con la denominación anterior del consolidado.",
+  "INVESTIGACION Y DESARROLLO": "INNOVACIÓN Y DESARROLLO",
+  "SEGURIDAD INDUSTRIAL": "MÉTODOS Y SEGURIDAD",
+  "MECANICA DE ALIMENTOS": "TECNOLOGÍA DE ALIMENTOS",
+  "_biotecnologia": "La sede lo registra con el nombre completo de la carrera.",
+  "BIOTECNOLOGIA": "BIOTECNOLOGÍA VEGETAL",
+  "_edafologia": "El consolidado lista un único ambiente 'EDAFOLOGÍA'; la sede lo desglosa en tres áreas. Se mapea al área principal, donde ya están sus equipos.",
+  "_sistemas": "El consolidado llama 'Informática' al laboratorio general de cómputo. UALP ya tiene INFORMÁTICA bajo TECNOLÓGICO Y CIENCIAS BÁSICAS (aula 111, 46 equipos); crear otro nodo homónimo bajo SISTEMAS sería redundante.",
+  "hijo:EDAFOLOGÍA": "PREPARACIÓN DE MUESTRAS Y CARACTERIZACIÓN DE SUELOS",
+  "_nota_informatica": "El alias hijo:INFORMÁTICA → LABORATORIO DE SISTEMAS DE COMPUTO se retiró: son dos salas distintas (77,35 m² en Edificio Central 1er piso frente a 69 m² en el aula 102) y el alias, al no estar acotado por raíz, también reescribía la fila del Excel de la sede."
+}
