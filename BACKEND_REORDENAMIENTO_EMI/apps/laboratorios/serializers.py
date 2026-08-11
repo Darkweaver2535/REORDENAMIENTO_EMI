@@ -187,6 +187,22 @@ class EquipoListSerializer(serializers.ModelSerializer):
             )
         return value
 
+    def validate_laboratorio_id(self, value):
+        """Un equipo se guarda en un ambiente concreto, no en un contenedor.
+
+        Los laboratorios generales agrupan salas, áreas y secciones; el bien
+        físico está en una de ellas. El formulario ya sólo ofrece nodos hoja,
+        pero la API lo aceptaba igual, y entonces el equipo desaparecía del
+        árbol y de los recuentos por ambiente.
+        """
+        if value is not None and not value.es_hoja():
+            hijos = ", ".join(
+                h.nombre for h in value.hijos.all()[:3]) or "sus subespacios"
+            raise serializers.ValidationError(
+                f"«{value.nombre}» agrupa otros espacios; elige uno de ellos ({hijos})."
+            )
+        return value
+
     def get_laboratorio_nombre(self, obj):
         if obj.laboratorio_id is None:
             return None
@@ -389,11 +405,13 @@ class LaboratorioTreeSerializer(serializers.ModelSerializer):
         return obj.unidad_academica.nombre
 
     def get_es_hoja(self, obj):
-        return obj.es_hoja()
+        # `obj.hijos.all()` ya viene precargado por la vista, así que evaluarlo
+        # no toca la base. `exists()` en cambio lanza una consulta por nodo: con
+        # 169 laboratorios el árbol hacía 129 consultas en vez de 5.
+        return not obj.hijos.all()
 
     def get_hijos(self, obj):
-        # La recursión se detiene naturalmente cuando hijos.all() retorna queryset vacío
-        hijos_qs = obj.hijos.all()
-        if not hijos_qs.exists():
+        hijos = obj.hijos.all()
+        if not hijos:
             return []
-        return LaboratorioTreeSerializer(hijos_qs, many=True, context=self.context).data
+        return LaboratorioTreeSerializer(hijos, many=True, context=self.context).data

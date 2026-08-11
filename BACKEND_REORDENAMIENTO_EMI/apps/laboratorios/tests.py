@@ -4,9 +4,11 @@ import shutil
 import tempfile
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITestCase
 
 from apps.estructura_academica.models import UnidadAcademica
 from apps.laboratorios.models import Equipo, Laboratorio, TipoEquipo
@@ -414,3 +416,158 @@ class CantidadesImposiblesTests(TestCase):
             f"/api/v1/laboratorios/equipos/{equipo.pk}/",
             {"notas": "Revisado en inventario"}, format="json")
         self.assertEqual(resp.status_code, 200, resp.data)
+
+
+class EquipoEnNodoHojaTests(APITestCase):
+    """Un equipo se guarda en el ambiente concreto donde está.
+
+    Los laboratorios generales agrupan salas, áreas y secciones. Al aceptar uno
+    de esos contenedores, el equipo quedaba colgado de un nodo que la interfaz
+    no lista como destino: desaparecía del árbol y no contaba en el recuento de
+    ningún ambiente. El formulario ya filtraba los nodos hoja, pero la API no.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.unidad = UnidadAcademica.objects.create(
+            nombre="UA Hoja", ciudad="La Paz", codigo="0091", abreviacion="UAH")
+        cls.general = Laboratorio.objects.create(
+            nombre="QUÍMICA", unidad_academica=cls.unidad, campus="Central")
+        cls.sala = Laboratorio.objects.create(
+            nombre="QUÍMICA APLICADA", parent=cls.general,
+            unidad_academica=cls.unidad, campus="Central")
+        cls.suelto = Laboratorio.objects.create(
+            nombre="FÍSICA", unidad_academica=cls.unidad, campus="Central")
+        cls.admin = Usuario.objects.create_superuser(
+            carnet_identidad="60000001", password="x",
+            nombre_completo="Admin", rol="ADMIN")
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin)
+
+    def _crear(self, laboratorio, codigo):
+        return self.client.post("/api/v1/laboratorios/equipos/", {
+            "nombre": "Microscopio", "codigo_activo": codigo,
+            "laboratorio_id": laboratorio.pk,
+            "cantidad_total": 1, "cantidad_buena": 1,
+            "estatus_general": "bueno",
+        }, format="json")
+
+    def test_rechaza_un_laboratorio_que_agrupa_subespacios(self):
+        resp = self._crear(self.general, "EQ-HOJA-1")
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertIn("laboratorio_id", resp.data)
+
+    def test_el_mensaje_sugiere_los_subespacios(self):
+        resp = self._crear(self.general, "EQ-HOJA-2")
+        self.assertIn("QUÍMICA APLICADA", str(resp.data["laboratorio_id"]))
+
+    def test_acepta_un_subespacio(self):
+        resp = self._crear(self.sala, "EQ-HOJA-3")
+        self.assertEqual(resp.status_code, 201, resp.data)
+
+    def test_acepta_un_laboratorio_sin_subespacios(self):
+        """Un nodo raíz sin hijos también es una hoja: ahí sí hay equipos."""
+        resp = self._crear(self.suelto, "EQ-HOJA-4")
+        self.assertEqual(resp.status_code, 201, resp.data)
+
+    def test_no_se_puede_mover_un_equipo_a_un_contenedor(self):
+        self._crear(self.sala, "EQ-HOJA-5")
+        equipo = Equipo.objects.get(codigo_activo="EQ-HOJA-5")
+        resp = self.client.patch(f"/api/v1/laboratorios/equipos/{equipo.pk}/", {
+            "laboratorio_id": self.general.pk}, format="json")
+        self.assertEqual(resp.status_code, 400, resp.data)
+
+
+class ArbolSinConsultasPorNodoTests(APITestCase):
+    """El árbol se arma con un número fijo de consultas, no una por nodo.
+
+    El serializer preguntaba `hijos.exists()` dos veces por nodo —para saber si
+    es hoja y para decidir si recurre— y sacaba el nombre de la sede de cada
+    hijo por separado, ignorando la precarga. Con 169 laboratorios eso eran 129
+    consultas; el coste crecía con el inventario.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.unidad = UnidadAcademica.objects.create(
+            nombre="UA Árbol", ciudad="La Paz", codigo="0092", abreviacion="UAA")
+        # Tres raíces, cada una con tres salas y una de ellas con dos áreas.
+        for i in range(3):
+            raiz = Laboratorio.objects.create(
+                nombre=f"GENERAL {i}", unidad_academica=cls.unidad, campus="C")
+            for j in range(3):
+                sala = Laboratorio.objects.create(
+                    nombre=f"SALA {i}-{j}", parent=raiz,
+                    unidad_academica=cls.unidad, campus="C")
+                if j == 0:
+                    for k in range(2):
+                        Laboratorio.objects.create(
+                            nombre=f"ÁREA {i}-{j}-{k}", parent=sala,
+                            unidad_academica=cls.unidad, campus="C")
+        cls.admin = Usuario.objects.create_superuser(
+            carnet_identidad="61000001", password="x",
+            nombre_completo="Admin", rol="ADMIN")
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin)
+
+    def test_el_numero_de_consultas_no_depende_del_tamano_del_arbol(self):
+        """Una consulta por nivel de profundidad, ninguna por nodo."""
+        with CaptureQueriesContext(connection) as antes:
+            self.client.get("/api/v1/laboratorios/tree/")
+
+        # Se triplica el número de nodos sin añadir profundidad.
+        for i in range(3, 12):
+            raiz = Laboratorio.objects.create(
+                nombre=f"GENERAL {i}", unidad_academica=self.unidad, campus="C")
+            for j in range(3):
+                Laboratorio.objects.create(
+                    nombre=f"SALA {i}-{j}", parent=raiz,
+                    unidad_academica=self.unidad, campus="C")
+
+        with CaptureQueriesContext(connection) as despues:
+            resp = self.client.get("/api/v1/laboratorios/tree/")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(antes.captured_queries), len(despues.captured_queries),
+                         "el número de consultas creció con el número de nodos")
+        self.assertLessEqual(len(despues.captured_queries), 6)
+
+    def test_devuelve_el_arbol_completo(self):
+        datos = self.client.get("/api/v1/laboratorios/tree/").data
+
+        def contar(nodos):
+            return sum(1 + contar(n["hijos"]) for n in nodos)
+
+        self.assertEqual(len(datos), 3)          # raíces
+        self.assertEqual(contar(datos), 18)      # 3 + 9 + 6
+
+    def test_marca_bien_las_hojas(self):
+        datos = self.client.get("/api/v1/laboratorios/tree/").data
+        hojas, ramas = [], []
+
+        def recorrer(nodos):
+            for n in nodos:
+                (hojas if n["es_hoja"] else ramas).append(n["nombre"])
+                recorrer(n["hijos"])
+
+        recorrer(datos)
+        # Hojas: las 6 áreas y las 6 salas sin áreas.
+        self.assertEqual(len(hojas), 12)
+        self.assertTrue(all(n.startswith(("ÁREA", "SALA")) for n in hojas))
+        self.assertTrue(all(n.startswith(("GENERAL", "SALA")) for n in ramas))
+
+    def test_cada_nodo_trae_el_nombre_de_su_sede(self):
+        datos = self.client.get("/api/v1/laboratorios/tree/").data
+        nombres = []
+
+        def recorrer(nodos):
+            for n in nodos:
+                nombres.append(n["unidad_academica_nombre"])
+                recorrer(n["hijos"])
+
+        recorrer(datos)
+        self.assertTrue(all(n == "UA Árbol" for n in nombres), nombres[:5])

@@ -1,5 +1,5 @@
 from config.cache_resiliente import cache_resiliente as cache
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.utils import timezone
 from rest_framework import filters, status
 from rest_framework.decorators import action
@@ -100,9 +100,19 @@ class LaboratorioViewSet(ModelViewSet):
         Cada nodo raíz (parent=None) incluye recursivamente su lista de hijos.
         Los prefetch de 4 niveles cubren jerarquías de hasta General→Sección→Área→Lab.
         """
+        # Cada nivel se precarga con su unidad académica: el serializer muestra
+        # el nombre de la sede en cada nodo y, sin esto, la sacaba con una
+        # consulta suelta por laboratorio.
+        base = Laboratorio.objects.select_related("unidad_academica").order_by("nombre")
+        anidado = None
+        for _ in range(4):
+            anidado = Prefetch(
+                "hijos",
+                queryset=base.prefetch_related(anidado) if anidado else base,
+            )
         raices = (
             Laboratorio.objects.filter(parent=None)
-            .prefetch_related("hijos__hijos__hijos__hijos")
+            .prefetch_related(anidado)
             .select_related("unidad_academica")
         )
         # FIX #15: el árbol también respeta la visibilidad por rol/sede.
