@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
 	ArrowLeft, LoaderCircle, FileText,
-	Hash, Link as LinkIcon, Image, ChevronDown,
+	Hash, Image, ChevronDown,
 } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
 import { crearGuia, editarGuia, getGuiaDetalle } from "../../api/guiasApi";
@@ -31,9 +31,8 @@ const guiaSchema = z.object({
 		.min(1, "El número mínimo es 1")
 		.max(999, "El número máximo es 999"),
 
-	pdf_url: z
-		.string({ required_error: "La URL del PDF es obligatoria" })
-		.url("Ingresa una URL válida (ej: https://...)"),
+	// El PDF se sube como archivo, fuera del schema: react-hook-form no maneja
+	// el input file y la validación vive en `validarPdf`.
 
 	portada_url: z
 		.union([z.string().url("Ingresa una URL válida"), z.literal("")])
@@ -144,6 +143,11 @@ export default function GuiaFormPage() {
 	const [asignaturaSeleccionada, setAsignaturaSeleccionada] = useState(null);
 	const [asignaturaError, setAsignaturaError] = useState("");
 
+	// PDF: se maneja aparte de react-hook-form (input file).
+	const [pdfArchivo, setPdfArchivo] = useState(null);
+	const [pdfError, setPdfError] = useState("");
+	const [pdfActual, setPdfActual] = useState("");
+
 	const {
 		register,
 		handleSubmit,
@@ -155,7 +159,6 @@ export default function GuiaFormPage() {
 		defaultValues: {
 			titulo: "",
 			numero_practica: "",
-			pdf_url: "",
 			portada_url: "",
 		},
 	});
@@ -175,12 +178,22 @@ export default function GuiaFormPage() {
 			reset({
 				titulo: g.titulo,
 				numero_practica: g.numero_practica,
-				pdf_url: g.pdf_url,
 				portada_url: g.portada_url || "",
 			});
-			// Preseleccionar asignatura (asumiendo que viene id o dict)
-			if (g.asignatura) {
-				setAsignaturaSeleccionada({ id: g.asignatura });
+			setPdfActual(g.pdf_url || "");
+			// La API devuelve `asignatura_id` (no `asignatura`): leer la clave
+			// equivocada dejaba la asignatura sin preseleccionar y al guardar
+			// saltaba "Debes seleccionar una asignatura" aunque la guía ya
+			// tuviera una. Se conserva el nombre para mostrarlo sin obligar a
+			// recorrer de nuevo toda la cascada.
+			const idAsignatura = g.asignatura_id ?? g.asignatura?.id ?? g.asignatura;
+			if (idAsignatura) {
+				setAsignaturaSeleccionada({
+					id: idAsignatura,
+					nombre: g.asignatura_nombre,
+					semestre: g.semestre,
+					carrera_nombre: g.carrera_nombre,
+				});
 			}
 		}
 	}, [guiaExistente, isEdit, reset]);
@@ -203,12 +216,28 @@ export default function GuiaFormPage() {
 		}
 		setAsignaturaError("");
 
+		// El PDF es obligatorio al crear; al editar sólo si se quiere reemplazar.
+		if (!pdfArchivo && !isEdit) {
+			setPdfError("Debes subir el PDF de la guía");
+			return;
+		}
+		if (pdfArchivo && !pdfArchivo.name.toLowerCase().endsWith(".pdf")) {
+			setPdfError("El archivo debe ser un PDF");
+			return;
+		}
+		if (pdfArchivo && pdfArchivo.size > 30 * 1024 * 1024) {
+			setPdfError("El PDF supera el tamaño máximo de 30 MB");
+			return;
+		}
+		setPdfError("");
+
 		try {
 			const payload = {
 				...values,
 				numero_practica: Number(values.numero_practica),
 				asignatura: Number(asignaturaSeleccionada.id),
 			};
+			if (pdfArchivo) payload.pdf_archivo = pdfArchivo;
 
 			if (isEdit) {
 				await mutateAsync({ id, data: payload });
@@ -327,9 +356,21 @@ export default function GuiaFormPage() {
 								backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0",
 							}}>
 								<span style={{ color: "#16a34a", fontSize: "16px" }}>✓</span>
-								<p style={{ fontSize: "14px", fontWeight: 600, color: "#15803d" }}>
-									{asignaturaSeleccionada?.nombre ?? asignaturaSeleccionada?.titulo ?? `ID: ${asignaturaSeleccionada.id}`}
-								</p>
+								<div>
+									<p style={{ fontSize: "14px", fontWeight: 600, color: "#15803d" }}>
+										{asignaturaSeleccionada?.nombre ?? asignaturaSeleccionada?.titulo ?? `ID: ${asignaturaSeleccionada.id}`}
+									</p>
+									{/* Al editar, la cascada arranca vacía: este contexto evita
+									    tener que recorrerla de nuevo sólo para saber cuál es. */}
+									{(asignaturaSeleccionada?.carrera_nombre || asignaturaSeleccionada?.semestre) && (
+										<p style={{ fontSize: "13px", fontWeight: 500, color: "#4d7c0f", marginTop: 2 }}>
+											{[asignaturaSeleccionada.carrera_nombre,
+											  asignaturaSeleccionada.semestre && `${asignaturaSeleccionada.semestre}º semestre`]
+												.filter(Boolean).join(" · ")}
+											{isEdit && " — cambia los filtros sólo si quieres reasignarla"}
+										</p>
+									)}
+								</div>
 							</div>
 						)}
 					</SectionCard>
@@ -338,19 +379,42 @@ export default function GuiaFormPage() {
 					<SectionCard title="Archivos">
 						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
 
-							{/* PDF URL */}
+							{/* PDF: archivo subido al servidor */}
 							<div>
-								<FieldLabel htmlFor="pdf_url" required>URL del PDF</FieldLabel>
-								<StyledInput
-									id="pdf_url"
-									type="url"
-									placeholder="https://drive.google.com/..."
-									icon={LinkIcon}
-									error={errors.pdf_url}
-									{...register("pdf_url")}
+								<FieldLabel htmlFor="pdf_archivo" required={!isEdit}>
+									Archivo PDF de la guía
+								</FieldLabel>
+								<input
+									id="pdf_archivo"
+									type="file"
+									accept="application/pdf,.pdf"
+									onChange={(e) => setPdfArchivo(e.target.files?.[0] ?? null)}
+									style={{
+										width: "100%",
+										padding: "10px 12px",
+										fontSize: "14px",
+										borderRadius: "10px",
+										border: `1px solid ${pdfError ? "#ef4444" : "#e5e7eb"}`,
+										background: "#fff",
+										cursor: "pointer",
+									}}
 								/>
-								<FieldError message={errors.pdf_url?.message} />
-								<FieldHint>Sube el PDF a Google Drive o similar y pega el enlace público aquí.</FieldHint>
+								<FieldError message={pdfError} />
+								{pdfArchivo ? (
+									<FieldHint>
+										{pdfArchivo.name} · {(pdfArchivo.size / 1048576).toFixed(1)} MB
+									</FieldHint>
+								) : pdfActual ? (
+									<FieldHint>
+										Ya tiene un PDF cargado —{" "}
+										<a href={pdfActual} target="_blank" rel="noreferrer" style={{ color: "#2563eb", fontWeight: 600 }}>
+											ver actual
+										</a>
+										. Elige un archivo sólo si quieres reemplazarlo.
+									</FieldHint>
+								) : (
+									<FieldHint>Selecciona el PDF de la guía (máximo 30 MB).</FieldHint>
+								)}
 							</div>
 
 							{/* Portada URL */}
@@ -416,14 +480,14 @@ export default function GuiaFormPage() {
 								height: "48px",
 								padding: "0 28px",
 								borderRadius: "10px",
-								backgroundColor: "#002B5E",
+								backgroundColor: "#004F9F",
 								color: "#ffffff",
 								fontSize: "15px",
 								fontWeight: 700,
 								cursor: isSubmitting ? "not-allowed" : "pointer",
 								opacity: isSubmitting ? 0.6 : 1,
 								border: "none",
-								boxShadow: "0 4px 6px rgba(0,43,94,0.25)",
+								boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)",
 								transition: "opacity 150ms ease",
 							}}
 						>

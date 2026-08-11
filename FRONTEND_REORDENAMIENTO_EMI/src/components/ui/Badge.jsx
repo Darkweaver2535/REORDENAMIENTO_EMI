@@ -6,7 +6,7 @@ const STATUS_MAP = {
   pendiente:  { label: "Pendiente de aprobación", classes: "bg-amber-50 text-amber-800 border-amber-300" },
   aprobado:   { label: "Aprobado",                classes: "bg-blue-50 text-blue-800 border-blue-300" },
   ejecutado:  { label: "Ejecutado",               classes: "bg-emerald-50 text-emerald-800 border-emerald-300" },
-  autorizado: { label: "Autorizado",              classes: "bg-blue-50 text-[#002B5E] border-blue-300" },
+  autorizado: { label: "Autorizado",              classes: "bg-blue-50 text-[#004F9F] border-blue-300" },
   cancelado:  { label: "Cancelado",               classes: "bg-red-50 text-red-800 border-red-300" },
 };
 

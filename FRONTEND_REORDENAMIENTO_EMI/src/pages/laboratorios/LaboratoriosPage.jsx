@@ -20,6 +20,18 @@ const normalizeList = (data) => {
 };
 
 const getLabName        = (l) => l?.nombre ?? l?.nombre_laboratorio ?? l?.descripcion ?? "Sin nombre";
+
+/* Tipo de nodo (misma paleta que el árbol) para distinguir homónimos:
+   un espacio "General" puede contener un subespacio con el mismo nombre. */
+const TIPO_NODO = {
+	GENERAL:     { label: "General",     bg: "#1e3a6e", fg: "#e8f0fe" },
+	SALA:        { label: "Sala",        bg: "#0e4d7a", fg: "#bae6fd" },
+	AREA:        { label: "Área",        bg: "#5b3a00", fg: "#fde68a" },
+	SECCION:     { label: "Sección",     bg: "#3b1f63", fg: "#e9d5ff" },
+	LABORATORIO: { label: "Laboratorio", bg: "#7a1a1a", fg: "#fecaca" },
+};
+const getTipoNodo = (l) =>
+	l?.clase_nodo === "GENERAL" ? TIPO_NODO.GENERAL : TIPO_NODO[l?.subtipo_espacio] ?? null;
 const getUnidadAcademica = (l) => l?.unidad_academica_nombre ?? l?.sede_nombre ?? l?.sede ?? l?.unidad_academica ?? "—";
 const getEdificio       = (l) => l?.edificio ?? l?.nombre_edificio ?? "—";
 const getSala           = (l) => l?.sala ?? l?.numero_sala ?? l?.aula ?? "—";
@@ -192,7 +204,7 @@ export default function LaboratoriosPage() {
 								border: "none", cursor: "pointer",
 								transition: "all 180ms ease",
 								...(viewMode === key
-									? { background: "#ffffff", color: "#002B5E", boxShadow: "0 1px 3px rgba(0,0,0,0.10)" }
+									? { background: "#ffffff", color: "#004F9F", boxShadow: "0 1px 3px rgba(0,0,0,0.10)" }
 									: { background: "transparent", color: "#6b7280" }),
 							}}
 						>
@@ -350,12 +362,26 @@ export default function LaboratoriosPage() {
 												backgroundColor: "#EFF6FF", display: "flex",
 												alignItems: "center", justifyContent: "center", flexShrink: 0,
 											}}>
-												<FlaskConical size={18} color="#002B5E" />
+												<FlaskConical size={18} color="#004F9F" />
 											</div>
 											<div>
-												<p style={{ fontSize: "15px", fontWeight: 700, color: "#111827" }}>
+												<p style={{ fontSize: "15px", fontWeight: 700, color: "#111827", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
 													{getLabName(lab)}
+													{getTipoNodo(lab) && (
+														<span style={{
+															padding: "1px 8px", borderRadius: "9999px",
+															fontSize: "10px", fontWeight: 700, letterSpacing: "0.04em",
+															backgroundColor: getTipoNodo(lab).bg, color: getTipoNodo(lab).fg,
+														}}>
+															{getTipoNodo(lab).label}
+														</span>
+													)}
 												</p>
+												{lab?.parent_nombre && (
+													<p style={{ fontSize: "13px", color: "#9ca3af", fontWeight: 500, marginTop: "2px" }}>
+														dentro de {lab.parent_nombre}
+													</p>
+												)}
 												{lab?.responsable && (
 													<p style={{ fontSize: "13px", color: "#9ca3af", fontWeight: 500, marginTop: "2px" }}>
 														{lab.responsable}
@@ -410,10 +436,10 @@ export default function LaboratoriosPage() {
 											style={{
 												display: "inline-flex", alignItems: "center", gap: "8px",
 												padding: "8px 16px", borderRadius: "8px",
-												backgroundColor: "#002B5E", color: "#ffffff",
+												backgroundColor: "#004F9F", color: "#ffffff",
 												fontSize: "14px", fontWeight: 700,
 												border: "none", cursor: "pointer",
-												boxShadow: "0 2px 6px rgba(0,43,94,0.25)",
+												boxShadow: "0 2px 6px rgba(0, 79, 159,0.25)",
 												transition: "opacity 150ms ease",
 												whiteSpace: "nowrap",
 											}}

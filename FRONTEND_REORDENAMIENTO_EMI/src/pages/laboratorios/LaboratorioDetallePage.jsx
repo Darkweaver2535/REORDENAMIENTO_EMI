@@ -4,7 +4,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, FlaskConical, Wrench, ClipboardCheck } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
-import { fetchLaboratorioById, fetchEquipos } from "../../api/laboratoriosApi";
+import { fetchLaboratorioById, fetchTodosLosEquipos } from "../../api/laboratoriosApi";
 import { ROLES } from "../../constants/api";
 import PageWrapper from "../../components/layout/PageWrapper";
 import Button from "../../components/ui/Button";
@@ -41,7 +41,9 @@ export default function LaboratorioDetallePage() {
 
 	const { data: equiposData, isLoading: loadingEquipos } = useQuery({
 		queryKey: ["equipos", id],
-		queryFn: () => fetchEquipos({ laboratorio_id: id }),
+		// Sin recorrer las páginas sólo se veían los primeros 20 equipos del
+		// laboratorio y el contador mentía ("20 equipos" de 127).
+		queryFn: () => fetchTodosLosEquipos({ laboratorio_id: id }),
 		enabled: Boolean(id),
 	});
 
@@ -159,7 +161,7 @@ export default function LaboratorioDetallePage() {
 					boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
 				}}>
 					<div style={{ padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "10px" }}>
-						<Wrench size={18} color="#002B5E" />
+						<Wrench size={18} color="#004F9F" />
 						<h2 style={{ fontSize: "16px", fontWeight: 700, color: "#374151" }}>Equipos del laboratorio</h2>
 					</div>
 

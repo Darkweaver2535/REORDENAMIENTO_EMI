@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Monitor, LayoutGrid, List, X, Package } from "lucide-react";
-import { fetchLaboratorios, fetchEquipos } from "../../api/laboratoriosApi";
+import { Monitor, LayoutGrid, List, X, Package, PackagePlus } from "lucide-react";
+import { fetchTodosLosLaboratorios, fetchTodosLosEquipos } from "../../api/laboratoriosApi";
+import { contiene } from "../../utils/texto";
 import axiosClient from "../../api/axiosClient";
 import { ROLES, API_ROUTES } from "../../constants/api";
 import { useAuth } from "../../store/AuthContext";
@@ -10,6 +11,7 @@ import PageWrapper from "../../components/layout/PageWrapper";
 import EquipoCard from "../../components/equipos/EquipoCard";
 import EquipoListRow from "../../components/equipos/EquipoListRow";
 import FiltrosEquipos from "../../components/equipos/FiltrosEquipos";
+import ModalNuevoEquipo from "../../components/equipos/ModalNuevoEquipo";
 
 const normalize = (d) => { if (!d) return []; const p = d?.data ?? d; if (Array.isArray(p)) return p; return p?.results ?? p?.data ?? []; };
 
@@ -27,16 +29,20 @@ export default function EquiposPage() {
 		busqueda: "",
 	});
 	const [pagina, setPagina] = useState(1);
+	const [modalNuevo, setModalNuevo] = useState(false);
 	const PER_PAGE = 15;
 
 	/* ── Queries ──────────────────────────────────────── */
 	const { data: uaData } = useQuery({ queryKey: ["unidades"], queryFn: () => axiosClient.get(API_ROUTES.ESTRUCTURA.UNIDADES), staleTime: 5 * 60 * 1000 });
 	const unidades = normalize(uaData);
 
-	const { data: labsData } = useQuery({ queryKey: ["laboratorios"], queryFn: () => fetchLaboratorios({ page_size: 1000 }), staleTime: 5 * 60 * 1000 });
+	const { data: labsData } = useQuery({ queryKey: ["laboratorios", "todos"], queryFn: () => fetchTodosLosLaboratorios(), staleTime: 5 * 60 * 1000 });
 	const laboratorios = normalize(labsData);
 
-	const { data: eqData, isLoading } = useQuery({ queryKey: ["all-equipos"], queryFn: () => fetchEquipos({ page_size: 1000 }), staleTime: 3 * 60 * 1000 });
+	const { data: tiposData } = useQuery({ queryKey: ["tipos-equipo"], queryFn: () => axiosClient.get(API_ROUTES.LABORATORIOS.TIPOS_EQUIPO), staleTime: 5 * 60 * 1000 });
+	const tipos = normalize(tiposData);
+
+	const { data: eqData, isLoading } = useQuery({ queryKey: ["all-equipos"], queryFn: () => fetchTodosLosEquipos(), staleTime: 3 * 60 * 1000 });
 	const allEquipos = normalize(eqData);
 
 	/* ── Filtrado ─────────────────────────────────────── */
@@ -48,8 +54,9 @@ export default function EquiposPage() {
 		if (filtros.laboratorio) data = data.filter(e => String(e.laboratorio_id) === String(filtros.laboratorio));
 		if (filtros.estado) data = data.filter(e => e.estatus_general === filtros.estado);
 		if (filtros.busqueda) {
-			const q = filtros.busqueda.toLowerCase();
-			data = data.filter(e => (e.nombre || "").toLowerCase().includes(q) || (e.codigo_activo || "").toLowerCase().includes(q));
+			// Sin tildes: los nombres vienen de los Excel ("MULTÍMETRO") y nadie
+			// las teclea al buscar.
+			data = data.filter(e => contiene(e.nombre, filtros.busqueda) || contiene(e.codigo_activo, filtros.busqueda));
 		}
 		return data;
 	}, [allEquipos, filtros, laboratorios]);
@@ -102,7 +109,20 @@ export default function EquiposPage() {
 	);
 
 	return (
-		<PageWrapper title="Equipos" description="Explora y busca equipos por laboratorio, tipo o estado.">
+		<PageWrapper
+			title="Equipos"
+			description="Explora y busca equipos por laboratorio, tipo o estado."
+			actions={
+				hasRole(ROLES.ADMIN, ROLES.JEFE) ? (
+					<button
+						onClick={() => setModalNuevo(true)}
+						style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 18px", borderRadius: 10, backgroundColor: "#004F9F", border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+					>
+						<PackagePlus size={18} /> Nuevo equipo
+					</button>
+				) : null
+			}
+		>
 			<div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
 
 				{/* Filtros sidebar */}
@@ -134,11 +154,11 @@ export default function EquiposPage() {
 						<div style={{ display: "flex", gap: 4 }}>
 							<button onClick={() => setVistaGrilla(true)} style={{
 								width: 38, height: 38, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
-								border: "1px solid #e5e7eb", backgroundColor: vistaGrilla ? "#002B5E" : "#fff", color: vistaGrilla ? "#fff" : "#6b7280", cursor: "pointer",
+								border: "1px solid #e5e7eb", backgroundColor: vistaGrilla ? "#004F9F" : "#fff", color: vistaGrilla ? "#fff" : "#6b7280", cursor: "pointer",
 							}}><LayoutGrid size={17} /></button>
 							<button onClick={() => setVistaGrilla(false)} style={{
 								width: 38, height: 38, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
-								border: "1px solid #e5e7eb", backgroundColor: !vistaGrilla ? "#002B5E" : "#fff", color: !vistaGrilla ? "#fff" : "#6b7280", cursor: "pointer",
+								border: "1px solid #e5e7eb", backgroundColor: !vistaGrilla ? "#004F9F" : "#fff", color: !vistaGrilla ? "#fff" : "#6b7280", cursor: "pointer",
 							}}><List size={17} /></button>
 						</div>
 					</div>
@@ -158,7 +178,7 @@ export default function EquiposPage() {
 							<p style={{ fontSize: 14, color: "#9ca3af", marginTop: 6 }}>Intenta con otros filtros</p>
 							<button onClick={resetFiltros} style={{
 								marginTop: 16, padding: "10px 24px", borderRadius: 8,
-								backgroundColor: "#002B5E", color: "#fff", fontSize: 14, fontWeight: 700,
+								backgroundColor: "#004F9F", color: "#fff", fontSize: 14, fontWeight: 700,
 								border: "none", cursor: "pointer",
 							}}>Limpiar filtros</button>
 						</div>
@@ -201,6 +221,13 @@ export default function EquiposPage() {
 					)}
 				</div>
 			</div>
+			<ModalNuevoEquipo
+				abierto={modalNuevo}
+				onClose={() => setModalNuevo(false)}
+				laboratorios={laboratorios}
+				unidades={unidades}
+				tipos={tipos}
+			/>
 		</PageWrapper>
 	);
 }

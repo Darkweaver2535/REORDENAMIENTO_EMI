@@ -23,6 +23,11 @@ const getLabel = (item) => item?.nombre ?? item?.nombre_completo ?? item?.descri
 
 /* ── Select con icono de carga ───────────────────────────────────── */
 function CascadeSelect({ id, label, value, onChange, options = [], loading, disabled }) {
+	// Un nivel habilitado pero sin opciones deja al usuario en un callejón sin
+	// salida silencioso: pasa con DNICYT, que es dirección de investigación y no
+	// dicta carreras. Se dice explícitamente en vez de mostrar la lista vacía.
+	const vacio = !disabled && !loading && options.length === 0;
+
 	return (
 		<div>
 			<label
@@ -61,7 +66,7 @@ function CascadeSelect({ id, label, value, onChange, options = [], loading, disa
 						transition: "all 180ms ease",
 					}}
 				>
-					<option value="">Selecciona…</option>
+					<option value="">{vacio ? "No hay opciones disponibles" : "Selecciona…"}</option>
 					{options.map((o) => (
 						<option key={getId(o)} value={getId(o)}>
 							{getLabel(o)}
@@ -83,11 +88,17 @@ function CascadeSelect({ id, label, value, onChange, options = [], loading, disa
 					}}
 				>
 					{loading
-						? <LoaderCircle size={18} color="#002B5E" className="animate-spin" />
+						? <LoaderCircle size={18} color="#004F9F" className="animate-spin" />
 						: <ChevronDown size={18} />
 					}
 				</div>
 			</div>
+
+			{vacio && (
+				<p style={{ marginTop: 6, fontSize: 13, fontWeight: 500, color: "#b45309" }}>
+					No hay {label.toLowerCase()} para la selección anterior.
+				</p>
+			)}
 		</div>
 	);
 }
@@ -135,8 +146,10 @@ function FiltrosCascada({ onAsignaturaChange, showOnlyActive = true }) {
 	});
 
 	const { data: carrerasRaw, isLoading: loadingCarreras } = useQuery({
-		queryKey: ["carreras", deptId],
-		queryFn: () => getCarreras(deptId),
+		// La unidad entra en la clave: las carreras dependen de la sede, no sólo
+		// del departamento.
+		queryKey: ["carreras", deptId, unidadId],
+		queryFn: () => getCarreras(deptId, unidadId),
 		enabled: Boolean(deptId),
 	});
 
@@ -310,7 +323,7 @@ function FiltrosCascada({ onAsignaturaChange, showOnlyActive = true }) {
 					<span
 						style={{
 							width: "8px", height: "8px", borderRadius: "50%",
-							backgroundColor: "#002B5E", flexShrink: 0,
+							backgroundColor: "#004F9F", flexShrink: 0,
 						}}
 					/>
 					<p style={{ fontSize: "15px", fontWeight: 500, color: "#6b7280" }}>

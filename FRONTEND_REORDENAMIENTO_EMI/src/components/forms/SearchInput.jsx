@@ -12,7 +12,7 @@ function SearchInput({ value, onChange, placeholder = "Buscar...", className }) 
         className="w-full h-12 rounded-lg border border-gray-300 bg-white
           pl-12 pr-4 text-[16px] text-gray-800 font-medium outline-none transition-all
           placeholder-gray-400
-          focus:border-[#002B5E] focus:ring-3 focus:ring-[#002B5E]/10"
+          focus:border-[#004F9F] focus:ring-3 focus:ring-[#004F9F]/10"
       />
     </div>
   );

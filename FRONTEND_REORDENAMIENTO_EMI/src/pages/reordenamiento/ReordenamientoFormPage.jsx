@@ -17,7 +17,7 @@ import {
   ShoppingCart, HandshakeIcon, ArrowLeftRight, Paperclip, X,
 } from "lucide-react";
 import { useAuth } from "../../store/AuthContext";
-import { fetchLaboratorios, fetchEquipos } from "../../api/laboratoriosApi";
+import { fetchLaboratorios, fetchTodosLosEquipos } from "../../api/laboratoriosApi";
 import { createReordenamiento } from "../../api/reordenamientoApi";
 import { ROLES } from "../../constants/api";
 import PageWrapper from "../../components/layout/PageWrapper";
@@ -40,7 +40,7 @@ const TIPOS = [
     label: "Reasignación definitiva",
     desc: "Movimiento permanente de equipos entre laboratorios. Requiere resolución y PDF.",
     icon: ArrowLeftRight,
-    color: "#002B5E",
+    color: "#004F9F",
     bg: "#EFF6FF",
     border: "#bfdbfe",
   },
@@ -75,7 +75,9 @@ const makeSchemaStep1 = (tipo) =>
       ? z.coerce.number().optional().nullable()
       : z.coerce.number().positive("Selecciona un laboratorio de origen"),
     equipo_id: z.coerce.number().positive("Selecciona un equipo"),
-    cantidad_trasladada: z.coerce.number().min(1, "Mínimo 1 unidad"),
+    cantidad_trasladada: z.coerce
+      .number({ error: "Indica cuántas unidades vas a mover" })
+      .min(1, "Mínimo 1 unidad"),
   });
 
 const schemaStep2 = z.object({
@@ -107,7 +109,7 @@ function StepIndicator({ current, steps }) {
               <div style={{
                 width: "40px", height: "40px", borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                backgroundColor: done ? "#16a34a" : active ? "#002B5E" : "#e5e7eb",
+                backgroundColor: done ? "#16a34a" : active ? "#004F9F" : "#e5e7eb",
                 color: done || active ? "#fff" : "#9ca3af",
                 fontSize: "15px", fontWeight: 800, flexShrink: 0,
                 transition: "all 200ms ease",
@@ -116,7 +118,7 @@ function StepIndicator({ current, steps }) {
               </div>
               <span style={{
                 fontSize: "12px", fontWeight: 700, whiteSpace: "nowrap",
-                color: active ? "#002B5E" : done ? "#15803d" : "#9ca3af",
+                color: active ? "#004F9F" : done ? "#15803d" : "#9ca3af",
               }}>{step}</span>
             </div>
             {!last && (
@@ -188,7 +190,7 @@ function SectionCard({ icon: Icon, title, children }) {
     <div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "18px 24px", borderBottom: "1px solid #f3f4f6", backgroundColor: "#fafafa" }}>
         <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon size={18} color="#002B5E" />
+          <Icon size={18} color="#004F9F" />
         </div>
         <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#374151" }}>{title}</h2>
       </div>
@@ -284,7 +286,7 @@ export default function ReordenamientoFormPage() {
     tipo_movimiento: "",
     laboratorio_origen_id: "",
     equipo_id: "",
-    cantidad_trasladada: "",
+    cantidad_trasladada: 1,
     laboratorio_destino_id: "",
     numero_documento: "",
     fecha_retorno_prevista: "",
@@ -321,7 +323,9 @@ export default function ReordenamientoFormPage() {
 
   const { data: equiposData, isLoading: loadingEquipos } = useQuery({
     queryKey: ["equipos-lab", watchedOrigenId, isCompra],
-    queryFn: () => fetchEquipos(isCompra ? { modo: "compra" } : { laboratorio_id: watchedOrigenId }),
+    // El selector debe ofrecer TODOS los equipos del laboratorio origen;
+    // paginado a 20 era imposible mover el equipo 21 en adelante.
+    queryFn: () => fetchTodosLosEquipos(isCompra ? { modo: "compra" } : { laboratorio_id: watchedOrigenId }),
     enabled: isCompra || Boolean(watchedOrigenId),
   });
 
@@ -456,7 +460,7 @@ export default function ReordenamientoFormPage() {
               </SectionCard>
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button type="submit" style={{ ...navBtnBase, backgroundColor: "#002B5E", color: "#fff", boxShadow: "0 4px 6px rgba(0,43,94,0.25)" }}>
+                <button type="submit" style={{ ...navBtnBase, backgroundColor: "#004F9F", color: "#fff", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)" }}>
                   Siguiente
                   <ArrowRight size={17} />
                 </button>
@@ -490,7 +494,7 @@ export default function ReordenamientoFormPage() {
                         id="lab-origen"
                         error={form1.formState.errors.laboratorio_origen_id}
                         {...form1.register("laboratorio_origen_id", {
-                          onChange: () => { form1.setValue("equipo_id", ""); form1.setValue("cantidad_trasladada", ""); },
+                          onChange: () => { form1.setValue("equipo_id", ""); form1.setValue("cantidad_trasladada", 1); },
                         })}
                       >
                         <option value="">Selecciona un laboratorio…</option>
@@ -536,7 +540,7 @@ export default function ReordenamientoFormPage() {
                         disabled={tipo !== "COMPRA" && !watchedOrigenId}
                         error={form1.formState.errors.equipo_id}
                         {...form1.register("equipo_id", {
-                          onChange: () => form1.setValue("cantidad_trasladada", ""),
+                          onChange: () => form1.setValue("cantidad_trasladada", 1),
                         })}
                       >
                         <option value="">{tipo !== "COMPRA" && !watchedOrigenId ? "Primero selecciona origen…" : "Selecciona un equipo…"}</option>
@@ -582,7 +586,7 @@ export default function ReordenamientoFormPage() {
                   <ArrowLeft size={17} />
                   Anterior
                 </button>
-                <button type="submit" style={{ ...navBtnBase, backgroundColor: "#002B5E", color: "#fff", boxShadow: "0 4px 6px rgba(0,43,94,0.25)" }}>
+                <button type="submit" style={{ ...navBtnBase, backgroundColor: "#004F9F", color: "#fff", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)" }}>
                   Siguiente
                   <ArrowRight size={17} />
                 </button>
@@ -597,7 +601,7 @@ export default function ReordenamientoFormPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               {/* Resumen paso 1 */}
               <div style={{ padding: "16px 20px", borderRadius: "12px", backgroundColor: "#EFF6FF", border: "1px solid #dbeafe" }}>
-                <p style={{ fontSize: "13px", fontWeight: 700, color: "#002B5E", marginBottom: "4px" }}>Resumen del origen:</p>
+                <p style={{ fontSize: "13px", fontWeight: 700, color: "#004F9F", marginBottom: "4px" }}>Resumen del origen:</p>
                 <p style={{ fontSize: "15px", fontWeight: 500, color: "#374151" }}>
                   {origenLab ? formatLab(origenLab) : "Sin laboratorio origen"} · <strong>{getEquipName(equipoSelec)}</strong> · {formData.cantidad_trasladada} unidades
                 </p>
@@ -646,7 +650,7 @@ export default function ReordenamientoFormPage() {
                   <ArrowLeft size={17} />
                   Anterior
                 </button>
-                <button type="submit" style={{ ...navBtnBase, backgroundColor: "#002B5E", color: "#fff", boxShadow: "0 4px 6px rgba(0,43,94,0.25)" }}>
+                <button type="submit" style={{ ...navBtnBase, backgroundColor: "#004F9F", color: "#fff", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)" }}>
                   Siguiente
                   <ArrowRight size={17} />
                 </button>
@@ -661,7 +665,7 @@ export default function ReordenamientoFormPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
               {/* Resumen completo */}
               <div style={{ padding: "16px 20px", borderRadius: "12px", backgroundColor: "#EFF6FF", border: "1px solid #dbeafe" }}>
-                <p style={{ fontSize: "13px", fontWeight: 700, color: "#002B5E", marginBottom: "6px" }}>Resumen del movimiento:</p>
+                <p style={{ fontSize: "13px", fontWeight: 700, color: "#004F9F", marginBottom: "6px" }}>Resumen del movimiento:</p>
                 <p style={{ fontSize: "15px", color: "#374151", fontWeight: 500, lineHeight: 1.6 }}>
                   <strong>{formData.cantidad_trasladada}</strong> unidades de <strong>{getEquipName(equipoSelec)}</strong>
                   {tipo !== "COMPRA" && origenLab && <>{" desde "}<strong>{formatLab(origenLab)}</strong></>}
@@ -751,7 +755,7 @@ export default function ReordenamientoFormPage() {
                 <button
                   type="submit"
                   disabled={isPending}
-                  style={{ ...navBtnBase, backgroundColor: "#002B5E", color: "#fff", boxShadow: "0 4px 6px rgba(0,43,94,0.25)", opacity: isPending ? 0.6 : 1, cursor: isPending ? "not-allowed" : "pointer" }}
+                  style={{ ...navBtnBase, backgroundColor: "#004F9F", color: "#fff", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)", opacity: isPending ? 0.6 : 1, cursor: isPending ? "not-allowed" : "pointer" }}
                 >
                   {isPending ? (
                     <><LoaderCircle size={17} className="animate-spin" />Creando...</>

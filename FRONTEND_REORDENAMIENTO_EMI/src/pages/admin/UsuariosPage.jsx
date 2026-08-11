@@ -110,7 +110,7 @@ function ModalRoleEdit({ user, isOpen, onClose }) {
 
 					<div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
 						<button type="button" onClick={onClose} style={{ height: "40px", padding: "0 16px", borderRadius: "8px", backgroundColor: "#fff", border: "1px solid #d1d5db", color: "#374151", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
-						<button type="submit" disabled={mutation.isPending} style={{ height: "40px", padding: "0 20px", borderRadius: "8px", backgroundColor: "#002B5E", border: "none", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: mutation.isPending ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: mutation.isPending ? 0.7 : 1 }}>
+						<button type="submit" disabled={mutation.isPending} style={{ height: "40px", padding: "0 20px", borderRadius: "8px", backgroundColor: "#004F9F", border: "none", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: mutation.isPending ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: "8px", opacity: mutation.isPending ? 0.7 : 1 }}>
 							{mutation.isPending ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle size={16} />}
 							Guardar cambios
 						</button>
@@ -171,7 +171,7 @@ export default function UsuariosPage() {
 		>
 			<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
 				<div style={{ padding: "18px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "10px" }}>
-					<Users size={20} color="#002B5E" />
+					<Users size={20} color="#004F9F" />
 					<h2 style={{ fontSize: "16px", fontWeight: 700, color: "#374151", margin: 0 }}>Usuarios del Sistema</h2>
 				</div>
 
@@ -191,7 +191,7 @@ export default function UsuariosPage() {
 
 							{!isLoading && users.map((u, i) => {
 								const id = u?.id ?? u?.uuid;
-								const ci = u?.ci ?? u?.documento_identidad ?? "—";
+								const ci = u?.carnet_identidad || u?.ci || u?.documento_identidad || "—";
 								const roleColors = getRoleColor(u?.rol);
 								const unidadNombre = u?.unidad_academica_nombre ?? "—";
 								
@@ -200,7 +200,7 @@ export default function UsuariosPage() {
 										<td style={{ padding: "14px 20px", fontSize: "14px", color: "#6b7280", fontWeight: 500 }}>{ci}</td>
 										<td style={{ padding: "14px 20px" }}>
 											<p style={{ fontSize: "14px", fontWeight: 700, color: "#111827", margin: 0 }}>{u?.nombre_completo}</p>
-											<p style={{ fontSize: "13px", color: "#9ca3af", margin: "2px 0 0 0" }}>{u?.email || `${ci}@emi.edu.bo`}</p>
+											<p style={{ fontSize: "13px", color: "#9ca3af", margin: "2px 0 0 0" }}>{u?.email || (ci !== "—" ? `${ci}@emi.edu.bo` : "Sin correo registrado")}</p>
 										</td>
 										<td style={{ padding: "14px 20px" }}>
 											<span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "6px", backgroundColor: roleColors.bg, color: roleColors.text, fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>

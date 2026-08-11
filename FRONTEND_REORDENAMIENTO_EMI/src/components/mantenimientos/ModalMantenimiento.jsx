@@ -203,9 +203,9 @@ export default function ModalMantenimiento({ equipoId, registro, isOpen, onClose
 						</button>
 						<button type="submit" disabled={saving} style={{
 							padding: "10px 24px", borderRadius: 10, border: "none",
-							backgroundColor: "#002B5E", fontSize: 14, fontWeight: 700, color: "#fff",
+							backgroundColor: "#004F9F", fontSize: 14, fontWeight: 700, color: "#fff",
 							cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
-							boxShadow: "0 2px 8px rgba(0,43,94,0.3)", transition: "opacity 150ms ease",
+							boxShadow: "0 2px 8px rgba(0, 79, 159,0.3)", transition: "opacity 150ms ease",
 						}}>
 							{saving ? "Guardando..." : registro ? "Actualizar" : "Guardar"}
 						</button>

@@ -2,14 +2,20 @@ import { clsx } from "clsx";
 
 const VARIANT_STYLES = {
   primary: {
-    backgroundColor: "#002B5E",
+    backgroundColor: "#004F9F",
     color: "#ffffff",
-    boxShadow: "0 4px 6px rgba(0,43,94,0.25)",
+    boxShadow: "0 4px 10px rgba(0, 79, 159,0.28)",
+  },
+  // Acento institucional amarillo (para CTA destacadas)
+  accent: {
+    backgroundColor: "#FFDD00",
+    color: "#003D7C",
+    boxShadow: "0 4px 10px rgba(234,181,0,0.35)",
   },
   secondary: {
     backgroundColor: "#ffffff",
-    color: "#374151",
-    border: "2px solid #e5e7eb",
+    color: "#003D7C",
+    border: "2px solid #DFEAF8",
     boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
   },
   danger: {
@@ -19,12 +25,12 @@ const VARIANT_STYLES = {
   },
   ghost: {
     backgroundColor: "transparent",
-    color: "#002B5E",
+    color: "#004F9F",
   },
   outline: {
     backgroundColor: "#ffffff",
-    color: "#002B5E",
-    border: "2px solid rgba(0,43,94,0.3)",
+    color: "#004F9F",
+    border: "2px solid rgba(0, 79, 159,0.3)",
   },
 };
 

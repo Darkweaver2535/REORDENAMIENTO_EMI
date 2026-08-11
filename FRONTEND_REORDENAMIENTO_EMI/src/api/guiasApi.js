@@ -8,14 +8,20 @@ export async function getUnidades() {
 
 export async function getDepartamentos(unidadId) {
 	const response = await axiosClient.get(API_ROUTES.ESTRUCTURA.DEPARTAMENTOS, {
-		params: { unidad_id: unidadId },
+		params: { unidad_academica_id: unidadId },
 	});
 	return response.data;
 }
 
-export async function getCarreras(deptId) {
+// La unidad importa: una carrera se dicta sólo en algunas sedes (tabla
+// CarreraUnidadAcademica). Sin ella el selector listaba las 17 carreras de la
+// EMI aunque la sede sólo ofreciera 2.
+export async function getCarreras(deptId, unidadId) {
 	const response = await axiosClient.get(API_ROUTES.ESTRUCTURA.CARRERAS, {
-		params: { dept_id: deptId },
+		params: {
+			departamento_id: deptId,
+			...(unidadId ? { unidad_academica_id: unidadId } : {}),
+		},
 	});
 	return response.data;
 }
@@ -47,13 +53,28 @@ export async function getGuiaDetalle(id) {
 	return response.data;
 }
 
+// El PDF de la guía se sube como archivo, así que el alta y la edición van en
+// multipart. Cuando no hay archivo se envía JSON normal.
+function comoPayload(data) {
+	if (!(data?.pdf_archivo instanceof File)) return { body: data, config: undefined };
+
+	const form = new FormData();
+	Object.entries(data).forEach(([clave, valor]) => {
+		if (valor === undefined || valor === null || valor === "") return;
+		form.append(clave, valor);
+	});
+	return { body: form, config: { headers: { "Content-Type": "multipart/form-data" } } };
+}
+
 export async function crearGuia(data) {
-	const response = await axiosClient.post(API_ROUTES.GUIAS.BASE, data);
+	const { body, config } = comoPayload(data);
+	const response = await axiosClient.post(API_ROUTES.GUIAS.BASE, body, config);
 	return response.data;
 }
 
 export async function editarGuia({ id, data }) {
-	const response = await axiosClient.patch(API_ROUTES.GUIAS.DETALLE(id), data);
+	const { body, config } = comoPayload(data);
+	const response = await axiosClient.patch(API_ROUTES.GUIAS.DETALLE(id), body, config);
 	return response.data;
 }
 

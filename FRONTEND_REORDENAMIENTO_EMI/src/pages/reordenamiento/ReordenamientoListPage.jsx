@@ -163,7 +163,7 @@ function ActionButton({ reordenamiento, onAutorizar, onEjecutar, onRecepcinar, i
 
   if (["pendiente_aprobacion", "pendiente"].includes(estado) && hasRole(ROLES.ADMIN)) {
     return (
-      <button onClick={() => onAutorizar(id)} disabled={loading} style={{ ...btnBase, backgroundColor: "#002B5E", color: "#fff", boxShadow: "0 2px 4px rgba(0,43,94,0.25)" }}>
+      <button onClick={() => onAutorizar(id)} disabled={loading} style={{ ...btnBase, backgroundColor: "#004F9F", color: "#fff", boxShadow: "0 2px 4px rgba(0, 79, 159,0.25)" }}>
         {loading ? <LoaderCircle size={13} className="animate-spin" /> : <CheckCircle size={13} />}
         Aprobar
       </button>
@@ -285,9 +285,9 @@ export default function ReordenamientoListPage() {
             style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
               height: "44px", padding: "0 20px", borderRadius: "10px",
-              backgroundColor: "#002B5E", color: "#fff",
+              backgroundColor: "#004F9F", color: "#fff",
               fontSize: "15px", fontWeight: 700, border: "none",
-              cursor: "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)",
+              cursor: "pointer", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)",
             }}
           >
             <Plus size={18} />

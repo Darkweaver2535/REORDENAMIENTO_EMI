@@ -1,12 +1,13 @@
-// src/pages/auth/LoginPage.jsx — Estilo ZEUS corregido
+// src/pages/auth/LoginPage.jsx — Identidad Corporativa EMI 2025
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LoaderCircle, GraduationCap, IdCard, Lock } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, IdCard, Lock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { z } from "zod";
 import { useAuth } from "../../store";
+import { EmiLogo } from "../../components/ui";
 
 const loginSchema = z.object({
     carnet_identidad: z.string().min(5, "El carnet debe tener al menos 5 caracteres").max(20, "Máximo 20 caracteres"),
@@ -46,11 +47,11 @@ function LoginPage() {
     return (
         <div
             style={{
-                backgroundColor: "#002B5E",
-                backgroundImage: "linear-gradient(rgba(0, 43, 94, 0.7), rgba(0, 43, 94, 0.7)), url('/imagenes/fondo.jpg')",
+                backgroundColor: "#003D7C",
+                backgroundImage: "linear-gradient(rgba(0, 61, 124, 0.86), rgba(0, 45, 92, 0.92)), url('/imagenes/fondo.jpg')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
-                backgroundRepeat: "no-repeat"
+                backgroundRepeat: "no-repeat",
             }}
             className="min-h-screen flex items-center justify-center px-6 py-10"
         >
@@ -60,43 +61,45 @@ function LoginPage() {
                 <div
                     style={{
                         backgroundColor: "#ffffff",
-                        borderRadius: "16px",
-                        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)",
+                        borderRadius: "18px",
+                        overflow: "hidden",
+                        boxShadow: "0 25px 60px -12px rgba(0,0,0,0.45)",
                     }}
                 >
-                    {/* Mini tarjeta de título */}
-                    <div style={{ padding: "40px 40px 0 40px" }}>
-                        <div
-                            style={{
-                                backgroundColor: "#f9fafb",
-                                border: "1px solid #e5e7eb",
-                                borderRadius: "12px",
-                                padding: "24px",
-                                textAlign: "center",
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
-                            }}
-                        >
-                            <div className="flex justify-center mx-auto mb-2" style={{ height: "64px" }}>
-                                <img src="/imagenes/emi_logo.png" alt="Logo EMI" style={{ width: "auto", height: "100%", objectFit: "contain" }} />
-                            </div>
-                            <p style={{ fontSize: "19px", fontWeight: 800, color: "#1f2937", marginTop: "12px", letterSpacing: "-0.01em" }}>
-                                Sistema de Gestión de Laboratorios
-                            </p>
-                            <p style={{ fontSize: "15px", fontWeight: 500, color: "#6b7280", marginTop: "4px" }}>
-                                Escuela Militar de Ingeniería
-                            </p>
-                        </div>
+                    {/* ── Cabecera azul institucional con castillo ── */}
+                    <div
+                        style={{
+                            background: "linear-gradient(135deg, #004F9F 0%, #003D7C 100%)",
+                            padding: "34px 40px 26px 40px",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            textAlign: "center",
+                        }}
+                    >
+                        <EmiLogo variant="full" theme="dark" markSize={46} subtitle="Escuela Militar de Ingeniería" />
                     </div>
+                    {/* Línea amarilla de marca */}
+                    <div className="emi-accent-line" style={{ width: "100%", borderRadius: 0 }} />
 
                     {/* ═══ Formulario ═══ */}
-                    <div style={{ padding: "32px 40px 40px 40px" }}>
+                    <div style={{ padding: "30px 40px 38px 40px" }}>
+                        <div style={{ textAlign: "center", marginBottom: "26px" }}>
+                            <h1 style={{ fontSize: "18px", fontWeight: 800, color: "#003D7C", letterSpacing: "-0.01em" }}>
+                                Sistema de Gestión de Laboratorios
+                            </h1>
+                            <p style={{ fontSize: "13px", fontWeight: 600, color: "#808080", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                                Acceso institucional
+                            </p>
+                        </div>
+
                         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
 
                             {/* Carnet de Identidad */}
                             <div>
                                 <label
                                     htmlFor="carnet_identidad"
-                                    style={{ fontSize: "15px", fontWeight: 700, color: "#374151", display: "block", marginBottom: "10px" }}
+                                    style={{ fontSize: "15px", fontWeight: 700, color: "#1A1A1A", display: "block", marginBottom: "10px" }}
                                 >
                                     Carnet de Identidad:
                                 </label>
@@ -105,7 +108,7 @@ function LoginPage() {
                                         position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)",
                                         pointerEvents: "none", display: "flex", alignItems: "center"
                                     }}>
-                                        <IdCard size={20} color="#9ca3af" />
+                                        <IdCard size={20} color="#004F9F" />
                                     </div>
                                     <input
                                         id="carnet_identidad"
@@ -120,11 +123,12 @@ function LoginPage() {
                                             backgroundColor: "#ffffff",
                                             fontSize: "16px",
                                             fontWeight: 500,
-                                            color: "#111827",
+                                            color: "#1A1A1A",
                                             paddingLeft: "48px",
                                             paddingRight: "16px",
                                             outline: "none",
                                         }}
+                                        className="focus:border-[#004F9F] focus:ring-3 focus:ring-[#004F9F]/15"
                                         {...register("carnet_identidad")}
                                     />
                                 </div>
@@ -139,7 +143,7 @@ function LoginPage() {
                             <div>
                                 <label
                                     htmlFor="password"
-                                    style={{ fontSize: "15px", fontWeight: 700, color: "#374151", display: "block", marginBottom: "10px" }}
+                                    style={{ fontSize: "15px", fontWeight: 700, color: "#1A1A1A", display: "block", marginBottom: "10px" }}
                                 >
                                     Contraseña:
                                 </label>
@@ -148,7 +152,7 @@ function LoginPage() {
                                         position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)",
                                         pointerEvents: "none", display: "flex", alignItems: "center"
                                     }}>
-                                        <Lock size={20} color="#9ca3af" />
+                                        <Lock size={20} color="#004F9F" />
                                     </div>
                                     <input
                                         id="password"
@@ -163,11 +167,12 @@ function LoginPage() {
                                             backgroundColor: "#ffffff",
                                             fontSize: "16px",
                                             fontWeight: 500,
-                                            color: "#111827",
+                                            color: "#1A1A1A",
                                             paddingLeft: "48px",
                                             paddingRight: "56px",
                                             outline: "none",
                                         }}
+                                        className="focus:border-[#004F9F] focus:ring-3 focus:ring-[#004F9F]/15"
                                         {...register("password")}
                                     />
                                     <button
@@ -219,11 +224,11 @@ function LoginPage() {
                                 type="submit"
                                 disabled={isSubmitting}
                                 style={{
-                                    marginTop: "48px",
+                                    marginTop: "40px",
                                     width: "100%",
                                     height: "54px",
                                     borderRadius: "10px",
-                                    backgroundColor: "#002B5E",
+                                    background: "linear-gradient(135deg, #004F9F 0%, #003D7C 100%)",
                                     color: "#ffffff",
                                     fontSize: "17px",
                                     fontWeight: 800,
@@ -236,7 +241,8 @@ function LoginPage() {
                                     cursor: isSubmitting ? "not-allowed" : "pointer",
                                     opacity: isSubmitting ? 0.5 : 1,
                                     border: "none",
-                                    boxShadow: "0 4px 14px rgba(0,43,94,0.4)",
+                                    borderBottom: "3px solid #FFDD00",
+                                    boxShadow: "0 6px 18px rgba(0,79,159,0.4)",
                                 }}
                             >
                                 {isSubmitting ? (
@@ -253,8 +259,8 @@ function LoginPage() {
                 </div>
 
                 {/* Pie */}
-                <p style={{ textAlign: "center", fontSize: "14px", color: "rgba(147,197,253,0.6)", fontWeight: 500, marginTop: "24px" }}>
-                    © 2026 EMI Bolivia · SGL v1.4
+                <p style={{ textAlign: "center", fontSize: "13px", color: "rgba(255,255,255,0.7)", fontWeight: 600, marginTop: "22px", letterSpacing: "0.03em" }}>
+                    © 2026 Escuela Militar de Ingeniería · Bolivia · SGL v1.4
                 </p>
             </div>
         </div>

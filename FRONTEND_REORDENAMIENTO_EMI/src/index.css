@@ -1,16 +1,44 @@
 /* ============================================================
    SGL — Sistema de Gestión de Laboratorios · EMI Bolivia
-   Diseño institucional-gubernamental · Tailwind v4
+   Identidad Corporativa EMI 2025 (MIC v2.0) · Tailwind v4
+   Azul #004F9F · Amarillo #FFDD00 · Tipografía Montserrat
    ============================================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,500&display=swap");
 @import "tailwindcss";
+
+/* ── Tokens de marca (Tailwind v4 @theme → clases bg-emi-*, text-emi-*) ── */
+@theme {
+  --color-emi-blue:        #004F9F; /* Azul principal — Pantone 293C */
+  --color-emi-blue-dark:   #003D7C; /* Azul secundario — Pantone 286C */
+  --color-emi-blue-deep:   #00306180; /* sombra profunda */
+  --color-emi-blue-050:    #DFEAF8; /* Azul muy claro — Pantone 656C */
+  --color-emi-blue-100:    #c5dcf3;
+  --color-emi-yellow:      #FFDD00; /* Amarillo principal — Pantone 3955C */
+  --color-emi-gold:        #EAB500; /* Dorado secundario — Pantone 110C */
+  --color-emi-ink:         #1A1A1A; /* Negro principal (texto) */
+  --color-emi-gray:        #4D4D4D; /* Gris secundario */
+  --color-emi-gray-soft:   #808080; /* Gris secundario claro */
+
+  --font-sans: "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Espejo en :root para estilos inline (style={{ color: 'var(--emi-blue)' }}) */
+:root {
+  --emi-blue: #004F9F;
+  --emi-blue-dark: #003D7C;
+  --emi-blue-050: #DFEAF8;
+  --emi-yellow: #FFDD00;
+  --emi-gold: #EAB500;
+  --emi-ink: #1A1A1A;
+  --emi-gray: #4D4D4D;
+}
 
 /* ── Base ────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  font-size: 17px;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -19,11 +47,11 @@ html {
 
 body {
   min-height: 100dvh;
-  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  font-family: "Montserrat", system-ui, -apple-system, sans-serif;
   font-size: 1rem;
-  line-height: 1.65;
-  color: #111827;
-  background-color: #f3f4f6;
+  line-height: 1.6;
+  color: #1A1A1A;
+  background-color: #eef3fa;
   font-weight: 500;
 }
 
@@ -41,31 +69,44 @@ button { cursor: pointer; border: none; }
 table { border-collapse: collapse; width: 100%; }
 
 h1, h2, h3, h4, h5, h6 {
-  line-height: 1.2;
-  color: #111827;
+  line-height: 1.15;
+  color: #003D7C;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
-p { max-width: 72ch; }
+p { max-width: 74ch; }
 
 :focus-visible {
-  outline: 3px solid #1a6dd4;
+  outline: 3px solid #004F9F;
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-::selection { background: rgba(0, 43, 94, 0.12); }
+::selection { background: rgba(0, 79, 159, 0.16); }
 
 a, button, [role="button"], input, textarea, select {
   transition: all 180ms ease;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+::-webkit-scrollbar-thumb { background: #b4c6de; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #004F9F; }
+
+/* ── Utilidades de marca ────────────────────────────────────── */
+/* Línea amarilla institucional (firma bajo el nombre de la unidad) */
+.emi-accent-line {
+  height: 3px;
+  background: #FFDD00;
+  border-radius: 2px;
+}
+/* Franja tricolor de marca (azul → amarillo) para bordes superiores */
+.emi-topbar {
+  background: linear-gradient(90deg, #004F9F 0%, #003D7C 60%, #FFDD00 60%, #FFDD00 100%);
+}
+.emi-focus-ring:focus-visible { outline-color: #FFDD00; }
 
 /* ── Animations ─────────────────────────────────────────────── */
 @keyframes fadeIn {

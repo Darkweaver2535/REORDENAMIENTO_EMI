@@ -13,7 +13,7 @@ import {
 	BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
 	XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { fetchLaboratorios, fetchEquipos } from "../../api/laboratoriosApi";
+import { fetchTodosLosLaboratorios, fetchTodosLosEquipos } from "../../api/laboratoriosApi";
 import axiosClient from "../../api/axiosClient";
 import { BASE_URL, ROLES, API_ROUTES } from "../../constants/api";
 import PageWrapper from "../../components/layout/PageWrapper";
@@ -60,7 +60,7 @@ function ReportCard({ icon: Icon, title, description, children }) {
 		<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
 			<div style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 24px", borderBottom: "1px solid #f3f4f6", backgroundColor: "#fafafa" }}>
 				<div style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-					<Icon size={21} color="#002B5E" />
+					<Icon size={21} color="#004F9F" />
 				</div>
 				<div>
 					<h2 style={{ fontSize: 16, fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>{title}</h2>
@@ -75,7 +75,7 @@ function ReportCard({ icon: Icon, title, description, children }) {
 function DownloadBtn({ loading, disabled, onClick, label = "Generar PDF", type = "button" }) {
 	return (
 		<button type={type} onClick={onClick} disabled={loading || disabled}
-			style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 46, padding: "0 24px", borderRadius: 10, backgroundColor: (loading || disabled) ? "#9ca3af" : "#002B5E", color: "#fff", fontSize: 15, fontWeight: 700, border: "none", cursor: (loading || disabled) ? "not-allowed" : "pointer", boxShadow: (!loading && !disabled) ? "0 4px 6px rgba(0,43,94,0.25)" : "none", transition: "all 200ms ease", flexShrink: 0 }}>
+			style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 46, padding: "0 24px", borderRadius: 10, backgroundColor: (loading || disabled) ? "#9ca3af" : "#004F9F", color: "#fff", fontSize: 15, fontWeight: 700, border: "none", cursor: (loading || disabled) ? "not-allowed" : "pointer", boxShadow: (!loading && !disabled) ? "0 4px 6px rgba(0, 79, 159,0.25)" : "none", transition: "all 200ms ease", flexShrink: 0 }}>
 			{loading ? <><LoaderCircle size={17} className="animate-spin" />Generando...</> : <><FileDown size={17} />{label}</>}
 		</button>
 	);
@@ -104,10 +104,10 @@ export default function ReportesPage() {
 	const [activeTab, setActiveTab] = useState("consultas");
 
 	/* ── Queries ──────────────────────────────────────────── */
-	const { data: labsData, isLoading: loadingLabs } = useQuery({ queryKey: ["laboratorios"], queryFn: fetchLaboratorios, staleTime: 5 * 60 * 1000 });
+	const { data: labsData, isLoading: loadingLabs } = useQuery({ queryKey: ["laboratorios", "todos"], queryFn: () => fetchTodosLosLaboratorios(), staleTime: 5 * 60 * 1000 });
 	const laboratorios = normalize(labsData);
 
-	const { data: equiposData, isLoading: loadingEquipos } = useQuery({ queryKey: ["todos-equipos"], queryFn: () => fetchEquipos({ page_size: 1000 }), staleTime: 5 * 60 * 1000 });
+	const { data: equiposData, isLoading: loadingEquipos } = useQuery({ queryKey: ["todos-equipos"], queryFn: () => fetchTodosLosEquipos(), staleTime: 5 * 60 * 1000 });
 	const allEquipos = normalize(equiposData);
 
 	const { data: reordData, isLoading: loadingReord } = useQuery({ queryKey: ["todos-reord"], queryFn: () => axiosClient.get(API_ROUTES.REORDENAMIENTO.BASE, { params: { page_size: 500 } }), staleTime: 5 * 60 * 1000 });
@@ -123,7 +123,15 @@ export default function ReportesPage() {
 
 	const invTopTipos = useMemo(() => {
 		const map = {};
-		allEquipos.forEach(e => { const t = e.nombre?.split(" ")[0] || "Otro"; map[t] = (map[t] || 0) + (e.cantidad_total || 1); });
+		allEquipos.forEach(e => {
+			// Agrupamos por el catálogo canónico TipoEquipo, que es justo para
+			// esto. Antes se usaba la primera palabra del nombre y "EQUIPO DE
+			// COMPUTACIÓN" y "EQUIPO PARA ENSAYO DE RICE" caían en un mismo
+			// cajón llamado "EQUIPO". Sólo se recurre al nombre cuando el equipo
+			// no tiene tipo asignado.
+			const t = e.tipo_nombre || e.nombre?.split(" ")[0] || "Sin tipo";
+			map[t] = (map[t] || 0) + (e.cantidad_total || 1);
+		});
 		return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
 	}, [allEquipos]);
 
@@ -191,7 +199,7 @@ export default function ReportesPage() {
 					const active = activeTab === t.id;
 					return (
 						<button key={t.id} onClick={() => setActiveTab(t.id)}
-							style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 20px", border: "none", borderBottom: active ? "3px solid #002B5E" : "3px solid transparent", backgroundColor: "transparent", color: active ? "#002B5E" : "#6b7280", fontSize: 14, fontWeight: active ? 800 : 600, cursor: "pointer", whiteSpace: "nowrap", transition: "all 150ms ease", marginBottom: -2, position: "relative" }}>
+							style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 20px", border: "none", borderBottom: active ? "3px solid #004F9F" : "3px solid transparent", backgroundColor: "transparent", color: active ? "#004F9F" : "#6b7280", fontSize: 14, fontWeight: active ? 800 : 600, cursor: "pointer", whiteSpace: "nowrap", transition: "all 150ms ease", marginBottom: -2, position: "relative" }}>
 							<t.icon size={17} />
 							{t.label}
 							{t.isNew && <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 10, backgroundColor: "#dbeafe", color: "#1d4ed8", lineHeight: 1.4 }}>Nuevo</span>}
@@ -209,7 +217,7 @@ export default function ReportesPage() {
 					{/* Export button */}
 					<div style={{ display: "flex", justifyContent: "flex-end" }}>
 						<button onClick={() => exportInvPDF(`reporte-inventario-${Date.now()}.pdf`, "Reporte de Inventario General")} disabled={isExportingInv || chartsLoading}
-							style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 10, backgroundColor: (isExportingInv || chartsLoading) ? "#9ca3af" : "#002B5E", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: (isExportingInv || chartsLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)" }}>
+							style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 10, backgroundColor: (isExportingInv || chartsLoading) ? "#9ca3af" : "#004F9F", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: (isExportingInv || chartsLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)" }}>
 							{isExportingInv ? <><LoaderCircle size={16} className="animate-spin" />Generando...</> : <><FileDown size={16} />Exportar PDF con Gráficos</>}
 						</button>
 					</div>
@@ -241,7 +249,7 @@ export default function ReportesPage() {
 										<XAxis dataKey="name" tick={{ fontSize: 11 }} />
 										<YAxis tick={{ fontSize: 12 }} />
 										<Tooltip content={<ChartTooltip />} />
-										<Bar dataKey="value" fill="#002B5E" radius={[6, 6, 0, 0]} name="Cantidad" />
+										<Bar dataKey="value" fill="#004F9F" radius={[6, 6, 0, 0]} name="Cantidad" />
 									</BarChart>
 								</ResponsiveContainer>
 							) : (
@@ -277,7 +285,7 @@ export default function ReportesPage() {
 					{/* Export button */}
 					<div style={{ display: "flex", justifyContent: "flex-end" }}>
 						<button onClick={() => exportMovPDF(`reporte-movimientos-${Date.now()}.pdf`, "Reporte de Movimientos")} disabled={isExportingMov || chartsLoading}
-							style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 10, backgroundColor: (isExportingMov || chartsLoading) ? "#9ca3af" : "#002B5E", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: (isExportingMov || chartsLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)" }}>
+							style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 42, padding: "0 20px", borderRadius: 10, backgroundColor: (isExportingMov || chartsLoading) ? "#9ca3af" : "#004F9F", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: (isExportingMov || chartsLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)" }}>
 							{isExportingMov ? <><LoaderCircle size={16} className="animate-spin" />Generando...</> : <><FileDown size={16} />Exportar PDF con Gráficos</>}
 						</button>
 					</div>

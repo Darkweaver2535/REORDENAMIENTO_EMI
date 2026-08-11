@@ -147,7 +147,7 @@ export default function DashboardPage() {
   const hayEstado = estadoEquipos.some(e => safeNum(e.value) > 0);
 
   const quickCards = [
-    { title: 'Guías de Laboratorio', desc: 'Consulta y descarga prácticas', icon: BookOpen, href: '/guias', iconBg: '#EFF6FF', iconColor: '#002B5E', visible: true },
+    { title: 'Guías de Laboratorio', desc: 'Consulta y descarga prácticas', icon: BookOpen, href: '/guias', iconBg: '#EFF6FF', iconColor: '#004F9F', visible: true },
     { title: 'Laboratorios', desc: 'Gestión de equipos y evaluaciones', icon: FlaskConical, href: '/laboratorios', iconBg: '#ECFDF5', iconColor: '#065f46', visible: hasRole('admin', 'jefe', 'encargado_activos') },
     { title: 'Reordenamiento', desc: 'Movimientos entre unidades académicas', icon: ArrowLeftRight, href: '/reordenamientos', iconBg: '#FFFBEB', iconColor: '#92400e', visible: hasRole('admin', 'jefe') },
     { title: 'Reportes', desc: 'Exportación de datos en PDF', icon: FileText, href: '/reportes', iconBg: '#F0F9FF', iconColor: '#0284c7', visible: hasRole('admin', 'jefe') },
@@ -157,9 +157,9 @@ export default function DashboardPage() {
     <div style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '48px' }} className="animate-fade-in">
       {/* ── Header ──────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #002B5E 0%, #003d82 50%, #1a5bb5 100%)',
+        background: 'linear-gradient(135deg, #004F9F 0%, #003d82 50%, #1a5bb5 100%)',
         borderRadius: '20px', padding: '40px', marginBottom: '24px',
-        boxShadow: '0 12px 32px rgba(0,43,94,0.35)', position: 'relative', overflow: 'hidden',
+        boxShadow: '0 12px 32px rgba(0, 79, 159,0.35)', position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-20px', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
@@ -199,7 +199,7 @@ export default function DashboardPage() {
         <KPICard label="Total Equipos" value={totalEquipos} icon={Package} iconBg="#F3F4F6" iconColor="#374151" isLoading={isLoading} />
         <KPICard label="Operativos" value={pctOperativos} suffix="%" icon={CheckCircle2} iconBg="#ECFDF5" iconColor="#16a34a" isLoading={isLoading} />
         <KPICard label="Sin Asignar" value={sinAsignar} icon={PackageX} iconBg="#FEF2F2" iconColor="#dc2626" isLoading={isLoading} />
-        <KPICard label="Labs Activos" value={labsActivos} icon={FlaskConical} iconBg="#EFF6FF" iconColor="#002B5E" isLoading={isLoading} />
+        <KPICard label="Labs Activos" value={labsActivos} icon={FlaskConical} iconBg="#EFF6FF" iconColor="#004F9F" isLoading={isLoading} />
         <KPICard label="Tipos de Equipo" value={totalTipos} icon={Tags} iconBg="#F5F3FF" iconColor="#6d28d9" isLoading={isLoading} />
         <KPICard label="Reordenam." value={pendientes} suffix=" pend." icon={ArrowLeftRight} iconBg="#FFFBEB" iconColor="#d97706" isLoading={isLoading} />
       </div>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
                 ) : reordEstado.map((r, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', backgroundColor: '#f9fafb' }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{r.label}</span>
-                    <span style={{ fontSize: '15px', fontWeight: 800, color: '#002B5E' }}>{r.total}</span>
+                    <span style={{ fontSize: '15px', fontWeight: 800, color: '#004F9F' }}>{r.total}</span>
                   </div>
                 ))}
               </div>
@@ -405,7 +405,7 @@ export default function DashboardPage() {
       {/* ── Accesos Rápidos ─────────────────────────── */}
       <div>
         <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Monitor size={18} color="#002B5E" /> Accesos Rápidos
+          <Monitor size={18} color="#004F9F" /> Accesos Rápidos
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
           {quickCards.map((card) => (

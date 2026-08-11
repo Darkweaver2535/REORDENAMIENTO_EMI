@@ -159,7 +159,7 @@ export default function ModalEvaluacionInsitu({ isOpen, onClose, equipo, queryKe
 				<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: "1px solid #f3f4f6", backgroundColor: "#fafafa", position: "sticky", top: 0, zIndex: 1 }}>
 					<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
 						<div style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-							<ClipboardCheck size={20} color="#002B5E" />
+							<ClipboardCheck size={20} color="#004F9F" />
 						</div>
 						<div>
 							<h2 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: 0 }}>Evaluación In-Situ</h2>
@@ -238,7 +238,7 @@ export default function ModalEvaluacionInsitu({ isOpen, onClose, equipo, queryKe
 								<button onClick={handleReEvaluar} style={{ display: "flex", alignItems: "center", gap: 8, height: 44, padding: "0 20px", borderRadius: 10, border: "1px solid #e5e7eb", backgroundColor: "#fff", color: "#374151", fontSize: 14, fontWeight: 700, cursor: "pointer" }} className="hover:bg-gray-50">
 									<RotateCcw size={15} /> Re-evaluar
 								</button>
-								<button onClick={onClose} style={{ height: 44, padding: "0 24px", borderRadius: 10, backgroundColor: "#002B5E", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 2px 8px rgba(0,43,94,0.3)" }}>
+								<button onClick={onClose} style={{ height: 44, padding: "0 24px", borderRadius: 10, backgroundColor: "#004F9F", color: "#fff", fontSize: 14, fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 2px 8px rgba(0, 79, 159,0.3)" }}>
 									Cerrar
 								</button>
 							</div>
@@ -328,10 +328,10 @@ export default function ModalEvaluacionInsitu({ isOpen, onClose, equipo, queryKe
 									disabled={!esValido || isPending}
 									style={{
 										display: "flex", alignItems: "center", gap: 8, height: 44, padding: "0 24px", borderRadius: 10,
-										backgroundColor: !esValido || isPending ? "#9ca3af" : "#002B5E",
+										backgroundColor: !esValido || isPending ? "#9ca3af" : "#004F9F",
 										color: "#fff", fontSize: 15, fontWeight: 700, border: "none",
 										cursor: !esValido || isPending ? "not-allowed" : "pointer",
-										boxShadow: !esValido ? "none" : "0 2px 8px rgba(0,43,94,0.3)",
+										boxShadow: !esValido ? "none" : "0 2px 8px rgba(0, 79, 159,0.3)",
 										transition: "all 200ms ease",
 									}}
 								>

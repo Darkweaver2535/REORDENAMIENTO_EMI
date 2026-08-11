@@ -61,7 +61,7 @@ export default function EspecificacionesEditor({ value = {}, onChange, readOnly 
 					backgroundColor: "#fafafa",
 				}}
 			>
-				<Wrench size={17} color="#002B5E" />
+				<Wrench size={17} color="#004F9F" />
 				<h3 style={{ fontSize: 15, fontWeight: 800, color: "#111827", margin: 0 }}>
 					Especificaciones Técnicas
 				</h3>

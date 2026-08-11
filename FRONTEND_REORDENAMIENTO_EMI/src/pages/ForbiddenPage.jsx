@@ -15,7 +15,7 @@ function ForbiddenPage() {
         </p>
         <Link to="/dashboard"
           className="inline-flex items-center gap-2 mt-8 px-6 py-3 rounded-lg
-            bg-[#002B5E] text-white text-[15px] font-bold
+            bg-[#004F9F] text-white text-[15px] font-bold
             hover:bg-[#001a3a] transition-all shadow-md">
           <ArrowLeft size={18} />
           Volver al inicio

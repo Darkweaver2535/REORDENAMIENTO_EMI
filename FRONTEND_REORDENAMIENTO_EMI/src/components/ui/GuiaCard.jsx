@@ -111,12 +111,12 @@ export default function GuiaCard({ guia, onEdit }) {
 							gap: "8px",
 							height: "44px",
 							borderRadius: "10px",
-							backgroundColor: "#002B5E",
+							backgroundColor: "#004F9F",
 							color: "#ffffff",
 							fontSize: "15px",
 							fontWeight: 700,
 							textDecoration: "none",
-							boxShadow: "0 2px 8px rgba(0,43,94,0.25)",
+							boxShadow: "0 2px 8px rgba(0, 79, 159,0.25)",
 							transition: "all 150ms ease",
 						}}
 						className="hover:opacity-90"

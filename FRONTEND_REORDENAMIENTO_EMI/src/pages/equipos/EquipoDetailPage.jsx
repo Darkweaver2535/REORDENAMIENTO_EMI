@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, MapPin, Building2, Calendar, Hash, Wrench, ArrowLeftRight,
 	ClipboardCheck, Plus, Pencil, Trash2, AlertTriangle, Clock,
@@ -98,7 +99,7 @@ export default function EquipoDetailPage() {
 		if (!window.confirm("¿Eliminar este registro de la bitácora?")) return;
 		try {
 			await axiosClient.delete(API_ROUTES.MANTENIMIENTOS.DELETE(regId));
-			queryClient.invalidateQueries(["mantenimientos", id]);
+			queryClient.invalidateQueries({ queryKey: ["mantenimientos", id] });
 		} catch (e) {
 			console.error("Error eliminando:", e);
 		}
@@ -116,9 +117,11 @@ export default function EquipoDetailPage() {
 			await axiosClient.post(API_ROUTES.LABORATORIOS.SUBIR_FOTO(id), form, {
 				headers: { "Content-Type": "multipart/form-data" },
 			});
-			queryClient.invalidateQueries(["equipo-detail", id]);
+			queryClient.invalidateQueries({ queryKey: ["equipo-detail", id] });
+			toast.success("Foto actualizada");
 		} catch (err) {
 			const msg = err?.response?.data?.foto || "No se pudo subir la imagen.";
+			toast.error(typeof msg === "string" ? msg : "No se pudo subir la imagen.");
 			setErrorFoto(typeof msg === "string" ? msg : "No se pudo subir la imagen.");
 		} finally {
 			setSubiendoFoto(false);
@@ -218,8 +221,8 @@ export default function EquipoDetailPage() {
 							<button key={t.id} onClick={() => setActiveTab(t.id)} style={{
 								display: "inline-flex", alignItems: "center", gap: 8,
 								padding: "12px 20px", border: "none",
-								borderBottom: active ? "3px solid #002B5E" : "3px solid transparent",
-								backgroundColor: "transparent", color: active ? "#002B5E" : "#6b7280",
+								borderBottom: active ? "3px solid #004F9F" : "3px solid transparent",
+								backgroundColor: "transparent", color: active ? "#004F9F" : "#6b7280",
 								fontSize: 14, fontWeight: active ? 800 : 600, cursor: "pointer",
 								marginBottom: -2, whiteSpace: "nowrap",
 							}}>
@@ -250,7 +253,7 @@ export default function EquipoDetailPage() {
 								{reordenamientos.slice(0, 10).map((r, i) => (
 									<div key={r.id || i} style={{ display: "flex", gap: 14, paddingBottom: 16, borderBottom: i < 9 ? "1px solid #f3f4f6" : "none" }}>
 										<div style={{ width: 32, height: 32, borderRadius: "50%", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-											<ArrowLeftRight size={15} color="#002B5E" />
+											<ArrowLeftRight size={15} color="#004F9F" />
 										</div>
 										<div>
 											<p style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>
@@ -277,7 +280,7 @@ export default function EquipoDetailPage() {
 						<div style={{ padding: "18px 24px", borderBottom: "1px solid #f3f4f6" }}>
 							<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
 								<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-									<ClipboardCheck size={18} color="#002B5E" />
+									<ClipboardCheck size={18} color="#004F9F" />
 									<h2 style={{ fontSize: 16, fontWeight: 700, color: "#374151", margin: 0 }}>Bitácora de Mantenimiento</h2>
 								</div>
 								{hasRole(ROLES.ADMIN, ROLES.ENCARGADO_ACTIVOS) && (
@@ -286,9 +289,9 @@ export default function EquipoDetailPage() {
 										style={{
 											display: "inline-flex", alignItems: "center", gap: 6,
 											padding: "8px 16px", borderRadius: 10, border: "none",
-											backgroundColor: "#002B5E", color: "#fff",
+											backgroundColor: "#004F9F", color: "#fff",
 											fontSize: 13, fontWeight: 700, cursor: "pointer",
-											boxShadow: "0 2px 6px rgba(0,43,94,0.25)",
+											boxShadow: "0 2px 6px rgba(0, 79, 159,0.25)",
 										}}
 									>
 										<Plus size={15} /> Agregar registro
@@ -435,7 +438,7 @@ export default function EquipoDetailPage() {
 				registro={registroEditar}
 				isOpen={modalOpen}
 				onClose={() => { setModalOpen(false); setRegistroEditar(null); }}
-				onGuardado={() => queryClient.invalidateQueries(["mantenimientos", id])}
+				onGuardado={() => queryClient.invalidateQueries({ queryKey: ["mantenimientos", id] })}
 			/>
 		</>
 	);

@@ -4,7 +4,7 @@ import {
 	BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
 	XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { fetchLaboratorios, fetchEquipos } from "../../api/laboratoriosApi";
+import { fetchTodosLosEquipos } from "../../api/laboratoriosApi";
 import axiosClient from "../../api/axiosClient";
 import { API_ROUTES } from "../../constants/api";
 import GraficoSeccion, { COLORES_ESTADO } from "../../components/reportes/GraficoSeccion";
@@ -72,7 +72,7 @@ export default function ReporteUnidadAcademica() {
 			try {
 				const [uaRes, eqRes, reordRes] = await Promise.all([
 					axiosClient.get(API_ROUTES.ESTRUCTURA.UNIDADES),
-					fetchEquipos({ page_size: 1000 }),
+					fetchTodosLosEquipos(),
 					axiosClient.get(API_ROUTES.REORDENAMIENTO.BASE, { params: { page_size: 500 } }),
 				]);
 				setUnidades(normalize(uaRes));
@@ -127,7 +127,9 @@ export default function ReporteUnidadAcademica() {
 	const barrasTipo = useMemo(() => {
 		const map = {};
 		equiposFiltrados.forEach(e => {
-			const tipo = e.nombre?.split(" ")[0] || "Otro";
+			// Catálogo canónico TipoEquipo; la primera palabra del nombre sólo
+			// como respaldo para los equipos que aún no tienen tipo asignado.
+			const tipo = e.tipo_nombre || e.nombre?.split(" ")[0] || "Sin tipo";
 			map[tipo] = (map[tipo] || 0) + (e.cantidad_total || 1);
 		});
 		return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name, value }));
@@ -215,7 +217,7 @@ export default function ReporteUnidadAcademica() {
 			{/* Export PDF button */}
 			<div style={{ display: "flex", justifyContent: "flex-end" }}>
 				<button onClick={() => exportPDF(`reporte-unidad-academica-${Date.now()}.pdf`, `Reporte por Unidad Académica — ${uaNombre}`)} disabled={isExporting || isLoading}
-					style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 46, padding: "0 24px", borderRadius: 10, backgroundColor: (isExporting || isLoading) ? "#9ca3af" : "#002B5E", color: "#fff", fontSize: 15, fontWeight: 700, border: "none", cursor: (isExporting || isLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)", transition: "all 200ms ease" }}>
+					style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 46, padding: "0 24px", borderRadius: 10, backgroundColor: (isExporting || isLoading) ? "#9ca3af" : "#004F9F", color: "#fff", fontSize: 15, fontWeight: 700, border: "none", cursor: (isExporting || isLoading) ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)", transition: "all 200ms ease" }}>
 					{isExporting ? <><LoaderCircle size={17} className="animate-spin" />Generando PDF...</> : <><FileDown size={17} />Exportar PDF con Gráficos</>}
 				</button>
 			</div>
@@ -236,7 +238,7 @@ export default function ReporteUnidadAcademica() {
 
 			{/* KPIs */}
 			<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-				<KPI label="Total Equipos" value={kpis.total} icon={Package} color="#002B5E" />
+				<KPI label="Total Equipos" value={kpis.total} icon={Package} color="#004F9F" />
 				<KPI label="Buenos" value={kpis.buenos} pctVal={pct(kpis.buenos, kpis.total)} icon={CheckCircle} color={COLORES_ESTADO.bueno} />
 				<KPI label="Regular" value={kpis.regulares} pctVal={pct(kpis.regulares, kpis.total)} icon={Monitor} color={COLORES_ESTADO.regular} />
 				<KPI label="Reordenamientos" value={kpis.reordCount} icon={ArrowLeftRight} color="#8b5cf6" />
@@ -291,7 +293,7 @@ export default function ReporteUnidadAcademica() {
 									<XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
 									<YAxis tick={{ fontSize: 12 }} />
 									<Tooltip content={<ChartTooltip />} />
-									<Bar dataKey="value" fill="#002B5E" radius={[6, 6, 0, 0]} name="Cantidad" />
+									<Bar dataKey="value" fill="#004F9F" radius={[6, 6, 0, 0]} name="Cantidad" />
 								</BarChart>
 							</ResponsiveContainer>
 						) : (

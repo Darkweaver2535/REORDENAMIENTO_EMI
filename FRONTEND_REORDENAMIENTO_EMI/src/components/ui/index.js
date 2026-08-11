@@ -4,3 +4,4 @@ export { default as Modal } from "./Modal";
 export { default as Badge } from "./Badge";
 export { default as SkeletonCard } from "./SkeletonCard";
 export { default as GuiaCard } from "./GuiaCard";
+export { default as EmiLogo, EmiCastle } from "./EmiLogo";

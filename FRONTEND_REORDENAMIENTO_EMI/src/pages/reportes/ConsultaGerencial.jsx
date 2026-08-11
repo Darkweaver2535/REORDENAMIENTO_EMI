@@ -16,7 +16,7 @@ const EJEMPLOS = [
   "¿Cuántos equipos en mal estado hay y dónde se concentran?",
 ];
 
-const COLORS = ["#002B5E", "#0066CC", "#16a34a", "#f59e0b", "#8b5cf6", "#ec4899"];
+const COLORS = ["#004F9F", "#0066CC", "#16a34a", "#f59e0b", "#8b5cf6", "#ec4899"];
 
 /* Render mínimo de la respuesta del modelo (negritas **x** y viñetas) */
 function renderRespuesta(texto) {
@@ -64,7 +64,7 @@ export default function ConsultaGerencial() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Encabezado */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "20px 24px", borderRadius: 16, background: "linear-gradient(135deg, #002B5E 0%, #1a5bb5 100%)", color: "#fff" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, padding: "20px 24px", borderRadius: 16, background: "linear-gradient(135deg, #004F9F 0%, #1a5bb5 100%)", color: "#fff" }}>
         <div style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Sparkles size={22} />
         </div>
@@ -93,7 +93,7 @@ export default function ConsultaGerencial() {
           <button
             onClick={() => enviar()}
             disabled={mutation.isPending || !pregunta.trim()}
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 22px", borderRadius: 10, border: "none", backgroundColor: (mutation.isPending || !pregunta.trim()) ? "#9ca3af" : "#002B5E", color: "#fff", fontSize: 15, fontWeight: 700, cursor: (mutation.isPending || !pregunta.trim()) ? "not-allowed" : "pointer", flexShrink: 0 }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, height: 48, padding: "0 22px", borderRadius: 10, border: "none", backgroundColor: (mutation.isPending || !pregunta.trim()) ? "#9ca3af" : "#004F9F", color: "#fff", fontSize: 15, fontWeight: 700, cursor: (mutation.isPending || !pregunta.trim()) ? "not-allowed" : "pointer", flexShrink: 0 }}
           >
             {mutation.isPending ? <><LoaderCircle size={17} className="animate-spin" />Analizando…</> : <><Send size={16} />Consultar</>}
           </button>
@@ -116,7 +116,7 @@ export default function ConsultaGerencial() {
       {/* Estado de carga */}
       {mutation.isPending && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: 48, backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: 16 }}>
-          <LoaderCircle size={32} className="animate-spin" style={{ color: "#002B5E" }} />
+          <LoaderCircle size={32} className="animate-spin" style={{ color: "#004F9F" }} />
           <p style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", margin: 0 }}>Analizando los datos con IA local…</p>
           <p style={{ fontSize: 12.5, color: "#9ca3af", margin: 0 }}>Esto puede tardar unos segundos.</p>
         </div>
@@ -136,7 +136,7 @@ export default function ConsultaGerencial() {
           {/* Respuesta */}
           <div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Sparkles size={18} style={{ color: "#002B5E" }} />
+              <Sparkles size={18} style={{ color: "#004F9F" }} />
               <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111827", margin: 0 }}>Respuesta</h3>
               {!resultado.conversacional && (
                 <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, fontWeight: 600, color: resultado.ia_disponible ? "#16a34a" : "#d97706", backgroundColor: resultado.ia_disponible ? "#f0fdf4" : "#fffbeb", border: `1px solid ${resultado.ia_disponible ? "#bbf7d0" : "#fde68a"}`, borderRadius: 999, padding: "3px 10px" }}>

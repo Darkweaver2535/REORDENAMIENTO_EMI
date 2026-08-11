@@ -6,8 +6,8 @@ import toast from "react-hot-toast";
 import { Badge, Button, Input, PageWrapper } from "../../components";
 import { ROLES } from "../../constants/api";
 import {
-	fetchEquipos,
-	fetchLaboratorios,
+	fetchTodosLosEquipos,
+	fetchTodosLosLaboratorios,
 	updateEvaluacionInsitu,
 } from "../../api/laboratoriosApi";
 import { useAuth } from "../../store";
@@ -128,7 +128,19 @@ function EquipoCard({ equipo, laboratorioId }) {
 
 		setLocalError("");
 
+		// La API exige `condicion` (el estado general resultante). El formulario
+		// sólo pide las cantidades, así que se deduce de ellas: manda el estado
+		// con más unidades y, a igualdad, el peor (criterio conservador para un
+		// inventario). Sin esto, TODA evaluación fallaba con 400.
+		const condicion =
+			cantidad_mala >= cantidad_regular && cantidad_mala >= cantidad_buena
+				? "malo"
+				: cantidad_regular >= cantidad_buena
+					? "regular"
+					: "bueno";
+
 		const payload = {
+			condicion,
 			cantidad_buena: cantidad_buena,
 			cantidad_regular: cantidad_regular,
 			cantidad_mala: cantidad_mala,
@@ -278,16 +290,24 @@ function EvaluacionInsituPage() {
 
 	const [selectedLaboratorioId, setSelectedLaboratorioId] = useState("");
 
+	// Los ADMIN tienen alcance nacional y no siempre tienen sede asignada:
+	// exigir `unidad_academica_id` dejaba el selector de laboratorios vacío y la
+	// página inservible. Se filtra por sede sólo cuando el usuario tiene una;
+	// el backend ya restringe lo que cada rol puede ver.
+	const filtroSede = user?.unidad_academica_id
+		? { unidad_academica_id: user.unidad_academica_id }
+		: {};
+
 	const { data: laboratoriosData, isLoading: loadingLaboratorios } = useQuery({
-		queryKey: ["laboratorios", user?.unidad_academica_id],
-		queryFn: () =>
-			fetchLaboratorios({ unidad_academica_id: user?.unidad_academica_id }),
-		enabled: Boolean(user?.unidad_academica_id) && canAccess,
+		queryKey: ["laboratorios", "evaluacion", user?.unidad_academica_id ?? "todas"],
+		queryFn: () => fetchTodosLosLaboratorios(filtroSede),
+		enabled: canAccess,
 	});
 
 	const { data: equiposData, isLoading: loadingEquipos } = useQuery({
 		queryKey: ["equipos", selectedLaboratorioId],
-		queryFn: () => fetchEquipos({ laboratorio_id: selectedLaboratorioId }),
+		// La evaluación in situ debe listar TODOS los equipos del laboratorio.
+		queryFn: () => fetchTodosLosEquipos({ laboratorio_id: selectedLaboratorioId }),
 		enabled: Boolean(selectedLaboratorioId) && canAccess,
 	});
 

@@ -21,7 +21,7 @@ const Input = forwardRef(function Input({ className, ...props }, ref) {
       }}
       className={clsx(
         "placeholder-gray-400",
-        "focus:border-[#002B5E] focus:ring-3 focus:ring-[#002B5E]/10",
+        "focus:border-[#004F9F] focus:ring-3 focus:ring-[#004F9F]/10",
         "disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-gray-100",
         className
       )}

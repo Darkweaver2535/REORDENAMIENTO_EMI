@@ -28,7 +28,11 @@ const getRatio = (s) => { const req = getReq(s); return req > 0 ? getDisp(s) / r
 const getDeficit = (s) => Math.max(getReq(s) - getDisp(s), 0);
 const getExcedente = (s) => Math.max(getDisp(s) - getReq(s), 0);
 
-function getRatioConfig(ratio) {
+function getRatioConfig(ratio, sinDemanda = false) {
+    // Sin equipos requeridos declarados no hay carencia que reportar: pintarlo
+    // de rojo como "Insuficiente" alarmaba sobre laboratorios que simplemente
+    // no tienen demanda registrada en las guías.
+    if (sinDemanda) return { bar: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0", text: "#475569", label: "Sin requerimiento", icon: Minus };
     if (ratio >= 1) return { bar: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", label: "Suficiente", icon: TrendingUp };
     if (ratio >= 0.6) return { bar: "#f59e0b", bg: "#fffbeb", border: "#fde68a", text: "#92400e", label: "Ajustado", icon: Minus };
     return { bar: "#dc2626", bg: "#fef2f2", border: "#fecaca", text: "#b91c1c", label: "Insuficiente", icon: TrendingDown };
@@ -62,7 +66,7 @@ function KpiCard({ title, value, icon: Icon, color }) {
 }
 
 /* ── Componente: Panorama Nacional ─────────────────────────────── */
-const COLORS = ['#002B5E', '#1D4ED8', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'];
+const COLORS = ['#004F9F', '#1D4ED8', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'];
 
 function PanoramaNacional({ data, navigate }) {
     const kpis = data?.kpis || {};
@@ -141,14 +145,14 @@ function PanoramaNacional({ data, navigate }) {
                                         </div>
                                     </div>
                                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                                        <span style={{ fontSize: "16px", fontWeight: 800, color: "#002B5E" }}>{op.cantidad_sugerida}</span>
+                                        <span style={{ fontSize: "16px", fontWeight: 800, color: "#004F9F" }}>{op.cantidad_sugerida}</span>
                                         <span style={{ fontSize: "10px", color: "#9ca3af", textTransform: "uppercase" }}>Unidades</span>
                                     </div>
                                 </div>
                             ))}
                             <button
                                 onClick={() => navigate("/reordenamientos/nuevo")}
-                                style={{ marginTop: "12px", padding: "12px", width: "100%", borderRadius: "8px", border: "1px solid #002B5E", backgroundColor: "#fff", color: "#002B5E", fontWeight: 700, cursor: "pointer", fontSize: "13px", transition: "all 200ms ease" }}
+                                style={{ marginTop: "12px", padding: "12px", width: "100%", borderRadius: "8px", border: "1px solid #004F9F", backgroundColor: "#fff", color: "#004F9F", fontWeight: 700, cursor: "pointer", fontSize: "13px", transition: "all 200ms ease" }}
                                 className="hover:bg-blue-50"
                             >
                                 Iniciar Reordenamiento
@@ -173,7 +177,7 @@ function SedeCard({ sede, maxDisp, maxReq }) {
     const requerido = getReq(sede);
     const deficit = getDeficit(sede);
     const excedente = getExcedente(sede);
-    const config = getRatioConfig(ratio);
+    const config = getRatioConfig(ratio, requerido === 0 && disponibles === 0);
     const Icon = config.icon;
 
     const barWidth = maxDisp > 0 ? Math.min((disponibles / maxDisp) * 100, 100) : 0;
@@ -290,7 +294,7 @@ export default function ComparativaSedesPage() {
                         <button
                             onClick={handleSearch}
                             disabled={loading}
-                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", height: "48px", padding: "0 24px", borderRadius: "10px", backgroundColor: "#002B5E", color: "#fff", fontSize: "15px", fontWeight: 700, border: "none", cursor: loading ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)", transition: "all 200ms ease", flexShrink: 0 }}
+                            style={{ display: "inline-flex", alignItems: "center", gap: "8px", height: "48px", padding: "0 24px", borderRadius: "10px", backgroundColor: "#004F9F", color: "#fff", fontSize: "15px", fontWeight: 700, border: "none", cursor: loading ? "not-allowed" : "pointer", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)", transition: "all 200ms ease", flexShrink: 0 }}
                         >
                             {loading ? <><LoaderCircle size={17} className="animate-spin" />Buscando...</> : <><Search size={17} />Buscar</>}
                         </button>
@@ -298,7 +302,7 @@ export default function ComparativaSedesPage() {
                     {searchTerm && (
                         <p style={{ marginTop: "10px", fontSize: "13px", color: "#9ca3af", fontWeight: 500 }}>
                             Mostrando comparativa para: <strong style={{ color: "#374151" }}>"{searchTerm}"</strong> {" · "}
-                            <button onClick={handleClear} style={{ background: "none", border: "none", color: "#002B5E", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
+                            <button onClick={handleClear} style={{ background: "none", border: "none", color: "#004F9F", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
                                 Volver al panorama nacional
                             </button>
                         </p>
@@ -345,12 +349,12 @@ export default function ComparativaSedesPage() {
                                 {bestOrigen && bestDestino && getUnidadNombre(bestOrigen) !== getUnidadNombre(bestDestino) && (
                                     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px", padding: "20px 24px", borderRadius: "14px", backgroundColor: "#EFF6FF", border: "1px solid #dbeafe", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                                         <div>
-                                            <p style={{ fontSize: "13px", fontWeight: 700, color: "#002B5E", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>💡 Oportunidad detectada</p>
+                                            <p style={{ fontSize: "13px", fontWeight: 700, color: "#004F9F", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "6px" }}>💡 Oportunidad detectada</p>
                                             <p style={{ fontSize: "15px", fontWeight: 500, color: "#374151", lineHeight: 1.5 }}>
-                                                Trasladar <strong style={{ color: "#002B5E" }}>{Math.min(getExcedente(bestOrigen), getDeficit(bestDestino))} unidad(es)</strong> desde <strong>{getUnidadNombre(bestOrigen)}</strong> hacia <strong>{getUnidadNombre(bestDestino)}</strong>
+                                                Trasladar <strong style={{ color: "#004F9F" }}>{Math.min(getExcedente(bestOrigen), getDeficit(bestDestino))} unidad(es)</strong> desde <strong>{getUnidadNombre(bestOrigen)}</strong> hacia <strong>{getUnidadNombre(bestDestino)}</strong>
                                             </p>
                                         </div>
-                                        <button onClick={() => navigate("/reordenamientos/nuevo")} style={{ display: "inline-flex", alignItems: "center", gap: "8px", height: "44px", padding: "0 20px", borderRadius: "10px", backgroundColor: "#002B5E", color: "#fff", fontSize: "14px", fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(0,43,94,0.25)", flexShrink: 0 }}>
+                                        <button onClick={() => navigate("/reordenamientos/nuevo")} style={{ display: "inline-flex", alignItems: "center", gap: "8px", height: "44px", padding: "0 20px", borderRadius: "10px", backgroundColor: "#004F9F", color: "#fff", fontSize: "14px", fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 4px 6px rgba(0, 79, 159,0.25)", flexShrink: 0 }}>
                                             <ArrowRightLeft size={16} /> Crear reordenamiento
                                         </button>
                                     </div>

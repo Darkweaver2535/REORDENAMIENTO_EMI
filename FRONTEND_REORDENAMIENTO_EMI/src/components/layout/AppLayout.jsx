@@ -4,11 +4,12 @@ import { getRolDisplay } from '../../config/roles'
 import {
   BookOpen, FlaskConical, ArrowLeftRight,
   BarChart2, LogOut, Menu, X, Settings,
-  Building2, GraduationCap, User, Users, FileText,
+  Building2, User, Users, FileText,
   LayoutDashboard, Monitor, ShieldCheck
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from './NotificationBell'
+import { EmiLogo, EmiCastle } from '../ui'
 
 export default function AppLayout() {
   const { user, logout, hasRole } = useAuth()
@@ -22,6 +23,7 @@ export default function AppLayout() {
     alignItems: "center",
     gap: "14px",
     padding: "12px 16px",
+    marginBottom: "2px",
     borderRadius: "10px",
     fontSize: "15px",
     fontWeight: 600,
@@ -29,57 +31,48 @@ export default function AppLayout() {
     transition: "all 150ms ease",
   }
 
-  const linkActive = { ...linkBase, backgroundColor: "rgba(255,255,255,0.12)", color: "#ffffff" }
-  const linkInactive = { ...linkBase, color: "#93c5fd" }
+  // Enlace activo: fondo translúcido + acento amarillo institucional (firma EMI)
+  const linkActive = {
+    ...linkBase,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    color: "#ffffff",
+    boxShadow: "inset 3px 0 0 #FFDD00",
+  }
+  const linkInactive = { ...linkBase, color: "#c5dcf3" }
 
   const navLinkStyle = ({ isActive }) => isActive ? linkActive : linkInactive
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", backgroundColor: "#f3f4f6" }}>
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", backgroundColor: "#eef3fa" }}>
 
       {/* ── SIDEBAR ──────────────────────────────────────── */}
       <aside
         style={{
-          width: sidebarOpen ? "260px" : "0px",
+          width: sidebarOpen ? "264px" : "0px",
           flexShrink: 0,
           display: "flex",
           flexDirection: "column",
-          backgroundColor: "#002B5E",
+          background: "linear-gradient(180deg, #004F9F 0%, #003D7C 100%)",
           overflow: "hidden",
           transition: "width 300ms ease",
         }}
       >
-        {/* Logo */}
+        {/* Logo institucional EMI */}
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: "14px",
-          padding: "0 24px",
-          height: "72px",
-          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          padding: "0 20px",
+          height: "76px",
+          borderBottom: "1px solid rgba(255,255,255,0.14)",
           flexShrink: 0,
         }}>
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            width: "42px", height: "42px", borderRadius: "12px",
-            backgroundColor: "rgba(255,255,255,0.1)", flexShrink: 0,
-          }}>
-            <GraduationCap size={22} color="white" />
-          </div>
-          <div style={{ overflow: "hidden" }}>
-            <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "18px", display: "block", lineHeight: 1 }}>
-              SGL
-            </span>
-            <p style={{ color: "#93c5fd", fontSize: "13px", fontWeight: 500, marginTop: "4px", lineHeight: 1, whiteSpace: "nowrap" }}>
-              Gestión de Laboratorios
-            </p>
-          </div>
+          <EmiLogo variant="full" theme="dark" markSize={38} subtitle="Gestión de Laboratorios" />
         </div>
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "20px 16px", overflowY: "auto" }}>
 
-          <p style={{ padding: "4px 16px 16px", color: "rgba(147,197,253,0.5)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em" }}>
+          <p style={{ padding: "4px 16px 16px", color: "rgba(255,221,0,0.85)", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em" }}>
             Módulos
           </p>
 
@@ -109,7 +102,7 @@ export default function AppLayout() {
 
           {hasRole('admin', 'jefe') && (
             <>
-              <p style={{ padding: "28px 16px 16px 16px", color: "rgba(147,197,253,0.5)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em" }}>
+              <p style={{ padding: "28px 16px 16px 16px", color: "rgba(255,221,0,0.85)", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em" }}>
                 Unidades Académicas
               </p>
 
@@ -159,7 +152,7 @@ export default function AppLayout() {
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
               flexShrink: 0, width: "44px", height: "44px", borderRadius: "50%",
-              backgroundColor: "rgba(255,255,255,0.15)",
+              backgroundColor: "rgba(255,255,255,0.15)", border: "2px solid #FFDD00",
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
               <User size={20} color="white" />
@@ -198,6 +191,7 @@ export default function AppLayout() {
           height: "72px",
           backgroundColor: "#ffffff",
           borderBottom: "1px solid #e5e7eb",
+          borderTop: "3px solid #004F9F",
           display: "flex",
           alignItems: "center",
           padding: "0 20px",
@@ -210,7 +204,7 @@ export default function AppLayout() {
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: "42px", height: "42px", borderRadius: "10px",
-              color: "#6b7280", cursor: "pointer", border: "none",
+              color: "#004F9F", cursor: "pointer", border: "none",
             }}
             className="hover:bg-gray-100"
           >
@@ -219,12 +213,12 @@ export default function AppLayout() {
 
           <div style={{ width: "1px", height: "24px", backgroundColor: "#e5e7eb", flexShrink: 0 }} />
 
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: 0 }}>
-            <Building2 size={20} color="#002B5E" style={{ flexShrink: 0 }} />
-            <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+            <EmiCastle size={30} theme="light" />
+            <h2 style={{ fontSize: "17px", fontWeight: 800, color: "#003D7C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               Sistema de Gestión de Laboratorios
             </h2>
-            <span style={{ color: "#9ca3af", fontWeight: 500, fontSize: "15px", marginLeft: "4px", flexShrink: 0 }}>
+            <span style={{ color: "#9ca3af", fontWeight: 600, fontSize: "15px", marginLeft: "4px", flexShrink: 0 }}>
               — EMI
             </span>
           </div>
@@ -234,9 +228,9 @@ export default function AppLayout() {
           <span
             style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
-              padding: "8px 16px", backgroundColor: "#f9fafb",
-              color: "#374151", fontSize: "14px", fontWeight: 600,
-              borderRadius: "8px", border: "1px solid #e5e7eb", flexShrink: 0,
+              padding: "8px 16px", backgroundColor: "#DFEAF8",
+              color: "#003D7C", fontSize: "14px", fontWeight: 700,
+              borderRadius: "8px", border: "1px solid #c5dcf3", flexShrink: 0,
             }}
           >
             <Building2 size={16} />

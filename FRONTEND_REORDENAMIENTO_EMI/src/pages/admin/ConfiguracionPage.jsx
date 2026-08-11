@@ -64,7 +64,7 @@ function Toggle({ label, description, checked, onChange, disabled }) {
 
 /* ── Modal Genérico para CRUD ────────────────────────────────── */
 function ModalCrud({ isOpen, onClose, title, fields, defaultValues, onSubmit, isPending }) {
-	const { register, handleSubmit, reset } = useForm({ defaultValues });
+	const { register, handleSubmit, reset, formState: { errors } } = useForm({ defaultValues });
 
 	useEffect(() => {
 		if (isOpen) reset(defaultValues);
@@ -92,8 +92,8 @@ function ModalCrud({ isOpen, onClose, title, fields, defaultValues, onSubmit, is
 								</label>
 								{field.type === "select" ? (
 									<select
-										{...register(field.name, { required: field.required })}
-										style={{ width: "100%", height: "42px", borderRadius: "8px", border: "1px solid #d1d5db", padding: "0 12px", fontSize: "14px", outline: "none", backgroundColor: "#fff" }}
+										{...register(field.name, { required: field.required && `${field.label} es obligatorio` })}
+										style={{ width: "100%", height: "42px", borderRadius: "8px", border: `1px solid ${errors[field.name] ? "#f87171" : "#d1d5db"}`, padding: "0 12px", fontSize: "14px", outline: "none", backgroundColor: "#fff" }}
 									>
 										<option value="">Selecciona...</option>
 										{field.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -101,17 +101,24 @@ function ModalCrud({ isOpen, onClose, title, fields, defaultValues, onSubmit, is
 								) : (
 									<input
 										type={field.type || "text"}
-										{...register(field.name, { required: field.required })}
-										style={{ width: "100%", height: "42px", borderRadius: "8px", border: "1px solid #d1d5db", padding: "0 12px", fontSize: "14px", outline: "none", backgroundColor: "#fff" }}
+										{...register(field.name, { required: field.required && `${field.label} es obligatorio` })}
+										style={{ width: "100%", height: "42px", borderRadius: "8px", border: `1px solid ${errors[field.name] ? "#f87171" : "#d1d5db"}`, padding: "0 12px", fontSize: "14px", outline: "none", backgroundColor: "#fff" }}
 										placeholder={field.placeholder}
 									/>
+								)}
+								{/* Sin esto la validación bloqueaba el envío en silencio y el
+								    usuario no sabía por qué no pasaba nada al pulsar Guardar. */}
+								{errors[field.name] && (
+									<p style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: "#dc2626" }}>
+										{errors[field.name]?.message || `${field.label} es obligatorio`}
+									</p>
 								)}
 							</div>
 						))}
 					</div>
 					<div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
 						<button type="button" onClick={onClose} disabled={isPending} style={{ height: "40px", padding: "0 16px", borderRadius: "8px", backgroundColor: "#fff", border: "1px solid #d1d5db", color: "#374151", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>Cancelar</button>
-						<button type="submit" disabled={isPending} style={{ height: "40px", padding: "0 20px", borderRadius: "8px", backgroundColor: "#002B5E", border: "none", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: isPending ? "not-allowed" : "pointer", opacity: isPending ? 0.7 : 1, display: "flex", alignItems: "center", gap: "8px" }}>
+						<button type="submit" disabled={isPending} style={{ height: "40px", padding: "0 20px", borderRadius: "8px", backgroundColor: "#004F9F", border: "none", color: "#fff", fontSize: "14px", fontWeight: 600, cursor: isPending ? "not-allowed" : "pointer", opacity: isPending ? 0.7 : 1, display: "flex", alignItems: "center", gap: "8px" }}>
 							{isPending && <LoaderCircle size={16} className="animate-spin" />}
 							Guardar
 						</button>
@@ -150,7 +157,17 @@ export default function ConfiguracionPage() {
 			queryClient.invalidateQueries({ queryKey: [variables.queryKey] });
 			setModalConfig(null);
 		},
-		onError: (err) => toast.error(err?.response?.data?.detail ?? err?.message ?? "Error al guardar"),
+		onError: (err) => {
+			// DRF devuelve {campo: ["mensaje"]}; quedarse sólo con `detail` hacía
+			// que errores como "ya existe una unidad con ese nombre" no se vieran.
+			const data = err?.response?.data;
+			const detalle =
+				data?.detail ??
+				(data && typeof data === "object"
+					? Object.values(data).flat().filter((x) => typeof x === "string")[0]
+					: null);
+			toast.error(detalle ?? err?.message ?? "Error al guardar");
+		},
 	});
 
 	// Modales
@@ -249,10 +266,10 @@ export default function ConfiguracionPage() {
 				<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
 					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
 						<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-							<Building2 size={24} color="#002B5E" />
+							<Building2 size={24} color="#004F9F" />
 							<h2 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: 0 }}>Unidades Académicas</h2>
 						</div>
-						<button onClick={() => handleOpenUnidad()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#002B5E", color: "#fff", padding: "8px 16px", borderRadius: "8px", border: "none", fontSize: "14px", fontWeight: 700, cursor: "pointer" }} className="hover:bg-blue-900 transition-colors">
+						<button onClick={() => handleOpenUnidad()} style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#004F9F", color: "#fff", padding: "8px 16px", borderRadius: "8px", border: "none", fontSize: "14px", fontWeight: 700, cursor: "pointer" }} className="hover:bg-blue-900 transition-colors">
 							<Plus size={16} /> Agregar Unidad Académica
 						</button>
 					</div>
@@ -289,7 +306,7 @@ export default function ConfiguracionPage() {
 				<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
 					<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
 						<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-							<Layers size={24} color="#002B5E" />
+							<Layers size={24} color="#004F9F" />
 							<h2 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: 0 }}>Estructura Académica</h2>
 						</div>
 						<div style={{ display: "flex", gap: "10px" }}>
@@ -305,7 +322,13 @@ export default function ConfiguracionPage() {
 					<div style={{ border: "1px solid #e5e7eb", borderRadius: "10px", overflow: "hidden" }}>
 						{unidades.map((u, i) => {
 							const isExpanded = expandedUnidades[u.id];
-							const uDeptos = departamentos.filter(d => d.unidad_academica_id === u.id || (typeof d.unidad_academica === 'object' && d.unidad_academica?.id === u.id));
+							// La relación real Departamento↔Sede es M2M (`unidades_academicas`);
+							// el FK `unidad_academica` es legado y está vacío, así que filtrar
+							// sólo por él mostraba "0 Deptos" en todas las unidades.
+							const uDeptos = departamentos.filter(d =>
+								(Array.isArray(d.unidades_academicas) && d.unidades_academicas.some(ua => (ua?.id ?? ua) === u.id))
+								|| d.unidad_academica_id === u.id
+								|| (typeof d.unidad_academica === 'object' && d.unidad_academica?.id === u.id));
 							return (
 								<div key={u.id} style={{ borderBottom: i < unidades.length - 1 ? "1px solid #e5e7eb" : "none" }}>
 									{/* Cabecera Unidad */}
@@ -329,7 +352,7 @@ export default function ConfiguracionPage() {
 														<div key={d.id} style={{ borderTop: "1px solid #f3f4f6" }}>
 															<div style={{ padding: "14px 20px 14px 44px", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#fff" }}>
 																<span style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>{d.nombre}</span>
-																<button onClick={() => handleOpenDepto(d)} style={{ background: "none", border: "none", color: "#002B5E", cursor: "pointer", fontSize: "12px", fontWeight: 700 }} className="hover:underline">Editar</button>
+																<button onClick={() => handleOpenDepto(d)} style={{ background: "none", border: "none", color: "#004F9F", cursor: "pointer", fontSize: "12px", fontWeight: 700 }} className="hover:underline">Editar</button>
 															</div>
 															{dCarreras.length > 0 && (
 																<div style={{ backgroundColor: "#fafafa", padding: "12px 20px 12px 64px", display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px dashed #e5e7eb" }}>
@@ -356,7 +379,7 @@ export default function ConfiguracionPage() {
 				{/* ══ Sección 3: Parámetros del Sistema ══ */}
 				<div style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
 					<div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-						<Settings size={24} color="#002B5E" />
+						<Settings size={24} color="#004F9F" />
 						<h2 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: 0 }}>Parámetros del Sistema</h2>
 					</div>
 
@@ -392,7 +415,7 @@ export default function ConfiguracionPage() {
 							<button
 								onClick={handleSaveConfig}
 								disabled={configMutation.isPending}
-								style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#002B5E", color: "#fff", padding: "0 24px", height: "46px", borderRadius: "10px", border: "none", fontSize: "15px", fontWeight: 700, cursor: configMutation.isPending ? "not-allowed" : "pointer", opacity: configMutation.isPending ? 0.7 : 1, boxShadow: "0 4px 6px rgba(0,43,94,0.2)" }}
+								style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#004F9F", color: "#fff", padding: "0 24px", height: "46px", borderRadius: "10px", border: "none", fontSize: "15px", fontWeight: 700, cursor: configMutation.isPending ? "not-allowed" : "pointer", opacity: configMutation.isPending ? 0.7 : 1, boxShadow: "0 4px 6px rgba(0, 79, 159,0.2)" }}
 								className="hover:bg-blue-900 transition-colors"
 							>
 								{configMutation.isPending ? <LoaderCircle size={18} className="animate-spin" /> : <CheckCircle size={18} />}

@@ -95,7 +95,7 @@ export default function NotificationBell() {
 					<div style={{ padding: "16px 20px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
 						<h3 style={{ fontSize: "16px", fontWeight: 700, color: "#111827", margin: 0 }}>Notificaciones</h3>
 						{unreadCount > 0 && (
-							<span style={{ fontSize: "12px", fontWeight: 700, color: "#002B5E", backgroundColor: "#EFF6FF", padding: "3px 8px", borderRadius: "10px" }}>
+							<span style={{ fontSize: "12px", fontWeight: 700, color: "#004F9F", backgroundColor: "#EFF6FF", padding: "3px 8px", borderRadius: "10px" }}>
 								{unreadCount} nuevas
 							</span>
 						)}
@@ -173,7 +173,7 @@ export default function NotificationBell() {
 							Marcar todas como leídas
 						</button>
 						{/* Esto puede ser un Link o botón a página completa si existe */}
-						<span style={{ fontSize: "13px", fontWeight: 700, color: "#002B5E", cursor: "pointer" }} className="hover:underline">
+						<span style={{ fontSize: "13px", fontWeight: 700, color: "#004F9F", cursor: "pointer" }} className="hover:underline">
 							Ver todas
 						</span>
 					</div>
