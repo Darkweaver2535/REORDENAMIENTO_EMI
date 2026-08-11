@@ -1,4 +1,4 @@
-from django.core.cache import cache
+from config.cache_resiliente import cache_resiliente as cache
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
@@ -10,6 +10,11 @@ from apps.estructura_academica.models import UnidadAcademica
 from apps.guias.models import Guia
 from apps.laboratorios.models import Equipo, Laboratorio, TipoEquipo
 from apps.reordenamiento.models import Reordenamiento
+from apps.usuarios.permissions import (
+    es_admin_o_jefe,
+    es_encargado_activos,
+    scope_inventario_por_rol,
+)
 
 MESES_ES = [
     "",
@@ -43,12 +48,32 @@ class DashboardMetricasView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        cached = cache.get(CACHE_KEY)
+        # El dashboard enseña el MISMO inventario que el resto del sistema, así
+        # que respeta la regla de visibilidad (#15): ADMIN y JEFE ven el país
+        # entero, ENCARGADO_ACTIVOS sólo su sede y los demás no ven inventario.
+        # Antes devolvía las cifras nacionales a cualquier usuario autenticado,
+        # de modo que un estudiante leía "3364 equipos" en la portada mientras
+        # el listado de equipos le salía vacío.
+        alcance = self._alcance(request.user)
+        clave = f"{CACHE_KEY}:{alcance}"
+        cached = cache.get(clave)
         if cached is not None:
             return Response(cached)
-        data = self._construir_payload()
-        cache.set(CACHE_KEY, data, timeout=CACHE_TTL)
+        data = self._construir_payload(
+            scope_inventario_por_rol(Equipo.objects.all(), request.user),
+            scope_inventario_por_rol(Laboratorio.objects.all(), request.user),
+        )
+        cache.set(clave, data, timeout=CACHE_TTL)
         return Response(data)
+
+    @staticmethod
+    def _alcance(user):
+        """Etiqueta del alcance, para no mezclar en caché lo que ve cada rol."""
+        if es_admin_o_jefe(user):
+            return "nacional"
+        if es_encargado_activos(user) and getattr(user, "unidad_academica_id", None):
+            return f"ua{user.unidad_academica_id}"
+        return "sin-inventario"
 
     # ── Condición por unidad (#13: estatus_general es el estado canónico) ──────
     @staticmethod
@@ -59,11 +84,11 @@ class DashboardMetricasView(APIView):
             "malos": Count("id", filter=Q(estatus_general="malo")),
         }
 
-    def _construir_payload(self):
+    def _construir_payload(self, equipos, laboratorios):
         total_guias = Guia.objects.count()
 
         # ── Equipos: totales y condición ──────────────────────────────────────
-        cond = Equipo.objects.aggregate(total=Count("id"), **self._cond_aggregates())
+        cond = equipos.aggregate(total=Count("id"), **self._cond_aggregates())
         total_equipos = cond["total"] or 0
         buenos = cond["buenos"] or 0
         regulares = cond["regulares"] or 0
@@ -72,20 +97,23 @@ class DashboardMetricasView(APIView):
         pct_malos = round((malos / total_equipos) * 100, 1) if total_equipos else 0
         pct_operativos = round((operativos / total_equipos) * 100, 1) if total_equipos else 0
 
-        labs_activos = Laboratorio.objects.filter(is_active=True).count()
-        total_unidades = Equipo.objects.values("unidad_academica_id").distinct().count()
+        labs_activos = laboratorios.filter(is_active=True).count()
+        total_unidades = equipos.values("unidad_academica_id").distinct().count()
         total_tipos = TipoEquipo.objects.count()
-        equipos_sin_asignar = Equipo.objects.filter(laboratorio__isnull=True).count()
-        equipos_mantenimiento = Equipo.objects.filter(requiere_mantenimiento=True).count()
+        equipos_sin_asignar = equipos.filter(laboratorio__isnull=True).count()
+        equipos_mantenimiento = equipos.filter(requiere_mantenimiento=True).count()
 
-        pendientes = Reordenamiento.objects.filter(
+        movimientos = Reordenamiento.objects.filter(
+            Q(laboratorio_origen__in=laboratorios) | Q(laboratorio_destino__in=laboratorios)
+        )
+        pendientes = movimientos.filter(
             estado=Reordenamiento.Estado.PENDIENTE_APROBACION
         ).count()
 
         # ── Comparativa por unidad académica (dónde sobran/faltan) ────────────
         equipos_por_ua = {
             row["unidad_academica_id"]: row
-            for row in Equipo.objects.values("unidad_academica_id").annotate(
+            for row in equipos.values("unidad_academica_id").annotate(
                 total=Count("id"),
                 sin_asignar=Count("id", filter=Q(laboratorio__isnull=True)),
                 **self._cond_aggregates(),
@@ -93,7 +121,7 @@ class DashboardMetricasView(APIView):
         }
         labs_por_ua = {
             row["unidad_academica_id"]: row
-            for row in Laboratorio.objects.values("unidad_academica_id").annotate(
+            for row in laboratorios.values("unidad_academica_id").annotate(
                 labs=Count("id"),
                 capacidad=Sum("capacidad_estudiantes"),
             )
@@ -146,7 +174,7 @@ class DashboardMetricasView(APIView):
 
         # ── Laboratorios que requieren atención (por % de equipos malos) ──────
         labs_criticos = (
-            Laboratorio.objects.filter(equipos__isnull=False)
+            laboratorios.filter(equipos__isnull=False)
             .values("nombre", "unidad_academica__abreviacion")
             .annotate(
                 total=Count("equipos"),
@@ -171,11 +199,11 @@ class DashboardMetricasView(APIView):
 
         # ── Tipos de equipo más comunes (catálogo #12) ────────────────────────
         tipos_comunes = [
-            {"nombre": t["nombre"], "total": t["n"]}
-            for t in TipoEquipo.objects.annotate(n=Count("equipos"))
-            .filter(n__gt=0)
-            .order_by("-n")
-            .values("nombre", "n")[:10]
+            {"nombre": t["tipo__nombre"], "total": t["n"]}
+            for t in equipos.filter(tipo__isnull=False)
+            .values("tipo__nombre")
+            .annotate(n=Count("id"))
+            .order_by("-n")[:10]
         ]
 
         # ── Reordenamientos: por estado + serie mensual ───────────────────────
@@ -186,12 +214,12 @@ class DashboardMetricasView(APIView):
                 "label": estado_labels.get(r["estado"], r["estado"]),
                 "total": r["n"],
             }
-            for r in Reordenamiento.objects.values("estado").annotate(n=Count("id")).order_by("-n")
+            for r in movimientos.values("estado").annotate(n=Count("id")).order_by("-n")
         ]
 
         hace_6_meses = timezone.now() - timezone.timedelta(days=180)
         serie = (
-            Reordenamiento.objects.filter(created_at__gte=hace_6_meses)
+            movimientos.filter(created_at__gte=hace_6_meses)
             .annotate(mes=TruncMonth("created_at"))
             .values("mes")
             .annotate(movimientos=Count("id"))

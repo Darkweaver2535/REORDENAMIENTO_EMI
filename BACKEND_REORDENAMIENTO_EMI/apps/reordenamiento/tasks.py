@@ -27,7 +27,7 @@ import os
 from datetime import datetime
 
 from celery import shared_task
-from django.core.cache import cache
+from config.cache_resiliente import cache_resiliente as cache
 from django.utils import timezone
 
 from apps.laboratorios.services import InventoryAnalyticsService

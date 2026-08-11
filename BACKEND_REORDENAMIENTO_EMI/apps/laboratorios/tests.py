@@ -199,3 +199,218 @@ class EquipoUnidadIndividualTests(TestCase):
         resp = self._crear(5)
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("cantidad_total", resp.data)
+
+
+@override_settings(CACHES=CACHE_IN_MEMORY)
+class FiltrosInventarioTests(TestCase):
+    """Filtros de los listados de laboratorios y equipos.
+
+    `EquipoViewSet` no tenía filtro por sede: pedir los equipos de una unidad
+    devolvía el inventario completo de la EMI y el frontend acababa filtrando
+    en memoria. `LaboratorioViewSet` sólo leía `unidad_id`, así que la página de
+    evaluación in situ —que envía `unidad_academica_id`— veía todas las sedes.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.lapaz = UnidadAcademica.objects.create(
+            nombre="UALP", ciudad="La Paz", codigo="0001")
+        cls.tropico = UnidadAcademica.objects.create(
+            nombre="UAT", ciudad="Trópico", codigo="0005")
+
+        cls.lab_lp = Laboratorio.objects.create(
+            nombre="QUÍMICA", unidad_academica=cls.lapaz, campus="Irpavi")
+        cls.lab_tr = Laboratorio.objects.create(
+            nombre="FÍSICA", unidad_academica=cls.tropico, campus="Trópico")
+
+        for i in range(3):
+            Equipo.objects.create(
+                nombre=f"BALANZA {i}", codigo_activo=f"LP-{i}",
+                laboratorio=cls.lab_lp, unidad_academica=cls.lapaz,
+                cantidad_total=1, cantidad_buena=1)
+        Equipo.objects.create(
+            nombre="MICROSCOPIO", codigo_activo="TR-1",
+            laboratorio=cls.lab_tr, unidad_academica=cls.tropico,
+            cantidad_total=1, cantidad_buena=1)
+        # Activo del padrón contable todavía sin laboratorio asignado.
+        Equipo.objects.create(
+            nombre="AGITADOR SIN UBICAR", codigo_activo="LP-SIN",
+            laboratorio=None, unidad_academica=cls.lapaz,
+            cantidad_total=1, cantidad_regular=1)
+
+        cls.admin = Usuario.objects.create_superuser(
+            carnet_identidad="34343434", password="x",
+            nombre_completo="Admin", rol="ADMIN")
+
+    def setUp(self):
+        self.client = _client_as(self.admin)
+
+    def _codigos(self, url):
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK, resp.data)
+        datos = resp.data
+        filas = datos["results"] if isinstance(datos, dict) and "results" in datos else datos
+        return sorted(f["codigo_activo"] for f in filas)
+
+    def test_equipos_filtran_por_unidad_academica(self):
+        url = f"/api/v1/laboratorios/equipos/?unidad_academica_id={self.tropico.pk}"
+        self.assertEqual(self._codigos(url), ["TR-1"])
+
+    def test_equipos_aceptan_el_alias_unidad_id(self):
+        url = f"/api/v1/laboratorios/equipos/?unidad_id={self.tropico.pk}"
+        self.assertEqual(self._codigos(url), ["TR-1"])
+
+    def test_equipos_filtran_por_laboratorio(self):
+        url = f"/api/v1/laboratorios/equipos/?laboratorio_id={self.lab_tr.pk}"
+        self.assertEqual(self._codigos(url), ["TR-1"])
+
+    def test_equipos_sin_laboratorio_asignado(self):
+        url = "/api/v1/laboratorios/equipos/?sin_laboratorio=true"
+        self.assertEqual(self._codigos(url), ["LP-SIN"])
+
+    def test_equipos_sin_filtro_devuelven_todo(self):
+        self.assertEqual(len(self._codigos("/api/v1/laboratorios/equipos/?page_size=100")), 5)
+
+    def test_laboratorios_aceptan_unidad_academica_id(self):
+        """La evaluación in situ envía este nombre; antes se ignoraba."""
+        resp = self.client.get(
+            f"/api/v1/laboratorios/?unidad_academica_id={self.tropico.pk}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        filas = resp.data["results"] if "results" in resp.data else resp.data
+        self.assertEqual([f["nombre"] for f in filas], ["FÍSICA"])
+
+    def test_laboratorios_siguen_aceptando_unidad_id(self):
+        resp = self.client.get(f"/api/v1/laboratorios/?unidad_id={self.lapaz.pk}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        filas = resp.data["results"] if "results" in resp.data else resp.data
+        self.assertEqual([f["nombre"] for f in filas], ["QUÍMICA"])
+
+
+@override_settings(CACHES=CACHE_IN_MEMORY)
+class AltaEquipoTests(TestCase):
+    """Alta de equipos desde el inventario.
+
+    El asistente de reordenamiento remite a "Inventario → Equipos → Nuevo
+    equipo"; el formulario no existía aunque la API sí lo soportaba.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.ua = UnidadAcademica.objects.create(nombre="UAT", ciudad="Trópico", codigo="0005")
+        cls.lab = Laboratorio.objects.create(nombre="QUÍMICA", unidad_academica=cls.ua, campus="X")
+        cls.admin = Usuario.objects.create_superuser(
+            carnet_identidad="66660001", password="x", nombre_completo="Admin", rol="ADMIN")
+        cls.estudiante = Usuario.objects.create_user(
+            carnet_identidad="66660002", password="x", nombre_completo="Est", rol="ESTUDIANTE")
+
+    def setUp(self):
+        self.client = _client_as(self.admin)
+
+    def _payload(self, **extra):
+        base = {
+            "nombre": "MICROSCOPIO NUEVO", "codigo_activo": "9-00001",
+            "estatus_general": "bueno", "cantidad_total": 1,
+            "cantidad_buena": 1, "cantidad_regular": 0, "cantidad_mala": 0,
+            "laboratorio_id": self.lab.pk,
+        }
+        base.update(extra)
+        return base
+
+    def test_crea_equipo_y_hereda_la_unidad_del_laboratorio(self):
+        resp = self.client.post("/api/v1/laboratorios/equipos/", self._payload(), format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        eq = Equipo.objects.get(codigo_activo="9-00001")
+        self.assertEqual(eq.laboratorio, self.lab)
+        self.assertEqual(eq.unidad_academica, self.ua)
+        self.assertEqual((eq.cantidad_buena, eq.cantidad_total), (1, 1))
+
+    def test_crea_equipo_sin_laboratorio_si_hay_unidad(self):
+        """Un activo del padrón puede entrar sin ubicación asignada."""
+        resp = self.client.post("/api/v1/laboratorios/equipos/", self._payload(
+            codigo_activo="9-00002", laboratorio_id=None, unidad_academica_id=self.ua.pk),
+            format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertIsNone(Equipo.objects.get(codigo_activo="9-00002").laboratorio)
+
+    def test_rechaza_codigo_duplicado(self):
+        self.client.post("/api/v1/laboratorios/equipos/", self._payload(), format="json")
+        resp = self.client.post("/api/v1/laboratorios/equipos/", self._payload(), format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("codigo_activo", resp.data)
+
+    def test_rechaza_cantidad_mayor_a_uno(self):
+        resp = self.client.post("/api/v1/laboratorios/equipos/", self._payload(
+            codigo_activo="9-00003", cantidad_total=5, cantidad_buena=5), format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("cantidad_total", resp.data)
+
+    def test_estudiante_no_puede_crear(self):
+        self.client = _client_as(self.estudiante)
+        resp = self.client.post("/api/v1/laboratorios/equipos/", self._payload(
+            codigo_activo="9-00004"), format="json")
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class CantidadesImposiblesTests(TestCase):
+    """Las cantidades de un equipo tienen que ser posibles.
+
+    La API aceptaba un POST con cantidades negativas y devolvía 201. A partir de
+    ahí el inventario quedaba corrupto en silencio: el total de equipos, el
+    porcentaje de operativos y la comparativa por sede se calculan sumando estos
+    campos, y ninguna pantalla delataba de dónde venía el desajuste.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.ua = UnidadAcademica.objects.create(
+            nombre="UA Cant", ciudad="X", codigo="CANT1", abreviacion="CANT")
+        cls.lab = Laboratorio.objects.create(
+            nombre="Lab Cant", unidad_academica=cls.ua, campus="C")
+        cls.encargado = Usuario.objects.create_user(
+            carnet_identidad="82000001", password="x", nombre_completo="Enc",
+            rol="ENCARGADO_ACTIVOS", unidad_academica=cls.ua)
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.encargado)
+
+    def _crear(self, **extra):
+        payload = {
+            "nombre": "Equipo de prueba",
+            "codigo_activo": extra.pop("codigo", "CANT-001"),
+            "unidad_academica_id": self.ua.pk,
+            "laboratorio_id": self.lab.pk,
+            "estatus_general": "bueno",
+            "cantidad_total": 1,
+            "cantidad_buena": 1,
+            "cantidad_regular": 0,
+            "cantidad_mala": 0,
+        }
+        payload.update(extra)
+        return self.client.post("/api/v1/laboratorios/equipos/", payload, format="json")
+
+    def test_alta_valida_sigue_funcionando(self):
+        self.assertEqual(self._crear().status_code, 201)
+
+    def test_rechaza_cantidad_negativa(self):
+        resp = self._crear(codigo="CANT-NEG", cantidad_buena=-3, cantidad_total=-3)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("cantidad_buena", resp.data)
+
+    def test_rechaza_total_que_no_es_la_suma(self):
+        resp = self._crear(codigo="CANT-SUM", cantidad_total=9)
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("cantidad_total", resp.data)
+
+    def test_ninguna_alta_invalida_llega_a_la_base(self):
+        self._crear(codigo="CANT-X1", cantidad_mala=-1, cantidad_total=0)
+        self._crear(codigo="CANT-X2", cantidad_total=7)
+        self.assertFalse(Equipo.objects.filter(codigo_activo__startswith="CANT-X").exists())
+
+    def test_editar_otro_campo_no_exige_reenviar_las_cantidades(self):
+        self._crear(codigo="CANT-EDIT")
+        equipo = Equipo.objects.get(codigo_activo="CANT-EDIT")
+        resp = self.client.patch(
+            f"/api/v1/laboratorios/equipos/{equipo.pk}/",
+            {"notas": "Revisado en inventario"}, format="json")
+        self.assertEqual(resp.status_code, 200, resp.data)

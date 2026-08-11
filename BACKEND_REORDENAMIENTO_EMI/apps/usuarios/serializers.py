@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.estructura_academica.models import UnidadAcademica
 from apps.usuarios.models import AuditLog, Usuario
 
 
@@ -40,6 +41,21 @@ class LoginResponseSerializer(serializers.Serializer):
 class UsuarioResumenSerializer(serializers.ModelSerializer):
     """Datos mínimos de usuario para listas."""
 
+    # La tabla de administración muestra la sede del usuario; sin el nombre sólo
+    # llegaba el id y la columna quedaba siempre en "—".
+    unidad_academica_nombre = serializers.CharField(
+        source="unidad_academica.nombre", read_only=True, default=None)
+    # Escribible: `unidad_academica_id` no es un campo del modelo (lo es
+    # `unidad_academica`), así que sin declararlo DRF lo ignoraba en silencio y
+    # asignar la sede de un usuario desde el panel de administración no surtía
+    # efecto — el rol se guardaba y la unidad no.
+    unidad_academica_id = serializers.PrimaryKeyRelatedField(
+        source="unidad_academica",
+        queryset=UnidadAcademica.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = Usuario
         fields = (
@@ -48,6 +64,7 @@ class UsuarioResumenSerializer(serializers.ModelSerializer):
             "nombre_completo",
             "rol",
             "unidad_academica_id",
+            "unidad_academica_nombre",
             "is_active",
         )
 

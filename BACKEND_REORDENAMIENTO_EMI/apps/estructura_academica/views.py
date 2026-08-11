@@ -3,6 +3,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
+from apps.estructura_academica.filtros import param
 from apps.estructura_academica.models import (
     Asignatura,
     Carrera,
@@ -10,6 +11,7 @@ from apps.estructura_academica.models import (
     Semestre,
     UnidadAcademica,
 )
+from apps.usuarios.permissions import EsAdminOJefe
 from apps.estructura_academica.serializers import (
     AsignaturaListSerializer,
     CarreraSerializer,
@@ -20,12 +22,26 @@ from apps.estructura_academica.serializers import (
 
 
 class UnidadAcademicaViewSet(
+    mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
+    """El panel de administración permite dar de alta unidades académicas.
+
+    Sin `CreateModelMixin` el botón "Agregar Unidad Académica" existía en la UI
+    pero la API respondía 405, así que el formulario nunca podía completarse.
+    Crear y editar quedan restringidos a ADMIN/JEFE; la lectura, a cualquier
+    usuario autenticado (la usan los filtros en cascada de todo el sistema).
+    """
+
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in {"create", "update", "partial_update"}:
+            return [EsAdminOJefe()]
+        return [IsAuthenticated()]
     serializer_class = UnidadAcademicaSerializer
     queryset = UnidadAcademica.objects.filter(is_active=True).order_by("nombre")
     filter_backends = [DjangoFilterBackend]
@@ -45,7 +61,7 @@ class DepartamentoViewSet(ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = Departamento.objects.prefetch_related("unidades_academicas").order_by("nombre")
-        unidad_id = self.request.query_params.get("unidad_academica_id")
+        unidad_id = param(self.request, "unidad_academica_id")
         if unidad_id:
             queryset = queryset.filter(
                 depto_sedes__unidad_academica_id=unidad_id,
@@ -73,8 +89,8 @@ class CarreraViewSet(ReadOnlyModelViewSet):
             .prefetch_related("unidades_academicas")
             .order_by("nombre")
         )
-        departamento_id = self.request.query_params.get("departamento_id")
-        unidad_id = self.request.query_params.get("unidad_academica_id")
+        departamento_id = param(self.request, "departamento_id")
+        unidad_id = param(self.request, "unidad_academica_id")
         if departamento_id:
             queryset = queryset.filter(departamento_id=departamento_id)
         if unidad_id:
@@ -115,8 +131,8 @@ class AsignaturaViewSet(ReadOnlyModelViewSet):
             .filter(is_active=True)
             .order_by("nombre")
         )
-        carrera_id = self.request.query_params.get("carrera_id")
-        semestre_id = self.request.query_params.get("semestre_id")
+        carrera_id = param(self.request, "carrera_id")
+        semestre_id = param(self.request, "semestre_id")
 
         if carrera_id:
             queryset = queryset.filter(carrera_id=carrera_id)

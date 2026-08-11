@@ -449,3 +449,88 @@ class ReglasNegocioTests(TestCase):
             format="multipart",
         )
         self.assertEqual(r.status_code, 400)
+
+
+@override_settings(CACHES=CACHE_IN_MEMORY)
+class SedeDelEquipoTrasElMovimientoTests(TestCase):
+    """Un equipo pertenece a la sede de su laboratorio.
+
+    Al recepcionar un traslado se cambiaba `laboratorio` pero no
+    `unidad_academica`, así que un movimiento entre sedes dejaba el bien
+    físicamente en el destino y contabilizado en el origen: todas las cifras por
+    unidad académica —el dashboard, la comparativa de sedes, el alcance del
+    ENCARGADO_ACTIVOS— quedaban mal justo después del movimiento que el sistema
+    existe para gestionar. En el traslado parcial era peor: el registro nuevo se
+    creaba sin unidad académica ninguna.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.origen_ua = _ua("UA Origen", "UAORI")
+        cls.destino_ua = _ua("UA Destino", "UADES")
+        cls.origen = _lab(cls.origen_ua, "Lab Origen")
+        cls.destino = _lab(cls.destino_ua, "Lab Destino")
+        cls.aprobador = _usuario("81000001", "ADMIN")
+
+    def _mover(self, equipo, cantidad, tipo=None):
+        tipo = tipo or Reordenamiento.TipoMovimiento.REASIGNACION_DEFINITIVA
+        mov = ReordenamientoService.crear_movimiento(
+            tipo_movimiento=tipo,
+            equipo_id=equipo.id,
+            lab_origen_id=self.origen.id,
+            lab_destino_id=self.destino.id,
+            cantidad=cantidad,
+            numero_documento="RES-001/2026",
+            usuario_solicitante=self.aprobador,
+        )
+        ReordenamientoService.aprobar(mov.id, self.aprobador)
+        ReordenamientoService.recepcionar(mov.id, self.aprobador)
+        return mov
+
+    def test_traslado_completo_cambia_la_sede_del_equipo(self):
+        equipo = _equipo(self.origen, "EQ-SEDE-1", buena=1)
+        self._mover(equipo, 1)
+
+        equipo.refresh_from_db()
+        self.assertEqual(equipo.laboratorio_id, self.destino.id)
+        self.assertEqual(equipo.unidad_academica_id, self.destino_ua.id)
+
+    def test_traslado_parcial_crea_el_registro_en_la_sede_destino(self):
+        equipo = _equipo(self.origen, "EQ-SEDE-2", buena=3)
+        self._mover(equipo, 1)
+
+        equipo.refresh_from_db()
+        # El remanente no se mueve de sede.
+        self.assertEqual(equipo.unidad_academica_id, self.origen_ua.id)
+        self.assertEqual(equipo.cantidad_total, 2)
+
+        nuevo = Equipo.objects.get(laboratorio=self.destino)
+        self.assertEqual(nuevo.unidad_academica_id, self.destino_ua.id)
+        self.assertEqual(nuevo.cantidad_total, 1)
+
+    def test_ningun_equipo_queda_sin_unidad_academica(self):
+        equipo = _equipo(self.origen, "EQ-SEDE-3", buena=2)
+        self._mover(equipo, 1)
+
+        self.assertFalse(Equipo.objects.filter(unidad_academica__isnull=True).exists())
+
+    def test_la_compra_tambien_deja_el_equipo_en_la_sede_destino(self):
+        equipo = _equipo(self.origen, "EQ-SEDE-4", buena=1)
+        self._mover(equipo, 1, tipo=Reordenamiento.TipoMovimiento.COMPRA)
+
+        equipo.refresh_from_db()
+        self.assertEqual(equipo.laboratorio_id, self.destino.id)
+        self.assertEqual(equipo.unidad_academica_id, self.destino_ua.id)
+
+    def test_los_conteos_por_sede_cuadran_tras_el_movimiento(self):
+        """Es la cifra que enseñan el dashboard y la comparativa de sedes."""
+        equipo = _equipo(self.origen, "EQ-SEDE-5", buena=1)
+        self._mover(equipo, 1)
+
+        self.assertEqual(Equipo.objects.filter(unidad_academica=self.origen_ua).count(), 0)
+        self.assertEqual(Equipo.objects.filter(unidad_academica=self.destino_ua).count(), 1)
+        # Y coincide con lo que dice el laboratorio donde está.
+        self.assertEqual(
+            Equipo.objects.filter(laboratorio__unidad_academica=self.destino_ua).count(),
+            Equipo.objects.filter(unidad_academica=self.destino_ua).count(),
+        )

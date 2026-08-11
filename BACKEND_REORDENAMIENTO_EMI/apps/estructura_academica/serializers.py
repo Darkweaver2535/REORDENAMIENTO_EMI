@@ -10,9 +10,36 @@ from apps.estructura_academica.models import (
 
 
 class UnidadAcademicaSerializer(serializers.ModelSerializer):
+    # El formulario de administración pide nombre, abreviación y ciudad; el
+    # código es un correlativo institucional ("0001"…) que se asigna solo.
+    codigo = serializers.CharField(max_length=10, required=False)
+
     class Meta:
         model = UnidadAcademica
         fields = ("id", "nombre", "ciudad", "codigo", "abreviacion")
+
+    def validate_nombre(self, value):
+        nombre = (value or "").strip()
+        if not nombre:
+            raise serializers.ValidationError("El nombre es obligatorio.")
+        existe = UnidadAcademica.objects.filter(nombre__iexact=nombre)
+        if self.instance:
+            existe = existe.exclude(pk=self.instance.pk)
+        if existe.exists():
+            raise serializers.ValidationError("Ya existe una unidad académica con ese nombre.")
+        return nombre
+
+    def create(self, validated_data):
+        if not validated_data.get("codigo"):
+            usados = {
+                c for c in UnidadAcademica.objects.values_list("codigo", flat=True)
+                if c and c.isdigit()
+            }
+            siguiente = 1
+            while f"{siguiente:04d}" in usados:
+                siguiente += 1
+            validated_data["codigo"] = f"{siguiente:04d}"
+        return super().create(validated_data)
 
 
 class DepartamentoSerializer(serializers.ModelSerializer):

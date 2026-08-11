@@ -41,7 +41,7 @@
 
 import unicodedata
 
-from django.core.cache import cache
+from config.cache_resiliente import cache_resiliente as cache
 from django.db.models import Count, ExpressionWrapper, F, IntegerField, Max, Sum
 
 from apps.laboratorios.models import (

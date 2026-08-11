@@ -302,6 +302,18 @@ class ReordenamientoService:
                 "estado_reordenamiento": reordenamiento.estado,
             }
 
+            # El equipo pertenece a la sede de su laboratorio: al cambiarlo de
+            # laboratorio hay que cambiarle también la unidad académica. Si no,
+            # un traslado entre sedes dejaba el bien físicamente en el destino
+            # pero contabilizado en el origen, y todas las cifras por sede
+            # quedaban mal justo después del movimiento que el sistema existe
+            # para gestionar.
+            unidad_destino_id = (
+                reordenamiento.laboratorio_destino.unidad_academica_id
+                if reordenamiento.laboratorio_destino_id
+                else equipo.unidad_academica_id
+            )
+
             # Para COMPRA o PRESTAMO, el stock del equipo no se mueve del origen.
             # Para REASIGNACION, se mueve físicamente con descuento de stock.
             if tipo == Reordenamiento.TipoMovimiento.REASIGNACION_DEFINITIVA:
@@ -324,7 +336,9 @@ class ReordenamientoService:
                     # Y movía el registro a la vez, dejando un estado inconsistente
                     # (el origen perdía el equipo entero pero con total reducido).
                     equipo.laboratorio_id = reordenamiento.laboratorio_destino_id
-                    equipo.save(update_fields=["laboratorio", "updated_at"])
+                    equipo.unidad_academica_id = unidad_destino_id
+                    equipo.save(
+                        update_fields=["laboratorio", "unidad_academica", "updated_at"])
                 else:
                     # Traslado PARCIAL de un lote: se divide en dos registros para
                     # preservar la invariante total = buena + regular + mala.
@@ -351,6 +365,7 @@ class ReordenamientoService:
                             equipo.codigo_activo, reordenamiento.id
                         ),
                         laboratorio_id=reordenamiento.laboratorio_destino_id,
+                        unidad_academica_id=unidad_destino_id,
                         cantidad_total=movido_total,
                         cantidad_buena=mover_buena,
                         cantidad_regular=mover_regular,
@@ -362,7 +377,9 @@ class ReordenamientoService:
             elif tipo == Reordenamiento.TipoMovimiento.COMPRA:
                 # En compra, el equipo ya debería estar en el destino; solo se confirma.
                 equipo.laboratorio_id = reordenamiento.laboratorio_destino_id
-                equipo.save(update_fields=["laboratorio", "updated_at"])
+                equipo.unidad_academica_id = unidad_destino_id
+                equipo.save(
+                    update_fields=["laboratorio", "unidad_academica", "updated_at"])
 
             reordenamiento.estado = Reordenamiento.Estado.RECEPCIONADO
             reordenamiento.recepcionado_por = usuario_receptor

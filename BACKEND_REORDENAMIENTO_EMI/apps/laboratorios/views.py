@@ -1,4 +1,4 @@
-from django.core.cache import cache
+from config.cache_resiliente import cache_resiliente as cache
 from django.db.models import Count
 from django.utils import timezone
 from rest_framework import filters, status
@@ -9,6 +9,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from apps.estructura_academica.filtros import param
+from apps.laboratorios.busqueda import BusquedaSinTildes
 from apps.laboratorios.models import Equipo, Laboratorio, TipoEquipo
 from apps.laboratorios.serializers import (
     EquipoDetalleSerializer,
@@ -40,14 +42,16 @@ class LaboratorioViewSet(ModelViewSet):
 
     queryset = Laboratorio.objects.none()
     pagination_class = LaboratorioPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    # Búsqueda insensible a tildes: los nombres vienen de Excel con y sin
+    # ellas, y buscar 'FISICA' no encontraba ningún 'FÍSICA'.
+    filter_backends = [BusquedaSinTildes, filters.OrderingFilter]
     search_fields = ["nombre", "sala", "unidad_academica__nombre"]
     ordering_fields = ["nombre", "created_at"]
 
     def get_queryset(self):
-        queryset = Laboratorio.objects.select_related("unidad_academica")
+        queryset = Laboratorio.objects.select_related("unidad_academica", "parent")
 
-        unidad_id = self.request.query_params.get("unidad_id")
+        unidad_id = param(self.request, "unidad_academica_id")
         if unidad_id:
             queryset = queryset.filter(unidad_academica_id=unidad_id)
 
@@ -127,8 +131,9 @@ class EquipoViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = Equipo.objects.select_related(
-            "unidad_academica", "laboratorio", "laboratorio__unidad_academica", "evaluado_por"
-        )
+            "unidad_academica", "laboratorio", "laboratorio__unidad_academica",
+            "evaluado_por", "tipo",
+        ).prefetch_related("evaluaciones")
 
         modo = self.request.query_params.get("modo")
         if modo == "compra":
@@ -140,9 +145,19 @@ class EquipoViewSet(ModelViewSet):
             # (todos los equipos tienen unidad_academica, incluso sin laboratorio).
             return scope_inventario_por_rol(queryset, self.request.user)
 
-        laboratorio_id = self.request.query_params.get("laboratorio_id")
+        laboratorio_id = param(self.request, "laboratorio_id")
         if laboratorio_id:
             queryset = queryset.filter(laboratorio_id=laboratorio_id)
+
+        # Filtro por sede: faltaba, así que pedir los equipos de una unidad
+        # devolvía el inventario completo de la EMI.
+        unidad_id = param(self.request, "unidad_academica_id")
+        if unidad_id:
+            queryset = queryset.filter(unidad_academica_id=unidad_id)
+
+        # Equipos aún no asignados a ningún laboratorio (bandeja de pendientes).
+        if self.request.query_params.get("sin_laboratorio", "").lower() == "true":
+            queryset = queryset.filter(laboratorio__isnull=True)
 
         # FIX #15: ADMIN/JEFE ven todo; ENCARGADO_ACTIVOS solo su sede; el resto nada.
         queryset = scope_inventario_por_rol(queryset, self.request.user)
@@ -193,6 +208,9 @@ class EquipoViewSet(ModelViewSet):
         equipo.cantidad_total = serializer.validated_data["cantidad_total"]
         equipo.estatus_general = serializer.validated_data["condicion"]
         equipo.observaciones = serializer.validated_data.get("observaciones", equipo.observaciones)
+        # La inspección puede corregir la ubicación física constatada.
+        if serializer.validated_data.get("ubicacion_sala"):
+            equipo.ubicacion_sala = serializer.validated_data["ubicacion_sala"]
         equipo.evaluado_en = timezone.now()
         equipo.evaluado_por = request.user
         equipo.save()
@@ -263,7 +281,9 @@ class TipoEquipoViewSet(ModelViewSet):
 
     serializer_class = TipoEquipoSerializer
     pagination_class = LaboratorioPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    # Búsqueda insensible a tildes: los nombres vienen de Excel con y sin
+    # ellas, y buscar 'FISICA' no encontraba ningún 'FÍSICA'.
+    filter_backends = [BusquedaSinTildes, filters.OrderingFilter]
     search_fields = ["nombre", "categoria"]
     ordering_fields = ["nombre", "total_equipos"]
     ordering = ["nombre"]

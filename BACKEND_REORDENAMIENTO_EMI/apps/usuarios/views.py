@@ -27,7 +27,7 @@ from rest_framework import filters, status
 from rest_framework.generics import RetrieveUpdateAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from config.throttling import AnonRateThrottleResiliente
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -48,8 +48,12 @@ def _client_ip(request):
     return request.META.get("REMOTE_ADDR")
 
 
-class LoginThrottle(AnonRateThrottle):
-    """5 intentos/min por IP — protección contra fuerza bruta (#2)."""
+class LoginThrottle(AnonRateThrottleResiliente):
+    """5 intentos/min por IP — protección contra fuerza bruta (#2).
+
+    Resiliente a caídas de la caché: si Redis no responde, cuenta en memoria
+    del proceso en vez de dejar el login fuera de servicio.
+    """
 
     scope = "login"
 

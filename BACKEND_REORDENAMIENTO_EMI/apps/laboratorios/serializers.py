@@ -1,10 +1,26 @@
 from rest_framework import serializers
 
+from apps.estructura_academica.models import UnidadAcademica
 from apps.laboratorios.models import Equipo, Laboratorio, TipoEquipo, UsoAcademico
 
 
 class LaboratorioListSerializer(serializers.ModelSerializer):
     unidad_academica_nombre = serializers.SerializerMethodField()
+    # Escribibles: sin esto DRF los mapea como read-only y el create termina en
+    # IntegrityError (unidad_academica_id NULL) en vez de un 400 entendible.
+    unidad_academica_id = serializers.PrimaryKeyRelatedField(
+        source="unidad_academica",
+        queryset=UnidadAcademica.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    parent_id = serializers.PrimaryKeyRelatedField(
+        source="parent",
+        queryset=Laboratorio.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+    parent_nombre = serializers.CharField(source="parent.nombre", read_only=True, default=None)
 
     class Meta:
         model = Laboratorio
@@ -13,6 +29,10 @@ class LaboratorioListSerializer(serializers.ModelSerializer):
             "nombre",
             "unidad_academica_id",
             "unidad_academica_nombre",
+            "clase_nodo",
+            "subtipo_espacio",
+            "parent_id",
+            "parent_nombre",
             "campus",
             "edificio",
             "piso",
@@ -24,6 +44,55 @@ class LaboratorioListSerializer(serializers.ModelSerializer):
         if obj.unidad_academica_id is None:
             return None
         return obj.unidad_academica.nombre
+
+    def validate(self, attrs):
+        """Valida UA obligatoria (directa o heredada del padre) y bloquea
+        homónimos en el mismo nivel: mismo nombre + mismo padre + misma UA."""
+        instance = self.instance
+
+        nombre = (attrs.get("nombre") or (instance.nombre if instance else "")).strip()
+        parent = attrs.get("parent", instance.parent if instance else None)
+        unidad = attrs.get("unidad_academica") or (
+            instance.unidad_academica if instance else None
+        )
+
+        # La UA puede heredarse del padre (igual que hace el modelo en save())
+        if not unidad and parent is not None:
+            unidad = parent.unidad_academica
+        if not unidad:
+            raise serializers.ValidationError(
+                {
+                    "unidad_academica_id": (
+                        "Debes indicar la unidad académica (o un espacio padre del cual heredarla)."
+                    )
+                }
+            )
+        attrs["unidad_academica"] = unidad
+
+        # Mantiene el invariante de la jerarquía sin exigir el campo al cliente
+        if instance is None and "clase_nodo" not in attrs:
+            attrs["clase_nodo"] = (
+                Laboratorio.ClaseNodo.SUBESPACIO if parent else Laboratorio.ClaseNodo.GENERAL
+            )
+
+        if nombre:
+            homonimos = Laboratorio.objects.filter(
+                nombre__iexact=nombre,
+                parent_id=parent.pk if parent else None,
+                unidad_academica_id=unidad.pk,
+            )
+            if instance:
+                homonimos = homonimos.exclude(pk=instance.pk)
+            if homonimos.exists():
+                raise serializers.ValidationError(
+                    {
+                        "nombre": (
+                            f'Ya existe un laboratorio llamado "{nombre}" en ese mismo '
+                            "nivel de la unidad académica."
+                        )
+                    }
+                )
+        return attrs
 
     def get_total_equipos_disponibles(self, obj):
         equipos = Equipo.objects.filter(laboratorio=obj)
@@ -142,7 +211,10 @@ class EquipoListSerializer(serializers.ModelSerializer):
         return obj.evaluado_por.nombre_completo
 
     def get_ultima_evaluacion(self, obj):
-        ev = obj.evaluaciones.first()  # ordered by -fecha
+        # `.first()` construye un queryset nuevo y consulta la BD por cada
+        # equipo (N+1). Iterar sobre `.all()` reutiliza el prefetch de la vista;
+        # el orden ya viene por -fecha desde Meta.ordering de Evaluacion.
+        ev = next(iter(obj.evaluaciones.all()), None)
         if not ev:
             return None
         return {
@@ -169,6 +241,43 @@ class EquipoDetalleSerializer(EquipoListSerializer):
             "notas",
             "requiere_mantenimiento",
         )
+
+    def validate(self, attrs):
+        """Las cantidades tienen que ser posibles.
+
+        La API aceptaba crear un equipo con cantidades negativas, y a partir de
+        ahí todos los recuentos —dashboard, comparativa de sedes, porcentaje de
+        operativos— quedaban mal sin que nada lo delatara. Se exige lo mismo que
+        comprueba `auditar_integridad`: nada por debajo de cero y el total igual
+        a la suma de las tres condiciones.
+        """
+        datos = {**getattr(self, "initial_data", {}), **attrs}
+        instancia = self.instance
+
+        def valor(campo):
+            if campo in attrs:
+                return attrs[campo]
+            if instancia is not None:
+                return getattr(instancia, campo)
+            return datos.get(campo, 0) or 0
+
+        cantidades = {c: valor(c) for c in
+                      ("cantidad_total", "cantidad_buena", "cantidad_regular", "cantidad_mala")}
+        negativas = {c: v for c, v in cantidades.items() if isinstance(v, int) and v < 0}
+        if negativas:
+            raise serializers.ValidationError(
+                {c: "La cantidad no puede ser negativa." for c in negativas})
+
+        suma = (cantidades["cantidad_buena"] + cantidades["cantidad_regular"]
+                + cantidades["cantidad_mala"])
+        if cantidades["cantidad_total"] != suma:
+            raise serializers.ValidationError({
+                "cantidad_total": (
+                    f"El total ({cantidades['cantidad_total']}) debe ser la suma de buenos, "
+                    f"regulares y malos ({suma})."
+                )
+            })
+        return attrs
 
 
 class TipoEquipoSerializer(serializers.ModelSerializer):
@@ -202,6 +311,12 @@ class EvaluacionInsituSerializer(serializers.Serializer):
         help_text="Estado general del equipo tras la evaluación.",
     )
     observaciones = serializers.CharField(required=False, allow_blank=True, default="")
+    # El formulario de evaluación in situ permite corregir dónde está el equipo
+    # (mesón, estante). Sin declararlo aquí, el dato se descartaba en silencio.
+    ubicacion_sala = serializers.CharField(
+        required=False, allow_blank=True, max_length=100,
+        help_text="Ubicación física constatada durante la inspección.",
+    )
     cantidad_buena = serializers.IntegerField(min_value=0, required=False, default=0)
     cantidad_regular = serializers.IntegerField(min_value=0, required=False, default=0)
     cantidad_mala = serializers.IntegerField(min_value=0, required=False, default=0)
