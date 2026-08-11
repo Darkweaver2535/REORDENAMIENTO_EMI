@@ -1,10 +1,15 @@
 import getpass
+import sys
 from datetime import timedelta
 from pathlib import Path
 
 from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# True cuando corre `manage.py test`. Lo usamos para no depender de servicios
+# externos (Redis) en la suite.
+TESTING = "test" in sys.argv
 
 
 # Seguridad
@@ -143,9 +148,11 @@ REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
     # Throttling (#2): protección contra fuerza bruta y abuso de API.
     # LoginView tiene su propio throttle más estricto (ver views.py).
+    # Versiones resilientes: si la caché (Redis) cae, degradan a memoria local
+    # en vez de devolver 500 en cada petición. Ver config/cache_resiliente.py.
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
+        "config.throttling.AnonRateThrottleResiliente",
+        "config.throttling.UserRateThrottleResiliente",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/minute",  # Anónimos: 60 req/min (navegación pública)
@@ -195,14 +202,31 @@ CORS_ALLOWED_ORIGINS = config(
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Cache (Redis)
+# Cache (Redis en ejecución normal, memoria local en tests)
+#
+# El throttling de DRF y la analítica de laboratorios escriben en la caché, así
+# que si el backend de caché no responde TODA la API devuelve 500. En la suite
+# eso hacía fallar los tests por tener Redis apagado, sin que hubiera nada roto
+# en el código: los tests usan memoria local y no dependen de ningún servicio.
 CACHE_URL = config("CACHE_URL", default="redis://localhost:6379/2")
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": CACHE_URL,
+
+if TESTING:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "tests",
+        }
     }
-}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": config(
+                "CACHE_BACKEND",
+                default="django.core.cache.backends.redis.RedisCache",
+            ),
+            "LOCATION": CACHE_URL,
+        }
+    }
 
 
 # Celery
