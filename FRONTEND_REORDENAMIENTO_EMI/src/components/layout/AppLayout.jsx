@@ -7,14 +7,45 @@ import {
   Building2, User, Users, FileText,
   LayoutDashboard, Monitor, ShieldCheck
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
 import NotificationBell from './NotificationBell'
 import { EmiLogo, EmiCastle } from '../ui'
+
+/** ¿La ventana es demasiado estrecha para tener el menú fijo al lado? */
+const ANCHO_MENU_FIJO = 1024
+
+function usarPantallaEstrecha() {
+  const [estrecha, setEstrecha] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < ANCHO_MENU_FIJO,
+  )
+  useEffect(() => {
+    const consulta = window.matchMedia(`(max-width: ${ANCHO_MENU_FIJO - 1}px)`)
+    const alCambiar = (e) => setEstrecha(e.matches)
+    consulta.addEventListener("change", alCambiar)
+    return () => consulta.removeEventListener("change", alCambiar)
+  }, [])
+  return estrecha
+}
 
 export default function AppLayout() {
   const { user, logout, hasRole } = useAuth()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // En una pantalla de teléfono el menú ocupa 264 de los 375 píxeles
+  // disponibles y deja el contenido en una columna de una palabra por línea.
+  // Arranca plegado por debajo de 1024 px; el botón de la cabecera lo abre.
+  const estrecha = usarPantallaEstrecha()
+  const [sidebarOpen, setSidebarOpen] = useState(
+    () => typeof window === "undefined" || window.innerWidth >= ANCHO_MENU_FIJO,
+  )
+
+  // Al pasar a una pantalla estrecha el menú se pliega solo; al volver a una
+  // ancha reaparece, que es donde tiene sitio propio.
+  useEffect(() => { setSidebarOpen(!estrecha) }, [estrecha])
+
+  // En móvil el menú se cierra al elegir una sección: si no, tapa la pantalla
+  // que el usuario acaba de pedir.
+  const alNavegar = () => { if (estrecha) setSidebarOpen(false) }
 
   const handleLogout = () => { logout(); navigate('/login') }
 
@@ -46,6 +77,20 @@ export default function AppLayout() {
     <div style={{ display: "flex", height: "100vh", overflow: "hidden", backgroundColor: "#eef3fa" }}>
 
       {/* ── SIDEBAR ──────────────────────────────────────── */}
+      {/* En pantallas estrechas el menú flota por encima del contenido en vez
+          de empujarlo: con 375 px de ancho, empujarlo dejaba el texto en una
+          columna de una palabra por línea. */}
+      {estrecha && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+          style={{
+            position: "fixed", inset: 0, zIndex: 40,
+            backgroundColor: "rgba(0,0,0,0.45)",
+          }}
+        />
+      )}
+
       <aside
         style={{
           width: sidebarOpen ? "264px" : "0px",
@@ -55,6 +100,10 @@ export default function AppLayout() {
           background: "linear-gradient(180deg, #004F9F 0%, #003D7C 100%)",
           overflow: "hidden",
           transition: "width 300ms ease",
+          ...(estrecha && {
+            position: "fixed", top: 0, bottom: 0, left: 0, zIndex: 50,
+            boxShadow: sidebarOpen ? "0 0 40px rgba(0,0,0,0.35)" : "none",
+          }),
         }}
       >
         {/* Logo institucional EMI */}
@@ -70,7 +119,7 @@ export default function AppLayout() {
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: "20px 16px", overflowY: "auto" }}>
+        <nav onClick={alNavegar} style={{ flex: 1, padding: "20px 16px", overflowY: "auto" }}>
 
           <p style={{ padding: "4px 16px 16px", color: "rgba(255,221,0,0.85)", fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em" }}>
             Módulos
@@ -201,9 +250,12 @@ export default function AppLayout() {
         }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label={sidebarOpen ? "Cerrar el menú" : "Abrir el menú"}
             style={{
+              // `flexShrink: 0`: en una pantalla estrecha el flex encogía el
+              // botón a 3 px de ancho y el menú quedaba imposible de abrir.
               display: "flex", alignItems: "center", justifyContent: "center",
-              width: "42px", height: "42px", borderRadius: "10px",
+              width: "42px", height: "42px", flexShrink: 0, borderRadius: "10px",
               color: "#004F9F", cursor: "pointer", border: "none",
             }}
             className="hover:bg-gray-100"
